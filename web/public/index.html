@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#153d33">
+  <title>同時着手将棋 — 二つの思考、ひとつの盤</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="masthead">
+    <a class="brand" href="./"><span class="brand-mark">同</span><span>同時着手将棋<small>SIMULTANEOUS SHOGI</small></span></a>
+    <div class="header-right"><span class="live-dot"></span><span>ローカル対局</span><span class="version">RULES 0.5</span></div>
+  </header>
+  <main>
+    <div class="intro"><div><p class="eyebrow">読むのは、相手の一手先。</p><h1>二つの思考を、ひとつの盤へ。</h1></div><button id="rules-open" class="text-button">遊び方 <span>↗</span></button></div>
+    <div id="error" class="error" role="alert" hidden></div>
+    <div class="game-layout">
+      <aside class="left-panel">
+        <div class="round-card"><span class="eyebrow">ROUND</span><div class="round-number" id="round-number">01</div><span id="round-status" class="round-status" aria-live="polite">エンジンを準備中</span></div>
+        <section class="setup"><h2>対局設定</h2><div class="segmented"><button id="mode-cpu" class="active">AIと対局</button><button id="mode-local">ふたりで対局</button></div><label class="field-label" for="policy">相手の方針</label><select id="policy"><option value="hunter">王を狙う</option><option value="defense">王を守る</option><option value="interference">打ち込みで妨害</option><option value="upgrade">成り・昇格を狙う</option><option value="random">無作為</option></select></section>
+        <section class="players"><h2>着手の準備</h2><div class="player-row" id="player-a"><span class="side-badge">A</span><div><strong>あなた</strong><small>下側の陣営</small></div><span class="commit-state">選択中</span></div><div class="player-row" id="player-b"><span class="side-badge light">B</span><div><strong>対戦AI</strong><small>上側の陣営</small></div><span class="commit-state">待機</span></div></section>
+        <div class="principle"><span>◈</span><p>手は、揃うまで秘密。<br>揃った瞬間、盤が動く。</p></div>
+        <button id="new-game" class="secondary full">新しい対局</button>
+        <div class="file-actions"><button id="export" class="text-button">棋譜を保存 ↓</button><button id="import" class="text-button">読み込む ↑</button><input id="replay-file" type="file" accept=".json,application/json" hidden></div>
+      </aside>
+      <section class="board-panel" aria-label="対局盤">
+        <div class="board-heading"><div><span id="board-mode" class="eyebrow">対局盤</span><h2 id="board-title">A陣営の手を選択</h2></div><span class="board-tag" id="board-tag">秘密入力</span></div>
+        <div id="hand-b" class="hand-tray" aria-label="Bの持ち駒"></div>
+        <div class="board-surround"><div id="files" class="files" aria-hidden="true"></div><div class="board-and-ranks"><div id="board" class="board" role="group" aria-label="9×9の将棋盤"></div><div id="ranks" class="ranks" aria-hidden="true"></div></div></div>
+        <div id="hand-a" class="hand-tray bottom" aria-label="Aの持ち駒"></div>
+        <div class="board-legend"><span><i class="legend-dot destination"></i>指定できるマス</span><span><i class="legend-dot path"></i>予定経路</span><span><i class="legend-dot upgraded"></i>昇格 +1</span></div>
+        <div id="handoff" class="handoff" hidden><div class="handoff-icon">封</div><p class="eyebrow">着手を封じました</p><h2 id="handoff-title">B陣営へ交代してください</h2><p>前の着手は、双方が確定した後に公開されます。</p><button id="handoff-ready" class="primary">B陣営の入力を始める →</button></div>
+      </section>
+      <aside class="right-panel">
+        <div class="inspector-tabs"><button id="tab-input" class="active">着手</button><button id="tab-replay">段階リプレイ <span id="replay-dot" hidden>•</span></button></div>
+        <section id="input-panel"><div class="selection-kicker">YOUR NEXT MOVE</div><h2 id="selection-title">駒を選んでください</h2><p id="selection-description" class="muted">盤上の自分の駒、または持ち駒を選んで、目的地を指定します。</p><div id="intent-card" class="intent-card" hidden></div><label class="field-label" for="choice">着手後の変更</label><select id="choice"><option value="none">変更なし</option><option value="promote">資格があれば成り</option><option value="upgrade">資格があれば昇格 +1</option></select><div id="conditions" class="conditions"></div><button id="commit" class="primary full" disabled>着手を確定 <span>→</span></button><p class="privacy-note">確定後に選び直すことはできません。</p><div class="rule-note"><span class="eyebrow">この将棋のひと工夫</span><h3>強さと、タイミング。</h3><p>同じ段階でぶつかれば「格」で勝負。止まった駒に追いつけば、格にかかわらず捕獲できます。</p></div></section>
+        <section id="replay-panel" hidden><div class="selection-kicker">ROUND REPLAY</div><h2 id="replay-title">まだ着手はありません</h2><div id="replay-controls" hidden><label class="field-label" for="replay-round">再生するラウンド</label><select id="replay-round"></select><p id="revealed-actions" class="muted"></p><div class="replay-stage"><button id="stage-prev" class="icon-button" aria-label="前の段階">←</button><strong id="stage-label">開始局面</strong><button id="stage-next" class="icon-button" aria-label="次の段階">→</button></div><input type="range" id="stage" min="0" max="1" value="0" aria-label="再生する段階"><div class="replay-buttons"><button id="play" class="secondary">▶ 再生</button><button id="return-input" class="text-button">入力へ戻る ↗</button></div><div id="plan-details" class="plan-details"></div></div><div id="events" class="events"><p class="muted">双方の着手が揃うと、移動や捕獲の理由を段階ごとに確認できます。</p></div></section>
+      </aside>
+    </div>
+    <footer><span>同時に選ぶ。段階ごとに解く。</span><span id="engine-status">Rust / WebAssembly · 接続中</span></footer>
+  </main>
+  <dialog id="rules-dialog"><button id="rules-close" class="dialog-close icon-button" aria-label="閉じる">×</button><p class="eyebrow">HOW TO PLAY</p><h2>相手の手を読んで、同時に指す。</h2><ol><li><strong>自分の手を選ぶ。</strong>移動か持ち駒の打ち込みを1つ指定し、成り・昇格も先に選びます。</li><li><strong>双方の手を同時に解く。</strong>長距離駒は1マスずつ、桂は着地までを1段階として進みます。</li><li><strong>動く駒同士は「格」で勝負。</strong>王0・歩1・香2・桂3・銀4・金5・飛角6。同格は相討ち、勝者も停止します。</li><li><strong>止まった駒は格によらず捕獲。</strong>味方が塞げば待機し、取られれば次の段階から進めます。打ち駒は盤上駒との競合に負けます。</li><li><strong>王を捕獲して勝利。</strong>その捕獲者が同じラウンドで取り返されると敗北。双方の王が取られれば捕獲時の格で比較します。</li></ol><p class="muted">王手放置・打ち歩詰めの禁止、独立したパスはありません。4回の同一局面、または200ラウンドで引き分けです。ふたりで遊ぶ場合は、確定するたびに画面を交代してください。</p></dialog>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
+

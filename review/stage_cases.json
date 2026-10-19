@@ -1,0 +1,5407 @@
+{
+  "version": "0.5",
+  "description": "現行の段階位置判定。期待結果は仕様の手計算。旧累積経路の期待値は使わない。",
+  "cases": [
+    {
+      "id": "E01",
+      "title": "依存循環でも部分停止で整合する",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              1,
+              3
+            ]
+          },
+          {
+            "id": "AP",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              3,
+              3
+            ]
+          },
+          {
+            "id": "BP",
+            "side": "B",
+            "kind": "P",
+            "at": [
+              5,
+              3
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              7,
+              3
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              7,
+              3
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              1,
+              3
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              2,
+              3
+            ]
+          },
+          {
+            "id": "AP",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              3,
+              3
+            ]
+          },
+          {
+            "id": "BP",
+            "side": "B",
+            "kind": "P",
+            "at": [
+              5,
+              3
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              6,
+              3
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": []
+      }
+    },
+    {
+      "id": "E02",
+      "title": "基本連戦",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AP",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              5,
+              6
+            ]
+          },
+          {
+            "id": "AB",
+            "side": "A",
+            "kind": "B",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              5,
+              2
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AP",
+            "to": [
+              5,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              5,
+              5
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AP",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              5,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "R": 1
+          },
+          "B": {
+            "B": 1
+          }
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": [
+          {
+            "stage": 4,
+            "reason": "chain",
+            "winner": "AP"
+          }
+        ]
+      }
+    },
+    {
+      "id": "E03",
+      "title": "連戦地点より手前の通常重複",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              1,
+              5
+            ]
+          },
+          {
+            "id": "AP",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              3,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              7,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              5,
+              5
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              5,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "R": 1
+          },
+          "B": {
+            "P": 1
+          }
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": [
+          {
+            "stage": 4,
+            "reason": "chain",
+            "winner": "AR"
+          }
+        ]
+      }
+    },
+    {
+      "id": "E04",
+      "title": "最初の味方障害直前まで部分移動",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              1,
+              5
+            ]
+          },
+          {
+            "id": "AG",
+            "side": "A",
+            "kind": "G",
+            "at": [
+              3,
+              5
+            ]
+          },
+          {
+            "id": "AP",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BG",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              8,
+              7
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              7,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BG",
+            "to": [
+              8,
+              8
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              2,
+              5
+            ]
+          },
+          {
+            "id": "AG",
+            "side": "A",
+            "kind": "G",
+            "at": [
+              3,
+              5
+            ]
+          },
+          {
+            "id": "AP",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BG",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              8,
+              8
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": []
+      }
+    },
+    {
+      "id": "E05",
+      "title": "選択した昇格は移動中の格を上げない",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AS",
+            "side": "A",
+            "kind": "S",
+            "at": [
+              5,
+              4
+            ]
+          },
+          {
+            "id": "BG",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              4,
+              3
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AS",
+            "to": [
+              5,
+              3
+            ],
+            "choice": "upgrade"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BG",
+            "to": [
+              5,
+              3
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "BG",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              5,
+              3
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {
+            "S": 1
+          }
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": [
+          {
+            "stage": 1,
+            "reason": "rank",
+            "winner": "BG"
+          }
+        ]
+      }
+    },
+    {
+      "id": "E06",
+      "title": "予定最終段に届かず成り可能位置で停止",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              1,
+              4
+            ]
+          },
+          {
+            "id": "BS",
+            "side": "B",
+            "kind": "S",
+            "at": [
+              1,
+              3
+            ]
+          },
+          {
+            "id": "BG",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              8,
+              7
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              1,
+              1
+            ],
+            "choice": "promote"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BG",
+            "to": [
+              8,
+              8
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              1,
+              3
+            ],
+            "promoted": true
+          },
+          {
+            "id": "BG",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              8,
+              8
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "S": 1
+          },
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": []
+      }
+    },
+    {
+      "id": "E07",
+      "title": "相手の捕獲で二歩が解消する条件付き打ち",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AP",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              1,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "P": 1
+          },
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "drop",
+            "kind": "P",
+            "to": [
+              5,
+              6
+            ]
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              5,
+              5
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "drop:A",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              5,
+              6
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {
+            "P": 1
+          }
+        },
+        "outcome": null,
+        "dropBans": [],
+        "dropStages": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "E08",
+      "title": "王を取った飛車が連戦で取られる",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              1,
+              5
+            ]
+          },
+          {
+            "id": "BP",
+            "side": "B",
+            "kind": "P",
+            "at": [
+              5,
+              4
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              5,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BP",
+            "to": [
+              5,
+              5
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BP",
+            "side": "B",
+            "kind": "P",
+            "at": [
+              5,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {
+            "R": 1
+          }
+        },
+        "outcome": {
+          "winner": "B",
+          "reason": "king_captor_lost"
+        },
+        "dropBans": [],
+        "contacts": [
+          {
+            "stage": 5,
+            "reason": "chain",
+            "winner": "BP"
+          }
+        ]
+      }
+    },
+    {
+      "id": "E09",
+      "title": "独立した双方王捕獲",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              2,
+              5
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              8,
+              5
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              8,
+              1
+            ]
+          },
+          {
+            "id": "BG",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              2,
+              4
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              8,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BG",
+            "to": [
+              2,
+              5
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              8,
+              5
+            ]
+          },
+          {
+            "id": "BG",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              2,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "outcome": {
+          "winner": "A",
+          "reason": "both_kings"
+        },
+        "dropBans": []
+      }
+    },
+    {
+      "id": "E10",
+      "title": "王自身が敵王を取り、その後連戦で取られる",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              5,
+              6
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              5,
+              2
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AK",
+            "to": [
+              5,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              5,
+              5
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              5,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "outcome": {
+          "winner": "B",
+          "reason": "king_captor_lost"
+        },
+        "dropBans": [],
+        "contacts": [
+          {
+            "stage": 3,
+            "reason": "chain",
+            "winner": "BR"
+          }
+        ]
+      }
+    },
+    {
+      "id": "E11",
+      "title": "味方占有先への打ちと占有者交代",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AP",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              5,
+              2
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "G": 1
+          },
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "drop",
+            "kind": "G",
+            "to": [
+              5,
+              5
+            ]
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              5,
+              5
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expectedError": "friendly occupied drop"
+    },
+    {
+      "id": "E12",
+      "title": "敵占有先が自主移動で空く打ち",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "BG",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              5,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "P": 1
+          },
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "drop",
+            "kind": "P",
+            "to": [
+              5,
+              5
+            ]
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BG",
+            "to": [
+              6,
+              6
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "BG",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              6,
+              6
+            ]
+          },
+          {
+            "id": "drop:A",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              5,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": []
+      }
+    },
+    {
+      "id": "E13",
+      "title": "桂馬同士の出発マス交換",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AN",
+            "side": "A",
+            "kind": "N",
+            "at": [
+              5,
+              5
+            ],
+            "upgraded": true
+          },
+          {
+            "id": "BN",
+            "side": "B",
+            "kind": "N",
+            "at": [
+              4,
+              3
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AN",
+            "to": [
+              4,
+              3
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BN",
+            "to": [
+              5,
+              5
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AN",
+            "side": "A",
+            "kind": "N",
+            "at": [
+              4,
+              3
+            ],
+            "upgraded": true
+          }
+        ],
+        "hands": {
+          "A": {
+            "N": 1
+          },
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": [
+          {
+            "stage": 1,
+            "mode": "swap",
+            "reason": "rank",
+            "winner": "AN"
+          }
+        ]
+      }
+    },
+    {
+      "id": "E14",
+      "title": "初回重複2候補の奥側",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              2,
+              5
+            ],
+            "upgraded": true
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              7,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              7,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              2,
+              5
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              5,
+              5
+            ],
+            "upgraded": true
+          }
+        ],
+        "hands": {
+          "A": {
+            "R": 1
+          },
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": [
+          {
+            "stage": 3,
+            "mode": "swap",
+            "reason": "rank",
+            "winner": "AR"
+          }
+        ]
+      }
+    },
+    {
+      "id": "E15",
+      "title": "空く予定でも行き所のない歩打ち",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "BG",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              5,
+              1
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "P": 1
+          },
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "drop",
+            "kind": "P",
+            "to": [
+              5,
+              1
+            ]
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BG",
+            "to": [
+              6,
+              2
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expectedError": "dead-end drop"
+    },
+    {
+      "id": "E16",
+      "title": "敵占有駒が残る条件付き打ち",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "BS",
+            "side": "B",
+            "kind": "S",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BG",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              8,
+              7
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "P": 1
+          },
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "drop",
+            "kind": "P",
+            "to": [
+              5,
+              5
+            ]
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BG",
+            "to": [
+              8,
+              8
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "BS",
+            "side": "B",
+            "kind": "S",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BG",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              8,
+              8
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "P": 1
+          },
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": []
+      }
+    },
+    {
+      "id": "E17",
+      "title": "二歩が解消しない対照局面",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AP",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              1,
+              4
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "P": 1
+          },
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "drop",
+            "kind": "P",
+            "to": [
+              5,
+              6
+            ]
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              5,
+              4
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AP",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              5,
+              4
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "P": 1
+          },
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": []
+      }
+    },
+    {
+      "id": "E18",
+      "title": "途中捕獲より奥の打ち駒は競合しない",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              1,
+              5
+            ]
+          },
+          {
+            "id": "BS",
+            "side": "B",
+            "kind": "S",
+            "at": [
+              3,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {
+            "P": 1
+          }
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              7,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "drop",
+            "kind": "P",
+            "to": [
+              5,
+              5
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              3,
+              5
+            ]
+          },
+          {
+            "id": "drop:B",
+            "side": "B",
+            "kind": "P",
+            "at": [
+              5,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "S": 1
+          },
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": []
+      }
+    },
+    {
+      "id": "E19",
+      "title": "王同士の同格相討ち",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              5,
+              3
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AK",
+            "to": [
+              5,
+              4
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BK",
+            "to": [
+              5,
+              4
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "outcome": {
+          "winner": "draw",
+          "reason": "both_kings"
+        },
+        "dropBans": [],
+        "contacts": [
+          {
+            "stage": 1,
+            "reason": "rank",
+            "winner": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "E20",
+      "title": "動けなかった銀は低格の歩に捕獲される",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AS",
+            "side": "A",
+            "kind": "S",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "AG",
+            "side": "A",
+            "kind": "G",
+            "at": [
+              4,
+              4
+            ]
+          },
+          {
+            "id": "BP",
+            "side": "B",
+            "kind": "P",
+            "at": [
+              5,
+              4
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AS",
+            "to": [
+              4,
+              4
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BP",
+            "to": [
+              5,
+              5
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AG",
+            "side": "A",
+            "kind": "G",
+            "at": [
+              4,
+              4
+            ]
+          },
+          {
+            "id": "BP",
+            "side": "B",
+            "kind": "P",
+            "at": [
+              5,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {
+            "S": 1
+          }
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": [
+          {
+            "stage": 1,
+            "reason": "unmoved",
+            "winner": "BP"
+          }
+        ]
+      }
+    },
+    {
+      "id": "E21",
+      "title": "双方王捕獲の比較格と移動後昇格",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              8,
+              7
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              2,
+              3
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              2,
+              4
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              8,
+              6
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              2,
+              3
+            ],
+            "choice": "upgrade"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              8,
+              7
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              2,
+              3
+            ],
+            "upgraded": true
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              8,
+              7
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "outcome": {
+          "winner": "draw",
+          "reason": "both_kings"
+        },
+        "dropBans": []
+      }
+    },
+    {
+      "id": "E22",
+      "title": "香の途中停止と実到達の強制成り",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AL",
+            "side": "A",
+            "kind": "L",
+            "at": [
+              1,
+              4
+            ]
+          },
+          {
+            "id": "BS",
+            "side": "B",
+            "kind": "S",
+            "at": [
+              1,
+              3
+            ]
+          },
+          {
+            "id": "BG",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              8,
+              7
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AL",
+            "to": [
+              1,
+              1
+            ],
+            "choice": "promote"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BG",
+            "to": [
+              8,
+              8
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AL",
+            "side": "A",
+            "kind": "L",
+            "at": [
+              1,
+              3
+            ],
+            "promoted": true
+          },
+          {
+            "id": "BG",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              8,
+              8
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "S": 1
+          },
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": []
+      }
+    },
+    {
+      "id": "E23",
+      "title": "打ち歩詰めの扱いを確認する局面",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              5,
+              1
+            ]
+          },
+          {
+            "id": "AG1",
+            "side": "A",
+            "kind": "G",
+            "at": [
+              4,
+              3
+            ]
+          },
+          {
+            "id": "AG2",
+            "side": "A",
+            "kind": "G",
+            "at": [
+              6,
+              3
+            ]
+          },
+          {
+            "id": "AP1",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              4,
+              2
+            ]
+          },
+          {
+            "id": "AP2",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              6,
+              2
+            ]
+          },
+          {
+            "id": "AN",
+            "side": "A",
+            "kind": "N",
+            "at": [
+              4,
+              4
+            ]
+          },
+          {
+            "id": "BL",
+            "side": "B",
+            "kind": "L",
+            "at": [
+              1,
+              1
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "P": 1
+          },
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "drop",
+            "kind": "P",
+            "to": [
+              5,
+              2
+            ]
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BL",
+            "to": [
+              1,
+              2
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              5,
+              1
+            ]
+          },
+          {
+            "id": "AG1",
+            "side": "A",
+            "kind": "G",
+            "at": [
+              4,
+              3
+            ]
+          },
+          {
+            "id": "AG2",
+            "side": "A",
+            "kind": "G",
+            "at": [
+              6,
+              3
+            ]
+          },
+          {
+            "id": "AP1",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              4,
+              2
+            ]
+          },
+          {
+            "id": "AP2",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              6,
+              2
+            ]
+          },
+          {
+            "id": "AN",
+            "side": "A",
+            "kind": "N",
+            "at": [
+              4,
+              4
+            ]
+          },
+          {
+            "id": "BL",
+            "side": "B",
+            "kind": "L",
+            "at": [
+              1,
+              2
+            ]
+          },
+          {
+            "id": "drop:A",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              5,
+              2
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": []
+      }
+    },
+    {
+      "id": "N01",
+      "title": "同方向・歩なし・停止した飛車を通常捕獲",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              1,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              3,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              7,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              5,
+              5
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              5,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "R": 1
+          },
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": [
+          {
+            "stage": 4,
+            "reason": "stopped",
+            "winner": "AR"
+          }
+        ]
+      }
+    },
+    {
+      "id": "N02",
+      "title": "追突する高格側が勝つ",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              1,
+              5
+            ],
+            "upgraded": true
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              3,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              7,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              5,
+              5
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              5,
+              5
+            ],
+            "upgraded": true
+          }
+        ],
+        "hands": {
+          "A": {
+            "R": 1
+          },
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": [
+          {
+            "stage": 4,
+            "reason": "stopped",
+            "winner": "AR"
+          }
+        ]
+      }
+    },
+    {
+      "id": "N03",
+      "title": "目的地で止まった高格駒も追いつかれれば通常捕獲",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              1,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              3,
+              5
+            ],
+            "upgraded": true
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              7,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              5,
+              5
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              5,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "R": 1
+          },
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": [
+          {
+            "stage": 4,
+            "reason": "stopped",
+            "winner": "AR"
+          }
+        ]
+      }
+    },
+    {
+      "id": "N04",
+      "title": "異なる段階に交差マスを通過して接触しない",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              1,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              4,
+              3
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              7,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              4,
+              7
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              7,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              4,
+              7
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": []
+      }
+    },
+    {
+      "id": "N05",
+      "title": "同じ段階の交差マスで接触",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              1,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              4,
+              2
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              7,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              4,
+              7
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "R": 1
+          },
+          "B": {
+            "R": 1
+          }
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": [
+          {
+            "stage": 3,
+            "reason": "rank",
+            "winner": null
+          }
+        ]
+      }
+    },
+    {
+      "id": "N06",
+      "title": "角の線分だけの交差",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AB",
+            "side": "A",
+            "kind": "B",
+            "at": [
+              1,
+              1
+            ]
+          },
+          {
+            "id": "BB",
+            "side": "B",
+            "kind": "B",
+            "at": [
+              2,
+              1
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AB",
+            "to": [
+              3,
+              3
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BB",
+            "to": [
+              1,
+              2
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AB",
+            "side": "A",
+            "kind": "B",
+            "at": [
+              3,
+              3
+            ]
+          },
+          {
+            "id": "BB",
+            "side": "B",
+            "kind": "B",
+            "at": [
+              1,
+              2
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": []
+      }
+    },
+    {
+      "id": "N07",
+      "title": "空き3マスの向かい合いは中央接触",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              2,
+              5
+            ],
+            "upgraded": true
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              6,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              6,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              2,
+              5
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              4,
+              5
+            ],
+            "upgraded": true
+          }
+        ],
+        "hands": {
+          "A": {
+            "R": 1
+          },
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": [
+          {
+            "stage": 2,
+            "mode": "same_square",
+            "winner": "AR",
+            "reason": "rank"
+          }
+        ]
+      }
+    },
+    {
+      "id": "N08",
+      "title": "遠い目的地でも空き4マスの交換位置は同じ",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              2,
+              5
+            ],
+            "upgraded": true
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              7,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              9,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              1,
+              5
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              5,
+              5
+            ],
+            "upgraded": true
+          }
+        ],
+        "hands": {
+          "A": {
+            "R": 1
+          },
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": [
+          {
+            "stage": 3,
+            "mode": "swap",
+            "winner": "AR",
+            "reason": "rank"
+          }
+        ]
+      }
+    },
+    {
+      "id": "N09",
+      "title": "部分移動後に味方障害の捕獲を待ち再開",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              1,
+              5
+            ]
+          },
+          {
+            "id": "AB",
+            "side": "A",
+            "kind": "B",
+            "at": [
+              4,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              4,
+              1
+            ],
+            "upgraded": true
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              7,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              4,
+              5
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              4,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "R": 1
+          },
+          "B": {
+            "B": 1
+          }
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": [
+          {
+            "stage": 5,
+            "reason": "chain",
+            "winner": "AR"
+          }
+        ]
+      }
+    },
+    {
+      "id": "N10",
+      "title": "経路外の味方捕獲だけでは連戦も接触も起きない",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              1,
+              5
+            ]
+          },
+          {
+            "id": "AB",
+            "side": "A",
+            "kind": "B",
+            "at": [
+              4,
+              4
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              4,
+              1
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              7,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              4,
+              4
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              7,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              4,
+              4
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {
+            "B": 1
+          }
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": []
+      }
+    },
+    {
+      "id": "N11",
+      "title": "桂は途中の敵金を飛び越す",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AN",
+            "side": "A",
+            "kind": "N",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BG1",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              4,
+              4
+            ]
+          },
+          {
+            "id": "BG2",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              8,
+              7
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AN",
+            "to": [
+              4,
+              3
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BG2",
+            "to": [
+              8,
+              8
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AN",
+            "side": "A",
+            "kind": "N",
+            "at": [
+              4,
+              3
+            ]
+          },
+          {
+            "id": "BG1",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              4,
+              4
+            ]
+          },
+          {
+            "id": "BG2",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              8,
+              8
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": []
+      }
+    },
+    {
+      "id": "N12",
+      "title": "桂の着地から相手が同段階に退出",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AN",
+            "side": "A",
+            "kind": "N",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BG",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              4,
+              3
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AN",
+            "to": [
+              4,
+              3
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BG",
+            "to": [
+              4,
+              4
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AN",
+            "side": "A",
+            "kind": "N",
+            "at": [
+              4,
+              3
+            ]
+          },
+          {
+            "id": "BG",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              4,
+              4
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": []
+      }
+    },
+    {
+      "id": "N13",
+      "title": "桂と銀の同段階着地競合",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AN",
+            "side": "A",
+            "kind": "N",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BS",
+            "side": "B",
+            "kind": "S",
+            "at": [
+              3,
+              2
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AN",
+            "to": [
+              4,
+              3
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BS",
+            "to": [
+              4,
+              3
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "BS",
+            "side": "B",
+            "kind": "S",
+            "at": [
+              4,
+              3
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {
+            "N": 1
+          }
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": [
+          {
+            "stage": 1,
+            "reason": "rank",
+            "winner": "BS"
+          }
+        ]
+      }
+    },
+    {
+      "id": "N14",
+      "title": "同段階の独立した停止駒捕獲を両方適用",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              1,
+              5
+            ]
+          },
+          {
+            "id": "BS",
+            "side": "B",
+            "kind": "S",
+            "at": [
+              3,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              7,
+              3
+            ]
+          },
+          {
+            "id": "AS",
+            "side": "A",
+            "kind": "S",
+            "at": [
+              5,
+              3
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              3,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              5,
+              3
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              3,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              5,
+              3
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "S": 1
+          },
+          "B": {
+            "S": 1
+          }
+        },
+        "outcome": null,
+        "dropBans": [],
+        "captureStages": [
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "id": "N15",
+      "title": "双方が最初から塞がれて移動0",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AP",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              5,
+              6
+            ]
+          },
+          {
+            "id": "AB",
+            "side": "A",
+            "kind": "B",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BP",
+            "side": "B",
+            "kind": "P",
+            "at": [
+              2,
+              2
+            ]
+          },
+          {
+            "id": "BG",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              2,
+              3
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AP",
+            "to": [
+              5,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BP",
+            "to": [
+              2,
+              3
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AP",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              5,
+              6
+            ]
+          },
+          {
+            "id": "AB",
+            "side": "A",
+            "kind": "B",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BP",
+            "side": "B",
+            "kind": "P",
+            "at": [
+              2,
+              2
+            ]
+          },
+          {
+            "id": "BG",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              2,
+              3
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": []
+      }
+    },
+    {
+      "id": "N16",
+      "title": "王は高格の打ち飛車にも勝つ",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {
+            "R": 1
+          }
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AK",
+            "to": [
+              9,
+              8
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "drop",
+            "kind": "R",
+            "to": [
+              9,
+              8
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              8
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "R": 1
+          },
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": [],
+        "captureStages": [
+          1
+        ]
+      }
+    },
+    {
+      "id": "N17",
+      "title": "打ち駒は盤上駒をその接触位置で止める",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              1,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {
+            "P": 1
+          }
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              7,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "drop",
+            "kind": "P",
+            "to": [
+              4,
+              5
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              4,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "P": 1
+          },
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": [],
+        "captureStages": [
+          3
+        ]
+      }
+    },
+    {
+      "id": "N18",
+      "title": "敵王の元位置への条件付き打ち",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              5,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "P": 1
+          },
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "drop",
+            "kind": "P",
+            "to": [
+              5,
+              5
+            ]
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BK",
+            "to": [
+              5,
+              6
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              5,
+              6
+            ]
+          },
+          {
+            "id": "drop:A",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              5,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": []
+      }
+    },
+    {
+      "id": "N19",
+      "title": "異種同格の同時打ちは保持と種類別禁止",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "R": 1
+          },
+          "B": {
+            "B": 1
+          }
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "drop",
+            "kind": "R",
+            "to": [
+              5,
+              5
+            ]
+          },
+          {
+            "side": "B",
+            "type": "drop",
+            "kind": "B",
+            "to": [
+              5,
+              5
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "R": 1
+          },
+          "B": {
+            "B": 1
+          }
+        },
+        "outcome": null,
+        "dropBans": [
+          {
+            "side": "A",
+            "kind": "R",
+            "to": [
+              5,
+              5
+            ],
+            "remaining": 1
+          },
+          {
+            "side": "B",
+            "kind": "B",
+            "to": [
+              5,
+              5
+            ],
+            "remaining": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "N20",
+      "title": "異格同時打ち",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "P": 1
+          },
+          "B": {
+            "G": 1
+          }
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "drop",
+            "kind": "P",
+            "to": [
+              5,
+              5
+            ]
+          },
+          {
+            "side": "B",
+            "type": "drop",
+            "kind": "G",
+            "to": [
+              5,
+              5
+            ]
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "drop:B",
+            "side": "B",
+            "kind": "G",
+            "at": [
+              5,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {
+            "P": 1
+          }
+        },
+        "outcome": null,
+        "dropBans": []
+      }
+    },
+    {
+      "id": "N21",
+      "title": "二歩解消前に通過済みのマスへ後から成立する打ち",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AP",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              5,
+              1
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "P": 1
+          },
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "drop",
+            "kind": "P",
+            "to": [
+              5,
+              3
+            ]
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              5,
+              5
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "drop:A",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              5,
+              3
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {
+            "P": 1
+          }
+        },
+        "outcome": null,
+        "dropBans": [],
+        "dropStages": [
+          4
+        ]
+      }
+    },
+    {
+      "id": "N22",
+      "title": "二歩未解消の打ちは通過を妨げない",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AP",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              5,
+              1
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "P": 1
+          },
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "drop",
+            "kind": "P",
+            "to": [
+              5,
+              3
+            ]
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              5,
+              4
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AP",
+            "side": "A",
+            "kind": "P",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              5,
+              4
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "P": 1
+          },
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": [],
+        "captureStages": []
+      }
+    },
+    {
+      "id": "N23",
+      "title": "部分停止した高格駒も追いつかれれば通常捕獲",
+      "input": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              1,
+              5
+            ]
+          },
+          {
+            "id": "BR",
+            "side": "B",
+            "kind": "R",
+            "at": [
+              3,
+              5
+            ],
+            "upgraded": true
+          },
+          {
+            "id": "BP",
+            "side": "B",
+            "kind": "P",
+            "at": [
+              6,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {},
+          "B": {}
+        },
+        "actions": [
+          {
+            "side": "A",
+            "type": "move",
+            "piece": "AR",
+            "to": [
+              7,
+              5
+            ],
+            "choice": "none"
+          },
+          {
+            "side": "B",
+            "type": "move",
+            "piece": "BR",
+            "to": [
+              7,
+              5
+            ],
+            "choice": "none"
+          }
+        ]
+      },
+      "expect": {
+        "pieces": [
+          {
+            "id": "AK",
+            "side": "A",
+            "kind": "K",
+            "at": [
+              9,
+              9
+            ]
+          },
+          {
+            "id": "BK",
+            "side": "B",
+            "kind": "K",
+            "at": [
+              9,
+              1
+            ]
+          },
+          {
+            "id": "AR",
+            "side": "A",
+            "kind": "R",
+            "at": [
+              5,
+              5
+            ]
+          },
+          {
+            "id": "BP",
+            "side": "B",
+            "kind": "P",
+            "at": [
+              6,
+              5
+            ]
+          }
+        ],
+        "hands": {
+          "A": {
+            "R": 1
+          },
+          "B": {}
+        },
+        "outcome": null,
+        "dropBans": [],
+        "contacts": [
+          {
+            "stage": 4,
+            "reason": "stopped",
+            "winner": "AR"
+          }
+        ]
+      }
+    }
+  ]
+}

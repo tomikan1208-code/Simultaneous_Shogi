@@ -1,0 +1,21 @@
+{
+  "name": "simultaneous-shogi",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:wasm": "node scripts/build-wasm.mjs",
+    "build:web": "node scripts/build-web.mjs",
+    "build": "npm run build:wasm && npm run build:web",
+    "dev": "node scripts/serve.mjs",
+    "test": "node scripts/verify.mjs",
+    "check": "node scripts/check.mjs"
+  },
+  "devDependencies": {
+    "happy-dom": "20.0.11",
+    "typescript": "5.9.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
