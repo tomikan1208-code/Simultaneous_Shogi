@@ -1,0 +1,1036 @@
+{
+  "format": "simultaneous-shogi/external-ai-trials-v1",
+  "date": "2026-10-21",
+  "trials": [
+    {
+      "name": "current-2000nodes-01",
+      "result": {
+        "format": "simultaneous-shogi/usi-match-v1",
+        "model": {
+          "run": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\dashboard\\runs\\continued-1792516340972",
+          "checkpoint": "checkpoints/g0017.pt",
+          "generation": 17,
+          "sha256": "db1d54fc1633d064ce5ebfe989451661c07356849005ddcc2b0dd94cb6a435e5",
+          "source_fingerprint": "e088c000159490601b5f62fb48aaa712235ab4bed8a86b6a11857d8f43381e70"
+        },
+        "baseline": null,
+        "engine": {
+          "name": "YaneuraOu NNUE V9.00Git 64AVX2 TOURNAMENT",
+          "executable": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\external-shogi\\yaneuraou\\NNUE_halfkp_256x2_32_32\\YaneuraOu_NNUE_halfkp_256x2_32_32-V900Git_AVX2.exe",
+          "executable_sha256": "6933dadadb8294a311c79a547768d555528870a1c20f365667ba8a32c3a6c068",
+          "options": {
+            "Threads": "1",
+            "USI_Hash": "64",
+            "MultiPV": "4",
+            "USI_OwnBook": "false",
+            "BookFile": "no_book",
+            "EnteringKingRule": "NoEnteringKing",
+            "FV_SCALE": "20",
+            "EvalDir": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\external-shogi\\tanuki\\eval"
+          },
+          "weights_sha256": "1141d275bceec911156801f27303dc9ff5beb24f4f59144cc069306c59e80782"
+        },
+        "rules": {
+          "profile": "balance-v1",
+          "repetitionLimit": 4,
+          "roundLimit": 200,
+          "version": "0.7",
+          "balance": {
+            "movement": "all_pieces",
+            "consecutiveThreshold": 2,
+            "rankOffset": 0,
+            "minimumRank": 0,
+            "restRecovery": 1,
+            "homeRows": 3,
+            "defenseBonus": 1,
+            "defensePosition": "destination",
+            "defenseCap": null
+          }
+        },
+        "rules_hash": "c6046b8834db22d51a72e4261257a8cfa0fe884173d28466acdaef613a2f000a",
+        "pairs": 2,
+        "games": 4,
+        "seed": 719005,
+        "wins": 2,
+        "draws": 0,
+        "losses": 2,
+        "score": 0.5,
+        "interval": [
+          0.0,
+          1.0
+        ],
+        "confidence": 0.95,
+        "interval_method": "Hoeffding on independent color-swapped pairs",
+        "decision": "inconclusive",
+        "adapter": {
+          "decisions": 38,
+          "queries": 36,
+          "usi_actions": 36,
+          "fallbacks": 2,
+          "fallback:nonmoving_king_in_check": 2,
+          "seconds": 6.203267899923958,
+          "usi_coverage": 0.9473684210526315
+        },
+        "seconds": 6.984821699967142,
+        "search": {
+          "policy_seconds": 0.15604610013542697,
+          "preview_seconds": 0.21295960008865222,
+          "value_seconds": 0.17702420009300113,
+          "solver_seconds": 0.018467500165570527,
+          "cells": 2432,
+          "unique_leaves": 1568,
+          "roots": 38,
+          "gap_sum": 0.0012559225844440834,
+          "covered_shortlists": 76,
+          "repetition_widened": 0,
+          "filtered_actions": 7308
+        },
+        "results": [
+          {
+            "game": 0,
+            "pair": 0,
+            "swapped": false,
+            "learner_side": "A",
+            "score": 1.0,
+            "rounds": 7,
+            "outcome": {
+              "reason": "king_captured",
+              "winner": "A"
+            },
+            "adapter_counts": {
+              "decisions": 7,
+              "queries": 7,
+              "usi_actions": 7
+            }
+          },
+          {
+            "game": 1,
+            "pair": 0,
+            "swapped": true,
+            "learner_side": "B",
+            "score": 0.0,
+            "rounds": 12,
+            "outcome": {
+              "reason": "king_captured",
+              "winner": "A"
+            },
+            "adapter_counts": {
+              "decisions": 12,
+              "queries": 11,
+              "usi_actions": 11,
+              "fallbacks": 1,
+              "fallback:nonmoving_king_in_check": 1
+            }
+          },
+          {
+            "game": 2,
+            "pair": 1,
+            "swapped": false,
+            "learner_side": "A",
+            "score": 1.0,
+            "rounds": 7,
+            "outcome": {
+              "reason": "king_captured",
+              "winner": "A"
+            },
+            "adapter_counts": {
+              "decisions": 7,
+              "queries": 7,
+              "usi_actions": 7
+            }
+          },
+          {
+            "game": 3,
+            "pair": 1,
+            "swapped": true,
+            "learner_side": "B",
+            "score": 0.0,
+            "rounds": 12,
+            "outcome": {
+              "reason": "king_captured",
+              "winner": "A"
+            },
+            "adapter_counts": {
+              "decisions": 12,
+              "queries": 11,
+              "usi_actions": 11,
+              "fallbacks": 1,
+              "fallback:nonmoving_king_in_check": 1
+            }
+          }
+        ],
+        "budget": {
+          "nodes_per_usi_query": 2000,
+          "model_candidates": 8,
+          "regret_iterations": 128,
+          "equal_wall_time": false
+        }
+      },
+      "environment": {
+        "format": "simultaneous-shogi/usi-teacher-v1",
+        "rules": {
+          "profile": "balance-v1",
+          "repetitionLimit": 4,
+          "roundLimit": 200,
+          "version": "0.7",
+          "balance": {
+            "movement": "all_pieces",
+            "consecutiveThreshold": 2,
+            "rankOffset": 0,
+            "minimumRank": 0,
+            "restRecovery": 1,
+            "homeRows": 3,
+            "defenseBonus": 1,
+            "defensePosition": "destination",
+            "defenseCap": null
+          }
+        },
+        "rules_hash": "c6046b8834db22d51a72e4261257a8cfa0fe884173d28466acdaef613a2f000a",
+        "source_fingerprint": "6ff8cb6f5d0243514e67f12334d84cfd131521f5b9296b89d86f96bd6cc26b1a",
+        "adapter_sha256": "d1b92b765da7148da30356de3bfef645757e4b36f4c2bf42624e9201738d8624",
+        "engine": {
+          "name": "YaneuraOu NNUE V9.00Git 64AVX2 TOURNAMENT",
+          "executable": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\external-shogi\\yaneuraou\\NNUE_halfkp_256x2_32_32\\YaneuraOu_NNUE_halfkp_256x2_32_32-V900Git_AVX2.exe",
+          "executable_sha256": "6933dadadb8294a311c79a547768d555528870a1c20f365667ba8a32c3a6c068",
+          "options": {
+            "Threads": "1",
+            "USI_Hash": "64",
+            "MultiPV": "4",
+            "USI_OwnBook": "false",
+            "BookFile": "no_book",
+            "EnteringKingRule": "NoEnteringKing",
+            "FV_SCALE": "20",
+            "EvalDir": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\external-shogi\\tanuki\\eval"
+          },
+          "weights_sha256": "1141d275bceec911156801f27303dc9ff5beb24f4f59144cc069306c59e80782"
+        },
+        "nodes_per_query": 2000,
+        "seed": 719005,
+        "pairs": 2,
+        "config": {
+          "seed": 20261020,
+          "generations": 0,
+          "games_per_generation": 128,
+          "environments": 32,
+          "workers": 1,
+          "candidates": 8,
+          "cheap_candidates": 4,
+          "deep_fraction": 0.25,
+          "regret_iterations": 128,
+          "batch_size": 128,
+          "value_batch_size": 256,
+          "updates": 64,
+          "replay_capacity": 4096,
+          "recent_fraction": 0.5,
+          "history_fraction": 0.25,
+          "history_size": 6,
+          "learning_rate": 0.0003,
+          "bootstrap_generations": 20,
+          "bootstrap_weight": 0,
+          "eval_pairs": 16,
+          "eval_every": 5,
+          "eval_seed": 719005,
+          "round_limit": 200,
+          "device": "cpu",
+          "amp": true,
+          "mirror_augmentation": true,
+          "channels": 32,
+          "balance": {
+            "movement": "all_pieces",
+            "consecutiveThreshold": 2,
+            "rankOffset": 0,
+            "minimumRank": 0,
+            "restRecovery": 1,
+            "homeRows": 3,
+            "defenseBonus": 1,
+            "defensePosition": "destination",
+            "defenseCap": null
+          },
+          "balance_logging": true
+        },
+        "model": {
+          "run": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\dashboard\\runs\\continued-1792516340972",
+          "checkpoint": "checkpoints/g0017.pt",
+          "generation": 17,
+          "sha256": "db1d54fc1633d064ce5ebfe989451661c07356849005ddcc2b0dd94cb6a435e5",
+          "source_fingerprint": "e088c000159490601b5f62fb48aaa712235ab4bed8a86b6a11857d8f43381e70"
+        },
+        "baseline": null,
+        "teacher_is_optimal_for_variant": false,
+        "nonpromotion_mapping": "upgrade if eligible, otherwise none",
+        "fallback": "native hunter; excluded from teacher decisions",
+        "value_target": "actual simultaneous-game outcome; USI scores are advisory only",
+        "hardware": {
+          "python": "3.11.9",
+          "torch": "2.11.0+cu128",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "cpu_threads": 2,
+          "device": "cpu",
+          "gpu": null,
+          "cuda": "12.8",
+          "runtime": "local",
+          "timestamp": 1792517597.687379
+        }
+      },
+      "artifact_directory": ".cache/external-shogi/experiments/current-2000nodes-01"
+    },
+    {
+      "name": "g0017-20000nodes-01",
+      "result": {
+        "format": "simultaneous-shogi/usi-match-v1",
+        "model": {
+          "run": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\dashboard\\runs\\continued-1792516340972",
+          "checkpoint": "checkpoints/g0017.pt",
+          "generation": 17,
+          "sha256": "db1d54fc1633d064ce5ebfe989451661c07356849005ddcc2b0dd94cb6a435e5",
+          "source_fingerprint": "e088c000159490601b5f62fb48aaa712235ab4bed8a86b6a11857d8f43381e70"
+        },
+        "baseline": null,
+        "engine": {
+          "name": "YaneuraOu NNUE V9.00Git 64AVX2 TOURNAMENT",
+          "executable": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\external-shogi\\yaneuraou\\NNUE_halfkp_256x2_32_32\\YaneuraOu_NNUE_halfkp_256x2_32_32-V900Git_AVX2.exe",
+          "executable_sha256": "6933dadadb8294a311c79a547768d555528870a1c20f365667ba8a32c3a6c068",
+          "options": {
+            "Threads": "1",
+            "USI_Hash": "64",
+            "MultiPV": "4",
+            "USI_OwnBook": "false",
+            "BookFile": "no_book",
+            "EnteringKingRule": "NoEnteringKing",
+            "FV_SCALE": "20",
+            "EvalDir": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\external-shogi\\tanuki\\eval"
+          },
+          "weights_sha256": "1141d275bceec911156801f27303dc9ff5beb24f4f59144cc069306c59e80782"
+        },
+        "rules": {
+          "profile": "balance-v1",
+          "repetitionLimit": 4,
+          "roundLimit": 200,
+          "version": "0.7",
+          "balance": {
+            "movement": "all_pieces",
+            "consecutiveThreshold": 2,
+            "rankOffset": 0,
+            "minimumRank": 0,
+            "restRecovery": 1,
+            "homeRows": 3,
+            "defenseBonus": 1,
+            "defensePosition": "destination",
+            "defenseCap": null
+          }
+        },
+        "rules_hash": "c6046b8834db22d51a72e4261257a8cfa0fe884173d28466acdaef613a2f000a",
+        "pairs": 4,
+        "games": 8,
+        "seed": 719006,
+        "wins": 0,
+        "draws": 0,
+        "losses": 8,
+        "score": 0.0,
+        "interval": [
+          0.0,
+          0.6790507578703098
+        ],
+        "confidence": 0.95,
+        "interval_method": "Hoeffding on independent color-swapped pairs",
+        "decision": "inconclusive",
+        "adapter": {
+          "decisions": 100,
+          "queries": 84,
+          "usi_actions": 84,
+          "fallbacks": 16,
+          "fallback:nonmoving_king_in_check": 16,
+          "seconds": 17.333411499857903,
+          "usi_coverage": 0.84
+        },
+        "seconds": 19.91339560004417,
+        "search": {
+          "policy_seconds": 0.5385575000545941,
+          "preview_seconds": 0.7290041999076493,
+          "value_seconds": 0.7076184999896213,
+          "solver_seconds": 0.05585610005073249,
+          "cells": 6400,
+          "unique_leaves": 4999,
+          "roots": 100,
+          "gap_sum": 0.12051969452778491,
+          "covered_shortlists": 200,
+          "repetition_widened": 0,
+          "filtered_actions": 20325
+        },
+        "results": [
+          {
+            "game": 0,
+            "pair": 0,
+            "swapped": false,
+            "learner_side": "A",
+            "score": 0.0,
+            "rounds": 14,
+            "outcome": {
+              "reason": "king_captured",
+              "winner": "B"
+            },
+            "adapter_counts": {
+              "decisions": 14,
+              "queries": 11,
+              "usi_actions": 11,
+              "fallbacks": 3,
+              "fallback:nonmoving_king_in_check": 3
+            }
+          },
+          {
+            "game": 1,
+            "pair": 0,
+            "swapped": true,
+            "learner_side": "B",
+            "score": 0.0,
+            "rounds": 11,
+            "outcome": {
+              "reason": "king_captured",
+              "winner": "A"
+            },
+            "adapter_counts": {
+              "decisions": 11,
+              "queries": 10,
+              "usi_actions": 10,
+              "fallbacks": 1,
+              "fallback:nonmoving_king_in_check": 1
+            }
+          },
+          {
+            "game": 2,
+            "pair": 1,
+            "swapped": false,
+            "learner_side": "A",
+            "score": 0.0,
+            "rounds": 14,
+            "outcome": {
+              "reason": "king_captured",
+              "winner": "B"
+            },
+            "adapter_counts": {
+              "decisions": 14,
+              "queries": 11,
+              "usi_actions": 11,
+              "fallbacks": 3,
+              "fallback:nonmoving_king_in_check": 3
+            }
+          },
+          {
+            "game": 3,
+            "pair": 1,
+            "swapped": true,
+            "learner_side": "B",
+            "score": 0.0,
+            "rounds": 11,
+            "outcome": {
+              "reason": "king_captured",
+              "winner": "A"
+            },
+            "adapter_counts": {
+              "decisions": 11,
+              "queries": 10,
+              "usi_actions": 10,
+              "fallbacks": 1,
+              "fallback:nonmoving_king_in_check": 1
+            }
+          },
+          {
+            "game": 4,
+            "pair": 2,
+            "swapped": false,
+            "learner_side": "A",
+            "score": 0.0,
+            "rounds": 14,
+            "outcome": {
+              "reason": "king_captured",
+              "winner": "B"
+            },
+            "adapter_counts": {
+              "decisions": 14,
+              "queries": 11,
+              "usi_actions": 11,
+              "fallbacks": 3,
+              "fallback:nonmoving_king_in_check": 3
+            }
+          },
+          {
+            "game": 5,
+            "pair": 2,
+            "swapped": true,
+            "learner_side": "B",
+            "score": 0.0,
+            "rounds": 11,
+            "outcome": {
+              "reason": "king_captured",
+              "winner": "A"
+            },
+            "adapter_counts": {
+              "decisions": 11,
+              "queries": 10,
+              "usi_actions": 10,
+              "fallbacks": 1,
+              "fallback:nonmoving_king_in_check": 1
+            }
+          },
+          {
+            "game": 6,
+            "pair": 3,
+            "swapped": false,
+            "learner_side": "A",
+            "score": 0.0,
+            "rounds": 14,
+            "outcome": {
+              "reason": "king_captured",
+              "winner": "B"
+            },
+            "adapter_counts": {
+              "decisions": 14,
+              "queries": 11,
+              "usi_actions": 11,
+              "fallbacks": 3,
+              "fallback:nonmoving_king_in_check": 3
+            }
+          },
+          {
+            "game": 7,
+            "pair": 3,
+            "swapped": true,
+            "learner_side": "B",
+            "score": 0.0,
+            "rounds": 11,
+            "outcome": {
+              "reason": "king_captured",
+              "winner": "A"
+            },
+            "adapter_counts": {
+              "decisions": 11,
+              "queries": 10,
+              "usi_actions": 10,
+              "fallbacks": 1,
+              "fallback:nonmoving_king_in_check": 1
+            }
+          }
+        ],
+        "budget": {
+          "nodes_per_usi_query": 20000,
+          "model_candidates": 8,
+          "regret_iterations": 128,
+          "equal_wall_time": false
+        }
+      },
+      "environment": {
+        "format": "simultaneous-shogi/usi-teacher-v1",
+        "rules": {
+          "profile": "balance-v1",
+          "repetitionLimit": 4,
+          "roundLimit": 200,
+          "version": "0.7",
+          "balance": {
+            "movement": "all_pieces",
+            "consecutiveThreshold": 2,
+            "rankOffset": 0,
+            "minimumRank": 0,
+            "restRecovery": 1,
+            "homeRows": 3,
+            "defenseBonus": 1,
+            "defensePosition": "destination",
+            "defenseCap": null
+          }
+        },
+        "rules_hash": "c6046b8834db22d51a72e4261257a8cfa0fe884173d28466acdaef613a2f000a",
+        "source_fingerprint": "6ff8cb6f5d0243514e67f12334d84cfd131521f5b9296b89d86f96bd6cc26b1a",
+        "adapter_sha256": "d1b92b765da7148da30356de3bfef645757e4b36f4c2bf42624e9201738d8624",
+        "engine": {
+          "name": "YaneuraOu NNUE V9.00Git 64AVX2 TOURNAMENT",
+          "executable": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\external-shogi\\yaneuraou\\NNUE_halfkp_256x2_32_32\\YaneuraOu_NNUE_halfkp_256x2_32_32-V900Git_AVX2.exe",
+          "executable_sha256": "6933dadadb8294a311c79a547768d555528870a1c20f365667ba8a32c3a6c068",
+          "options": {
+            "Threads": "1",
+            "USI_Hash": "64",
+            "MultiPV": "4",
+            "USI_OwnBook": "false",
+            "BookFile": "no_book",
+            "EnteringKingRule": "NoEnteringKing",
+            "FV_SCALE": "20",
+            "EvalDir": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\external-shogi\\tanuki\\eval"
+          },
+          "weights_sha256": "1141d275bceec911156801f27303dc9ff5beb24f4f59144cc069306c59e80782"
+        },
+        "nodes_per_query": 20000,
+        "seed": 719006,
+        "pairs": 4,
+        "config": {
+          "seed": 20261020,
+          "generations": 0,
+          "games_per_generation": 128,
+          "environments": 32,
+          "workers": 1,
+          "candidates": 8,
+          "cheap_candidates": 4,
+          "deep_fraction": 0.25,
+          "regret_iterations": 128,
+          "batch_size": 128,
+          "value_batch_size": 256,
+          "updates": 64,
+          "replay_capacity": 4096,
+          "recent_fraction": 0.5,
+          "history_fraction": 0.25,
+          "history_size": 6,
+          "learning_rate": 0.0003,
+          "bootstrap_generations": 20,
+          "bootstrap_weight": 0,
+          "eval_pairs": 16,
+          "eval_every": 5,
+          "eval_seed": 719005,
+          "round_limit": 200,
+          "device": "cpu",
+          "amp": true,
+          "mirror_augmentation": true,
+          "channels": 32,
+          "balance": {
+            "movement": "all_pieces",
+            "consecutiveThreshold": 2,
+            "rankOffset": 0,
+            "minimumRank": 0,
+            "restRecovery": 1,
+            "homeRows": 3,
+            "defenseBonus": 1,
+            "defensePosition": "destination",
+            "defenseCap": null
+          },
+          "balance_logging": true
+        },
+        "model": {
+          "run": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\dashboard\\runs\\continued-1792516340972",
+          "checkpoint": "checkpoints/g0017.pt",
+          "generation": 17,
+          "sha256": "db1d54fc1633d064ce5ebfe989451661c07356849005ddcc2b0dd94cb6a435e5",
+          "source_fingerprint": "e088c000159490601b5f62fb48aaa712235ab4bed8a86b6a11857d8f43381e70"
+        },
+        "baseline": null,
+        "teacher_is_optimal_for_variant": false,
+        "nonpromotion_mapping": "upgrade if eligible, otherwise none",
+        "fallback": "native hunter; excluded from teacher decisions",
+        "value_target": "actual simultaneous-game outcome; USI scores are advisory only",
+        "hardware": {
+          "python": "3.11.9",
+          "torch": "2.11.0+cu128",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "cpu_threads": 2,
+          "device": "cpu",
+          "gpu": null,
+          "cuda": "12.8",
+          "runtime": "local",
+          "timestamp": 1792517669.255109
+        }
+      },
+      "artifact_directory": ".cache/external-shogi/experiments/g0017-20000nodes-01"
+    },
+    {
+      "name": "distilled-g0017-20000nodes-01",
+      "result": {
+        "format": "simultaneous-shogi/usi-match-v1",
+        "model": {
+          "run": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\external-shogi\\distilled-g0017-demo-01",
+          "checkpoint": "checkpoints/g0001.pt",
+          "generation": 1,
+          "sha256": "219239903ddeb18c2fed9a7ee71211e59fe4c4571749885fb79e8923b554bd39",
+          "source_fingerprint": "6ff8cb6f5d0243514e67f12334d84cfd131521f5b9296b89d86f96bd6cc26b1a"
+        },
+        "baseline": null,
+        "engine": {
+          "name": "YaneuraOu NNUE V9.00Git 64AVX2 TOURNAMENT",
+          "executable": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\external-shogi\\yaneuraou\\NNUE_halfkp_256x2_32_32\\YaneuraOu_NNUE_halfkp_256x2_32_32-V900Git_AVX2.exe",
+          "executable_sha256": "6933dadadb8294a311c79a547768d555528870a1c20f365667ba8a32c3a6c068",
+          "options": {
+            "Threads": "1",
+            "USI_Hash": "64",
+            "MultiPV": "4",
+            "USI_OwnBook": "false",
+            "BookFile": "no_book",
+            "EnteringKingRule": "NoEnteringKing",
+            "FV_SCALE": "20",
+            "EvalDir": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\external-shogi\\tanuki\\eval"
+          },
+          "weights_sha256": "1141d275bceec911156801f27303dc9ff5beb24f4f59144cc069306c59e80782"
+        },
+        "rules": {
+          "profile": "balance-v1",
+          "repetitionLimit": 4,
+          "roundLimit": 200,
+          "version": "0.7",
+          "balance": {
+            "movement": "all_pieces",
+            "consecutiveThreshold": 2,
+            "rankOffset": 0,
+            "minimumRank": 0,
+            "restRecovery": 1,
+            "homeRows": 3,
+            "defenseBonus": 1,
+            "defensePosition": "destination",
+            "defenseCap": null
+          }
+        },
+        "rules_hash": "c6046b8834db22d51a72e4261257a8cfa0fe884173d28466acdaef613a2f000a",
+        "pairs": 2,
+        "games": 4,
+        "seed": 719105,
+        "wins": 2,
+        "draws": 0,
+        "losses": 2,
+        "score": 0.5,
+        "interval": [
+          0.0,
+          1.0
+        ],
+        "confidence": 0.95,
+        "interval_method": "Hoeffding on independent color-swapped pairs",
+        "decision": "inconclusive",
+        "adapter": {
+          "decisions": 30,
+          "queries": 27,
+          "usi_actions": 27,
+          "fallbacks": 3,
+          "fallback:nonmoving_king_in_check": 3,
+          "seconds": 5.097250000166241,
+          "usi_coverage": 0.9
+        },
+        "seconds": 6.187250500021037,
+        "search": {
+          "policy_seconds": 0.22511719976319,
+          "preview_seconds": 0.2957909998949617,
+          "value_seconds": 0.26562209997791797,
+          "solver_seconds": 0.020476199861150235,
+          "cells": 1920,
+          "unique_leaves": 1527,
+          "roots": 30,
+          "gap_sum": 0.07682559361329688,
+          "covered_shortlists": 60,
+          "repetition_widened": 0,
+          "filtered_actions": 4950
+        },
+        "results": [
+          {
+            "game": 0,
+            "pair": 0,
+            "swapped": false,
+            "learner_side": "A",
+            "score": 1.0,
+            "rounds": 5,
+            "outcome": {
+              "reason": "king_captured",
+              "winner": "A"
+            },
+            "adapter_counts": {
+              "decisions": 5,
+              "queries": 5,
+              "usi_actions": 5
+            }
+          },
+          {
+            "game": 1,
+            "pair": 0,
+            "swapped": true,
+            "learner_side": "B",
+            "score": 0.0,
+            "rounds": 7,
+            "outcome": {
+              "reason": "king_captured",
+              "winner": "A"
+            },
+            "adapter_counts": {
+              "decisions": 7,
+              "queries": 6,
+              "usi_actions": 6,
+              "fallbacks": 1,
+              "fallback:nonmoving_king_in_check": 1
+            }
+          },
+          {
+            "game": 2,
+            "pair": 1,
+            "swapped": false,
+            "learner_side": "A",
+            "score": 1.0,
+            "rounds": 5,
+            "outcome": {
+              "reason": "king_captured",
+              "winner": "A"
+            },
+            "adapter_counts": {
+              "decisions": 5,
+              "queries": 5,
+              "usi_actions": 5
+            }
+          },
+          {
+            "game": 3,
+            "pair": 1,
+            "swapped": true,
+            "learner_side": "B",
+            "score": 0.0,
+            "rounds": 13,
+            "outcome": {
+              "reason": "king_captured",
+              "winner": "A"
+            },
+            "adapter_counts": {
+              "decisions": 13,
+              "queries": 11,
+              "usi_actions": 11,
+              "fallbacks": 2,
+              "fallback:nonmoving_king_in_check": 2
+            }
+          }
+        ],
+        "budget": {
+          "nodes_per_usi_query": 20000,
+          "model_candidates": 8,
+          "regret_iterations": 128,
+          "equal_wall_time": false
+        }
+      },
+      "environment": {
+        "format": "simultaneous-shogi/usi-teacher-v1",
+        "rules": {
+          "profile": "balance-v1",
+          "repetitionLimit": 4,
+          "roundLimit": 200,
+          "version": "0.7",
+          "balance": {
+            "movement": "all_pieces",
+            "consecutiveThreshold": 2,
+            "rankOffset": 0,
+            "minimumRank": 0,
+            "restRecovery": 1,
+            "homeRows": 3,
+            "defenseBonus": 1,
+            "defensePosition": "destination",
+            "defenseCap": null
+          }
+        },
+        "rules_hash": "c6046b8834db22d51a72e4261257a8cfa0fe884173d28466acdaef613a2f000a",
+        "source_fingerprint": "6ff8cb6f5d0243514e67f12334d84cfd131521f5b9296b89d86f96bd6cc26b1a",
+        "adapter_sha256": "159f947df70901d05ab19fa8502885eda17cd8668ae893c72e82be9b63b66a1a",
+        "engine": {
+          "name": "YaneuraOu NNUE V9.00Git 64AVX2 TOURNAMENT",
+          "executable": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\external-shogi\\yaneuraou\\NNUE_halfkp_256x2_32_32\\YaneuraOu_NNUE_halfkp_256x2_32_32-V900Git_AVX2.exe",
+          "executable_sha256": "6933dadadb8294a311c79a547768d555528870a1c20f365667ba8a32c3a6c068",
+          "options": {
+            "Threads": "1",
+            "USI_Hash": "64",
+            "MultiPV": "4",
+            "USI_OwnBook": "false",
+            "BookFile": "no_book",
+            "EnteringKingRule": "NoEnteringKing",
+            "FV_SCALE": "20",
+            "EvalDir": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\external-shogi\\tanuki\\eval"
+          },
+          "weights_sha256": "1141d275bceec911156801f27303dc9ff5beb24f4f59144cc069306c59e80782"
+        },
+        "nodes_per_query": 20000,
+        "seed": 719105,
+        "pairs": 2,
+        "config": {
+          "seed": 20261020,
+          "generations": 0,
+          "games_per_generation": 128,
+          "environments": 32,
+          "workers": 1,
+          "candidates": 8,
+          "cheap_candidates": 4,
+          "deep_fraction": 0.25,
+          "regret_iterations": 128,
+          "batch_size": 128,
+          "value_batch_size": 256,
+          "updates": 8,
+          "replay_capacity": 4096,
+          "recent_fraction": 0.5,
+          "history_fraction": 0.25,
+          "history_size": 6,
+          "learning_rate": 0.0003,
+          "bootstrap_generations": 20,
+          "bootstrap_weight": 0,
+          "eval_pairs": 16,
+          "eval_every": 5,
+          "eval_seed": 719005,
+          "round_limit": 200,
+          "device": "cpu",
+          "amp": true,
+          "mirror_augmentation": true,
+          "channels": 32,
+          "balance": {
+            "movement": "all_pieces",
+            "consecutiveThreshold": 2,
+            "rankOffset": 0,
+            "minimumRank": 0,
+            "restRecovery": 1,
+            "homeRows": 3,
+            "defenseBonus": 1,
+            "defensePosition": "destination",
+            "defenseCap": null
+          },
+          "balance_logging": true
+        },
+        "model": {
+          "run": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\external-shogi\\distilled-g0017-demo-01",
+          "checkpoint": "checkpoints/g0001.pt",
+          "generation": 1,
+          "sha256": "219239903ddeb18c2fed9a7ee71211e59fe4c4571749885fb79e8923b554bd39",
+          "source_fingerprint": "6ff8cb6f5d0243514e67f12334d84cfd131521f5b9296b89d86f96bd6cc26b1a"
+        },
+        "baseline": null,
+        "teacher_is_optimal_for_variant": false,
+        "nonpromotion_mapping": "upgrade if eligible, otherwise none",
+        "fallback": "native hunter; excluded from teacher decisions",
+        "value_target": "actual simultaneous-game outcome; USI scores are advisory only",
+        "hardware": {
+          "python": "3.11.9",
+          "torch": "2.11.0+cu128",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "cpu_threads": 2,
+          "device": "cpu",
+          "gpu": null,
+          "cuda": "12.8",
+          "runtime": "local",
+          "timestamp": 1792517806.1265576
+        }
+      },
+      "artifact_directory": ".cache/external-shogi/experiments/distilled-g0017-20000nodes-01"
+    }
+  ],
+  "distillation": {
+    "completed_games": 8,
+    "completed_decisions": 84,
+    "unique_samples": 21,
+    "discarded_unfinished": 0,
+    "teacher": {
+      "type": "header",
+      "format": "simultaneous-shogi/usi-teacher-v1",
+      "rules": {
+        "profile": "balance-v1",
+        "repetitionLimit": 4,
+        "roundLimit": 200,
+        "version": "0.7",
+        "balance": {
+          "movement": "all_pieces",
+          "consecutiveThreshold": 2,
+          "rankOffset": 0,
+          "minimumRank": 0,
+          "restRecovery": 1,
+          "homeRows": 3,
+          "defenseBonus": 1,
+          "defensePosition": "destination",
+          "defenseCap": null
+        }
+      },
+      "rules_hash": "c6046b8834db22d51a72e4261257a8cfa0fe884173d28466acdaef613a2f000a",
+      "source_fingerprint": "6ff8cb6f5d0243514e67f12334d84cfd131521f5b9296b89d86f96bd6cc26b1a",
+      "adapter_sha256": "d1b92b765da7148da30356de3bfef645757e4b36f4c2bf42624e9201738d8624",
+      "engine": {
+        "name": "YaneuraOu NNUE V9.00Git 64AVX2 TOURNAMENT",
+        "executable": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\external-shogi\\yaneuraou\\NNUE_halfkp_256x2_32_32\\YaneuraOu_NNUE_halfkp_256x2_32_32-V900Git_AVX2.exe",
+        "executable_sha256": "6933dadadb8294a311c79a547768d555528870a1c20f365667ba8a32c3a6c068",
+        "options": {
+          "Threads": "1",
+          "USI_Hash": "64",
+          "MultiPV": "4",
+          "USI_OwnBook": "false",
+          "BookFile": "no_book",
+          "EnteringKingRule": "NoEnteringKing",
+          "FV_SCALE": "20",
+          "EvalDir": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\external-shogi\\tanuki\\eval"
+        },
+        "weights_sha256": "1141d275bceec911156801f27303dc9ff5beb24f4f59144cc069306c59e80782"
+      },
+      "nodes_per_query": 20000,
+      "seed": 719006,
+      "pairs": 4,
+      "config": {
+        "seed": 20261020,
+        "generations": 0,
+        "games_per_generation": 128,
+        "environments": 32,
+        "workers": 1,
+        "candidates": 8,
+        "cheap_candidates": 4,
+        "deep_fraction": 0.25,
+        "regret_iterations": 128,
+        "batch_size": 128,
+        "value_batch_size": 256,
+        "updates": 64,
+        "replay_capacity": 4096,
+        "recent_fraction": 0.5,
+        "history_fraction": 0.25,
+        "history_size": 6,
+        "learning_rate": 0.0003,
+        "bootstrap_generations": 20,
+        "bootstrap_weight": 0,
+        "eval_pairs": 16,
+        "eval_every": 5,
+        "eval_seed": 719005,
+        "round_limit": 200,
+        "device": "cpu",
+        "amp": true,
+        "mirror_augmentation": true,
+        "channels": 32,
+        "balance": {
+          "movement": "all_pieces",
+          "consecutiveThreshold": 2,
+          "rankOffset": 0,
+          "minimumRank": 0,
+          "restRecovery": 1,
+          "homeRows": 3,
+          "defenseBonus": 1,
+          "defensePosition": "destination",
+          "defenseCap": null
+        },
+        "balance_logging": true
+      },
+      "model": {
+        "run": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\dashboard\\runs\\continued-1792516340972",
+        "checkpoint": "checkpoints/g0017.pt",
+        "generation": 17,
+        "sha256": "db1d54fc1633d064ce5ebfe989451661c07356849005ddcc2b0dd94cb6a435e5",
+        "source_fingerprint": "e088c000159490601b5f62fb48aaa712235ab4bed8a86b6a11857d8f43381e70"
+      },
+      "baseline": null,
+      "teacher_is_optimal_for_variant": false,
+      "nonpromotion_mapping": "upgrade if eligible, otherwise none",
+      "fallback": "native hunter; excluded from teacher decisions",
+      "value_target": "actual simultaneous-game outcome; USI scores are advisory only",
+      "hardware": {
+        "python": "3.11.9",
+        "torch": "2.11.0+cu128",
+        "platform": "Windows-10-10.0.26200-SP0",
+        "cpu_threads": 2,
+        "device": "cpu",
+        "gpu": null,
+        "cuda": "12.8",
+        "runtime": "local",
+        "timestamp": 1792517669.255109
+      }
+    },
+    "data_sha256": "ba5e63d4228012bb042fd31dc4a2826550697a4be05ae7a65dee9428e702056c",
+    "adapter_sha256": "159f947df70901d05ab19fa8502885eda17cd8668ae893c72e82be9b63b66a1a",
+    "updates": 8,
+    "losses": {
+      "policy_loss": 6.063687324523926,
+      "value_loss": 0.3671518564224243,
+      "seconds": 0.4733550000237301,
+      "updates": 8,
+      "presentations": 1024
+    },
+    "method": "behavior imitation + actual simultaneous-game result",
+    "evaluated": false,
+    "improved_strength_is_established": false
+  },
+  "verified_replays": 16,
+  "notes": [
+    "Scores are from the local model perspective.",
+    "Node budgets and local-model budgets are not equal wall time.",
+    "Few starting-position games and one external opponent; all statistical decisions are inconclusive.",
+    "External player includes explicitly counted native hunter fallbacks.",
+    "Distillation is a separate experiment; original committed model weights were verified unchanged."
+  ]
+}
