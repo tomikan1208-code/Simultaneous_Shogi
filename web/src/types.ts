@@ -5,11 +5,13 @@ export type Choice = 'none' | 'promote' | 'upgrade';
 export interface Piece { id:string; side:Side; kind:Kind; at:Square; promoted:boolean; upgraded:boolean }
 export interface DropBan { side:Side; kind:Kind; to:Square; remaining:number }
 export interface MoveBan { side:Side; piece:string; from:Square; to:Square; remaining:number }
-export interface Position { pieces:Piece[]; hands:Record<Side,Partial<Record<Kind,number>>>; dropBans:DropBan[]; moveBans:MoveBan[]; nextPieceId:number }
+export interface PieceActivity { streak:number; fatigue:number }
+export interface Position { pieces:Piece[]; hands:Record<Side,Partial<Record<Kind,number>>>; dropBans:DropBan[]; moveBans:MoveBan[]; nextPieceId:number; activity?:Record<string,PieceActivity> }
 export type Action = { type:'move'; side:Side; piece:string; to:Square; choice:Choice } | { type:'drop'; side:Side; kind:Kind; to:Square };
 export interface ActionOption { action:Action; path:Square[]; conditions:string[] }
 export interface Outcome { winner:Side|'draw'; reason:string }
-export interface RuleSet { version:string; profile:string; repetitionLimit:number; roundLimit:number }
+export interface BalanceRules { movement:'none'|'upgrade_only'|'all_pieces'|'progressive'; consecutiveThreshold:number; rankOffset:number; minimumRank:number; restRecovery:number; homeRows:number; defenseBonus:number; defensePosition:'round_start'|'stage_from'|'destination'; defenseCap:number|null }
+export interface RuleSet { version:string; profile:string; repetitionLimit:number; roundLimit:number; balance?:BalanceRules|null }
 export interface StagePlan { actor:string; from:Square; proposed:Square; next:Square; advance:boolean; blocker:string|null; finished:boolean }
 export interface Frame { stage:number; pieces:Piece[]; plans:StagePlan[] }
 export interface Event { stage:number; type:string; actor?:string; actors?:string[]; captor?:string; victim?:string; kind?:Kind; reason?:string; mode?:string; winner?:string|null; to?:Square; at?:Square|Square[]; blocker?:string; side?:Side; kinds?:Kind[]; ranks?:number[] }

@@ -50,6 +50,11 @@ pub struct RoundResolution {
     pub before_hash: String,
     pub after_hash: String,
     pub metrics: BTreeMap<String, u64>,
+    /// Retained even without animation diagnostics, for experimental evidence.
+    #[serde(skip)]
+    pub contacts: Vec<Value>,
+    #[serde(skip)]
+    pub movements: Vec<Value>,
 }
 impl RoundResolution {
     /// Replay identity is independent of whether detailed diagnostics were kept.
@@ -102,6 +107,10 @@ struct Working {
     round_drops: BTreeSet<String>,
     diagnostics: bool,
     metrics: BTreeMap<String, u64>,
+    contacts: Vec<Value>,
+    balance: Option<BalanceRules>,
+    activity: BTreeMap<String, PieceActivity>,
+    moved_ids: BTreeSet<String>,
 }
 impl Working {
     fn occupant(&self, at: Square) -> Option<&Piece> {
@@ -132,7 +141,13 @@ impl Working {
             victim_side: victim.side,
             kind: victim.kind,
             at: victim.at,
-            captor_rank: captor.rank(),
+            captor_rank: self.balance.as_ref().map_or(captor.rank(), |b| {
+                b.movement_rank(
+                    captor,
+                    &self.activity.get(&captor.id).cloned().unwrap_or_default(),
+                    self.moved_ids.contains(&captor.id),
+                )
+            }),
             reason: reason.into(),
         };
         let mut e = serde_json::to_value(&c).map_err(|e| e.to_string())?;
@@ -172,7 +187,39 @@ pub fn resolve_round_with_diagnostics(
     actions: &[Action],
     diagnostics: bool,
 ) -> EngineResult<RoundResolution> {
+    resolve_round_with_rules(initial, actions, &RuleSet::default(), diagnostics)
+}
+
+pub fn validate_activity(initial: &Position, rules: &RuleSet) -> EngineResult<()> {
+    for (id, activity) in &initial.activity {
+        let balance = rules
+            .balance
+            .as_ref()
+            .ok_or("Official rules cannot contain experimental activity")?;
+        let piece = initial.piece(id).ok_or("Activity piece missing")?;
+        if balance.movement == MovementRule::None
+            || activity.streak > balance.consecutive_threshold
+            || activity.fatigue > balance.nominal_rank(piece)
+            || matches!(
+                balance.movement,
+                MovementRule::UpgradeOnly | MovementRule::AllPieces
+            ) && activity.fatigue != 0
+        {
+            return Err("Invalid activity for selected rules".into());
+        }
+    }
+    Ok(())
+}
+
+pub fn resolve_round_with_rules(
+    initial: &Position,
+    actions: &[Action],
+    rules: &RuleSet,
+    diagnostics: bool,
+) -> EngineResult<RoundResolution> {
+    rules.validate()?;
     initial.validate()?;
+    validate_activity(initial, rules)?;
     if actions.len() != 2 {
         return Err("InvalidIntent: two actions required".into());
     }
@@ -198,6 +245,10 @@ pub fn resolve_round_with_diagnostics(
         round_drops: BTreeSet::new(),
         diagnostics,
         metrics: BTreeMap::new(),
+        contacts: vec![],
+        balance: rules.balance.clone(),
+        activity: initial.activity.clone(),
+        moved_ids: BTreeSet::new(),
     };
     let mut actors = Vec::new();
     let mut drops = Vec::new();
@@ -304,9 +355,30 @@ pub fn resolve_round_with_diagnostics(
                     && plans[0].next == plans[1].from
                     && plans[1].next == plans[0].from);
         if contact {
+            for p in plans.iter().filter(|p| p.advance) {
+                w.moved_ids.insert(p.piece.id.clone());
+            }
             let x = &plans[0];
             let y = &plans[1];
             let swap = x.next != y.next;
+            let ranks: Vec<u8> = plans
+                .iter()
+                .map(|p| {
+                    rules.balance.as_ref().map_or(p.piece.rank(), |b| {
+                        b.collision_rank(
+                            &p.piece,
+                            &initial
+                                .activity
+                                .get(&p.piece.id)
+                                .cloned()
+                                .unwrap_or_default(),
+                            actors[p.actor].from,
+                            p.from,
+                            p.next,
+                        )
+                    })
+                })
+                .collect();
             let chain = |u: &Plan, v: &Plan| {
                 !swap
                     && u.advance
@@ -342,7 +414,7 @@ pub fn resolve_round_with_diagnostics(
                 )
             } else {
                 (
-                    match x.piece.rank().cmp(&y.piece.rank()) {
+                    match ranks[0].cmp(&ranks[1]) {
                         std::cmp::Ordering::Greater => Some(0),
                         std::cmp::Ordering::Less => Some(1),
                         _ => None,
@@ -350,8 +422,19 @@ pub fn resolve_round_with_diagnostics(
                     "rank",
                 )
             };
-            w.emit(json!({"type":"contact", "mode":if swap {"swap"} else {"same_square"}, "actors":[x.piece.id,y.piece.id], "reason":reason,
-                "at":if swap {json!([x.next,y.next])} else {json!(x.next)}, "winner":winner.map(|i| &plans[i].piece.id), "ranks":[x.piece.rank(),y.piece.rank()]}));
+            let contact_event = json!({"type":"contact", "mode":if swap {"swap"} else {"same_square"}, "actors":[x.piece.id,y.piece.id], "reason":reason,
+                "at":if swap {json!([x.next,y.next])} else {json!(x.next)}, "winner":winner.map(|i| &plans[i].piece.id),
+                "ranks":if reason == "rank" {ranks.clone()} else {vec![x.piece.rank(), y.piece.rank()]}});
+            {
+                let mut evidence = contact_event.clone();
+                evidence["stage"] = json!(w.stage);
+                evidence["from"] = json!([x.from, y.from]);
+                evidence["destinations"] = json!([x.next, y.next]);
+                evidence["baseRanks"] = json!([x.piece.rank(), y.piece.rank()]);
+                evidence["advancing"] = json!([x.advance, y.advance]);
+                w.contacts.push(evidence);
+            }
+            w.emit(contact_event);
             for p in &plans {
                 let a = &mut actors[p.actor];
                 a.moved |= p.advance;
@@ -378,6 +461,7 @@ pub fn resolve_round_with_diagnostics(
             progress = true;
         } else {
             for p in plans.iter().filter(|p| p.advance) {
+                w.moved_ids.insert(p.piece.id.clone());
                 w.pieces.get_mut(&p.piece.id).expect("moving piece").at = p.next;
                 let a = &mut actors[p.actor];
                 a.index += 1;
@@ -517,7 +601,8 @@ pub fn resolve_round_with_diagnostics(
     for d in drops.iter().filter(|d| !d.resolved) {
         w.emit(json!({"type":"drop_failure", "side":d.side, "kind":d.kind, "to":d.to}));
     }
-    let outcome = adjudicate_kings(&w.captures)?;
+    let outcome = adjudicate_kings(&w.captures, rules)?;
+    let mut movements = Vec::new();
     for a in &actors {
         let status = match w.pieces.get(&a.id) {
             None => "move_captured",
@@ -526,6 +611,7 @@ pub fn resolve_round_with_diagnostics(
             Some(_) => "move_partial",
         };
         *w.metrics.entry(status.into()).or_default() += 1;
+        movements.push(json!({"piece":a.id,"moved":a.moved,"status":status}));
     }
     for a in &actors {
         let Some(p) = w.pieces.get_mut(&a.id) else {
@@ -558,17 +644,54 @@ pub fn resolve_round_with_diagnostics(
             w.emit(json!({"type":kind, "actor":a.id}));
         }
     }
+    let mut activity = BTreeMap::new();
+    if let Some(balance) = &rules.balance {
+        if balance.movement != MovementRule::None {
+            for p in w.pieces.values() {
+                let mut a = initial.activity.get(&p.id).cloned().unwrap_or_default();
+                let moved = actors.iter().any(|actor| actor.id == p.id && actor.moved);
+                if moved {
+                    // Before an upgrade, only a single previous movement matters:
+                    // the actual upgrading round becomes the first of its streak.
+                    let new_upgrade =
+                        p.rank() == 7 && initial.piece(&p.id).is_some_and(|old| old.rank() != 7);
+                    a.streak = if new_upgrade && balance.movement == MovementRule::UpgradeOnly {
+                        1
+                    } else {
+                        a.streak
+                            .saturating_add(1)
+                            .min(balance.consecutive_threshold)
+                    };
+                    if balance.movement == MovementRule::Progressive
+                        && a.streak >= balance.consecutive_threshold
+                    {
+                        a.fatigue = a.fatigue.saturating_add(1).min(balance.nominal_rank(p));
+                    }
+                } else {
+                    a.streak = 0;
+                    a.fatigue = a.fatigue.saturating_sub(balance.rest_recovery);
+                }
+                if balance.movement == MovementRule::UpgradeOnly && p.rank() != 7 {
+                    a = PieceActivity::default();
+                }
+                if a != PieceActivity::default() {
+                    activity.insert(p.id.clone(), a);
+                }
+            }
+        }
+    }
     let mut position = Position {
         pieces: w.pieces.into_values().collect(),
         hands: w.hands,
         drop_bans: bans,
         move_bans: vec![],
         next_piece_id: next_id,
+        activity,
     };
     position.normalize();
     position.validate()?;
     Ok(RoundResolution {
-        version: RULE_VERSION.into(),
+        version: rules.version.clone(),
         before_hash: crate::replay::position_hash(initial),
         after_hash: crate::replay::position_hash(&position),
         position,
@@ -578,10 +701,12 @@ pub fn resolve_round_with_diagnostics(
         frames,
         events: w.events,
         metrics: w.metrics,
+        contacts: w.contacts,
+        movements,
     })
 }
 
-fn adjudicate_kings(captures: &[Capture]) -> EngineResult<Option<Outcome>> {
+fn adjudicate_kings(captures: &[Capture], rules: &RuleSet) -> EngineResult<Option<Outcome>> {
     let kings: Vec<_> = captures.iter().filter(|c| c.kind == Kind::K).collect();
     let later: Vec<_> = kings
         .iter()
@@ -595,9 +720,17 @@ fn adjudicate_kings(captures: &[Capture]) -> EngineResult<Option<Outcome>> {
         return Err("Invariant: conflicting king-captor losses".into());
     }
     let outcome = if let Some(k) = later.first() {
+        // Keep historical replays exact. From v0.7, recapturing the king's
+        // captor does not undo the victory, even when that captor is a king.
+        let legacy = rules.version == "0.6";
         Some(Outcome {
-            winner: k.victim_side.into(),
-            reason: "king_captor_lost".into(),
+            winner: if legacy { k.victim_side } else { k.captor_side }.into(),
+            reason: if legacy {
+                "king_captor_lost"
+            } else {
+                "king_capture_retained"
+            }
+            .into(),
         })
     } else if kings.len() == 2 {
         let winner = match kings[0].captor_rank.cmp(&kings[1].captor_rank) {

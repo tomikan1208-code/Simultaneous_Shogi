@@ -1,4 +1,4 @@
-import type { Action, ActionOption, Event, Kind, Piece, Resolution, Side, Square } from './types.js';
+import type { Action, ActionOption, Event, Kind, Piece, PieceActivity, Resolution, RuleSet, Side, Square } from './types.js';
 
 export const symbols:Record<Kind,string> = { K:'王', P:'歩', L:'香', N:'桂', S:'銀', G:'金', R:'飛', B:'角' };
 const promoted:Partial<Record<Kind,string>> = { P:'と', L:'杏', N:'圭', S:'全', R:'龍', B:'馬' };
@@ -10,15 +10,52 @@ export const same = (a:Square,b:Square):boolean => a[0] === b[0] && a[1] === b[1
 export const escape = (value:string):string => value.replace(/[&<>"']/g,c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]!));
 export const other = (side:Side):Side => side === 'A' ? 'B' : 'A';
 export const sideIndex = (side:Side):number => side === 'A' ? 0 : 1;
-export function pieceMarkup(piece:Piece, enemy = false):string {
-  return `<span class="piece${enemy ? ' enemy' : ''}${piece.promoted ? ' promoted' : piece.upgraded ? ' upgraded' : ''}" data-piece="${escape(piece.id)}"><span class="piece-symbol">${symbol(piece)}</span><span class="rank-badge" aria-hidden="true">${rank(piece)}</span></span>`;
+export interface RankContext { rules?:RuleSet; activity?:PieceActivity; moving?:boolean; defenseAt?:Square; effective?:number }
+export function rankAppearance(piece:Piece,context:RankContext = {}) {
+  const balance=context.rules?.balance,base=rank(piece),nominal=base+(balance?.rankOffset ?? 0);
+  const activity=context.activity ?? {streak:0,fatigue:0};
+  const streak=activity.streak+Number(!!context.moving);
+  const fatigue=!balance ? 0 : balance.movement==='upgrade_only' ? Number(base===7 && streak>=balance.consecutiveThreshold)
+    : balance.movement==='all_pieces' ? Number(streak>=balance.consecutiveThreshold)
+    : balance.movement==='progressive' ? activity.fatigue+Number(!!context.moving && streak>=balance.consecutiveThreshold) : 0;
+  const movement=Math.max(balance?.minimumRank ?? 0,nominal-fatigue),loss=nominal-movement;
+  const at=context.defenseAt ?? piece.at;
+  const home=balance && (piece.side==='A' ? at[1]>9-balance.homeRows : at[1]<=balance.homeRows);
+  const defense=home ? balance.defenseBonus : 0;
+  const effective=context.effective ?? Math.min(movement+defense,balance?.defenseCap ?? Infinity);
+  const reduced=loss>0 || effective<nominal;
+  const depth=Math.max(loss,nominal-effective);
+  const visuallyHome=balance && (piece.side==='A' ? piece.at[1]>9-balance.homeRows : piece.at[1]<=balance.homeRows);
+  const strengthened=visuallyHome && defense>0 && effective>movement;
+  return {effective,loss:depth,aura:reduced ? 'reduced' : strengthened ? 'boosted' : '',
+    intensity:reduced ? Math.min(.88,.32+depth*.08) : .34,
+    description:`格${effective}${balance ? '（移動中同士の衝突・現在位置基準）' : ''}${depth>0 ? ` / 一時低下 −${depth}` : ''}`};
+}
+export function pieceMarkup(piece:Piece, enemy = false, context:RankContext = {}):string {
+  const status=rankAppearance(piece,context);
+  return `<span class="piece${enemy ? ' enemy' : ''}${piece.promoted ? ' promoted' : piece.upgraded ? ' upgraded' : ''}${status.aura ? ` rank-${status.aura}` : ''}" data-piece="${escape(piece.id)}" data-rank="${status.effective}" data-rank-loss="${status.loss}" style="--aura-strength:${status.intensity};--rank-loss:${status.loss}">${status.aura ? '<span class="piece-aura" aria-hidden="true"></span>' : ''}<span class="piece-symbol">${symbol(piece)}</span><span class="rank-badge" aria-hidden="true">${status.effective}</span></span>`;
 }
 export function findPiece(resolution:Resolution,id?:string):Piece|undefined {
   return resolution.frames.flatMap(frame => frame.pieces).find(piece => piece.id === id) ?? resolution.pieces.find(piece => piece.id === id);
 }
-export function actionLabel(action:Action,pieces:Piece[]):string {
+export function actionLabel(action:Action,pieces:Piece[],resolution?:Resolution):string {
   const p = action.type === 'move' ? pieces.find(piece => piece.id === action.piece) : undefined;
-  return `${square(action.to)}${action.type === 'drop' ? `${symbols[action.kind]}打` : p ? symbol(p) : '駒'}${action.type === 'move' ? action.choice === 'promote' ? '成希望' : action.choice === 'upgrade' ? '昇格希望' : '' : ''}`;
+  const eligible=p && !p.promoted && !p.upgraded && !['K','G'].includes(p.kind) && (zone(p.side,p.at) || zone(p.side,action.to));
+  let change=action.type==='move' && eligible ? action.choice==='promote' ? '成希望' : action.choice==='upgrade' ? '昇格希望' : '' : '';
+  if (!resolution) return `${square(action.to)}${action.type==='drop' ? `${symbols[action.kind]}打` : p ? symbol(p) : '駒'}${change}`;
+  if (action.type==='drop') {
+    const failed=resolution.events.some(e=>e.type==='drop_failure' && e.side===action.side);
+    return `${square(action.to)}${symbols[action.kind]}打${failed ? '（不成立）' : ''}`;
+  }
+  const events=resolution.events.filter(e=>e.actor===action.piece);
+  const after=resolution.pieces.find(piece=>piece.id===action.piece);
+  const moved=p && after ? !same(p.at,after.at) : events.some(e=>e.type==='move');
+  if (events.some(e=>e.type==='upgrade')) change='昇格';
+  else if (events.some(e=>e.type==='promotion' || e.type==='forced_promotion')) change='成';
+  else change='';
+  const actual=after?.at ?? resolution.captures.find(c=>c.victim===action.piece)?.at ?? p?.at ?? action.to;
+  const status=!after ? `（被捕獲${!same(actual,action.to) ? `・指定${square(action.to)}` : ''}）` : !moved ? `（不動・指定${square(action.to)}）` : !same(actual,action.to) ? `（指定${square(action.to)}）` : '';
+  return `${square(actual)}${p ? symbol(p) : '駒'}${change}${status}`;
 }
 const zone = (side:Side,at:Square):boolean => side === 'A' ? at[1] <= 3 : at[1] >= 7;
 /** A partial move can end anywhere along the engine's advertised path. */
@@ -26,7 +63,7 @@ export function offersChange(piece:Piece,option:ActionOption):boolean {
   return !piece.promoted && !piece.upgraded && !['K','G'].includes(piece.kind) && (zone(piece.side,piece.at) || option.path.some(at => zone(piece.side,at)));
 }
 export const reasons:Record<string,string> = {
-  king_captured:'王を捕獲', king_captor_lost:'王を取った駒が同じラウンドで取り返されました', both_kings:'双方の王を捕獲・捕獲時の格で判定',
+  king_captured:'王を捕獲', king_capture_retained:'王を捕獲・取り返されても勝利', king_captor_lost:'王を取った駒が同じラウンドで取り返されました（旧ルール）', both_kings:'双方の王を捕獲・捕獲時の格で判定',
   repetition:'同一局面の4回反復', round_limit:'200ラウンドに到達', resigned:'投了', opponent_left:'対戦相手が退出しました', disconnected:'再接続の猶予時間が終了しました',
 };
 export function conditionText(conditions:string[]):string {

@@ -3,6 +3,7 @@ import { mkdir, readdir, readFile, open, rename, unlink } from 'node:fs/promises
 import { join } from 'node:path';
 import { WasmEngine } from '../web/dist/engine.js';
 import { actionLabel } from '../web/dist/presentation.js';
+import { PLAY_RULES } from '../web/dist/rules.js';
 
 export class HttpError extends Error {
   constructor(status, message) { super(message); this.status = status; }
@@ -155,7 +156,7 @@ export class RoomService {
         gameId: randomBytes(12).toString('hex'), phase: 'lobby', players: { A: player, B: null },
         result: null, pending: [null, null], history: [], engine: await WasmEngine.fromBytes(this.bytes), connections: new Map(), heartbeats: new Map(), queue: Promise.resolve(),
       };
-      this.call(room, { cmd: 'new', ...(this.initialPosition ? { position: this.initialPosition } : {}) });
+      this.call(room, { cmd: 'new', rules:PLAY_RULES, ...(this.initialPosition ? { position: this.initialPosition } : {}) });
       this.refresh(room); await this.save(room);
       this.rooms.set(code, room); this.register(room);
       return { token, ...this.publicView(room, 'A') };
@@ -207,7 +208,7 @@ export class RoomService {
       if (['A', 'B'].every(s => room.players[s]?.ready && room.players[s].inLobby && room.connections.has(s))) {
         room.phase = 'playing'; room.result = null; room.pending = [null, null]; room.history = []; room.gameId = randomBytes(12).toString('hex');
         for (const p of Object.values(room.players)) { p.ready = false; p.inLobby = false; }
-        this.call(room, { cmd: 'new', ...(this.initialPosition ? { position: this.initialPosition } : {}) }); this.refresh(room);
+        this.call(room, { cmd: 'new', rules:PLAY_RULES, ...(this.initialPosition ? { position: this.initialPosition } : {}) }); this.refresh(room);
       }
     });
     return this.publicView(room, side);
@@ -230,7 +231,7 @@ export class RoomService {
       if (room.view.round !== round) {
         room.pending = [null, null];
         const resolution = room.view.lastResolution;
-        room.history.push({ round: room.view.round, labels: ['A', 'B'].map(s => actionLabel(resolution.actions.find(a => a.side === s), resolution.frames[0].pieces)) });
+        room.history.push({ round: room.view.round, labels: ['A', 'B'].map(s => actionLabel(resolution.actions.find(a => a.side === s), resolution.frames[0].pieces, resolution)) });
         if (room.view.outcome) this.finish(room, room.view.outcome);
         this.refresh(room);
       }

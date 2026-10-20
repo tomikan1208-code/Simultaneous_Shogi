@@ -2,68 +2,94 @@
 <html lang="ja">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="color-scheme" content="light"><title>双刻 LAB — AI学習</title>
+  <meta name="color-scheme" content="light"><title>同時着手将棋 AI 学習コントロールパネル</title>
   <link rel="icon" href="/icon.svg" type="image/svg+xml"><link rel="stylesheet" href="/style.css">
   <script type="module" src="/app.js"></script>
 </head>
 <body>
-  <aside class="sidebar">
-    <a class="brand" href="/" aria-label="双刻 LAB ホーム"><img src="/icon.svg" alt="" width="43" height="43"><span><b>双刻 <small>LAB</small></b><span>SIMULTANEOUS SHOGI</span></span></a>
-    <div class="workspace-label">LEARNING WORKSPACE</div>
-    <nav aria-label="メインメニュー">
-      <button class="nav-item active" data-view="overview"><span class="nav-icon">◫</span>学習の概要<span class="nav-dot"></span></button>
-      <button class="nav-item" data-view="evaluation"><span class="nav-icon">↗</span>棋力の評価・比較</button>
-      <button class="nav-item" data-view="analysis"><span class="nav-icon">▦</span>棋譜・原因分析</button>
-      <button class="nav-item" data-view="colab"><span class="nav-icon">⇄</span>Colab・データ連携</button>
-      <button class="nav-item" data-view="research"><span class="nav-icon">⌘</span>研究と実装方針</button>
-    </nav>
-    <div class="sidebar-note"><span class="tiny-label">TRAIN THERE. UNDERSTAND HERE.</span><p>学習は Colab で。<br>変化の理由は、手元で。</p><button class="text-button" data-view="colab">セットアップを見る <span>↗</span></button></div>
-    <div class="sidebar-bottom"><span class="live-dot"></span> Rust × PyTorch <span class="version" id="rulesVersion">—</span><small>同時着手将棋 / 正式ルール</small></div>
+  <header class="header">
+    <div class="brand"><div class="brand-mark">王</div><div><div class="brand-title">AI 学習コントロールパネル</div><div class="brand-sub">同時着手将棋 <span id="rulesVersion"></span></div></div></div>
+    <div class="header-right">
+      <div class="status-badge"><span class="status-dot" id="statusDot"></span><span id="statusText">待機中</span><b id="statusGen"></b></div>
+      <div class="status-badge"><span>実行先:</span><b id="runtimeState">確認中</b></div>
+      <button class="btn btn-primary" id="localStart" disabled>▶ 学習開始</button>
+      <button class="btn btn-ghost" id="resumeButton" disabled>再開</button>
+      <label class="filter-label">停止世代<input class="input" id="resumeUntil" type="number" min="0" max="100000" value="0" title="0は停止操作まで継続"></label>
+      <button class="btn btn-ghost" id="continueButton" disabled>この状態を引き継ぐ</button>
+      <button class="btn btn-secondary" id="stopJob" disabled>■ 停止</button>
+      <button class="btn btn-ghost btn-icon" id="settingsBtn" title="学習設定" aria-label="学習設定" aria-controls="settingsPanel" aria-expanded="false">⚙</button>
+    </div>
+  </header>
+  <nav class="tabbar" aria-label="メインメニュー"><div class="segmented" id="tabbar">
+    <button class="nav-item active" data-view="overview">進捗</button><button class="nav-item" data-view="charts">グラフ</button><button class="nav-item" data-view="analysis">対局ビューア</button><button class="nav-item" data-view="evaluation">強さ・比較</button><button class="nav-item" data-view="balance">ルール比較</button><button class="nav-item" data-view="colab">☁ Colab・Drive連携</button><button class="nav-item" data-view="research">詳細</button>
+  </div></nav>
+  <main class="main">
+    <div class="filter-row"><label class="filter-label" for="runSelect">表示する学習データ</label><select class="select" id="runSelect"><option value="">実行記録なし</option></select><span class="badge" id="sourceTag">Local</span><span class="filter-note" id="runFingerprint"></span><button class="btn btn-ghost btn-icon" id="refresh" aria-label="更新">↻</button></div>
+    <div id="globalNotice" class="notice" role="status" hidden></div>
+    <p id="resumeSettingsNotice" class="hint" role="status" hidden></p>
+    <section id="view-overview" class="view active" aria-label="進捗">
+      <article class="card"><div class="card-head"><h2 class="card-title">現在の状態</h2><span class="card-note" id="statusUpdated">待機中</span></div><div id="liveStatus" class="status-card"></div><div id="kpis" class="tiles"></div><div id="welcome" class="welcome"><button class="btn btn-ghost" id="welcomeSettings">学習設定を開く</button></div></article>
+      <article class="card"><div class="card-head"><h2 class="card-title">強さの評価</h2><span class="card-note">最近の学習済みモデルとの対戦</span></div><div id="gateSummary"></div></article>
+      <article class="card"><div class="card-head"><h2 class="card-title">最新の学習状況</h2><span class="card-note">同じ学習条件の直近10世代まで</span></div><div id="learningSummary"></div><p id="historyPersistence" class="hint"></p></article>
+      <article class="card"><div class="card-head"><h2 class="card-title">世代の記録</h2><span class="card-note">行を選ぶと、その世代の詳細を表示</span></div><div class="table-wrap"><div class="table-scroll"><table><thead><tr><th>世代</th><th>対局数</th><th>平均ラウンド</th><th>引分率</th><th>方策損失</th><th>価値損失</th><th>対・学習済みモデル</th><th>判定</th></tr></thead><tbody id="generationTable"></tbody></table></div></div></article>
+      <article class="card" id="generationDetailCard" tabindex="-1"><div class="card-head"><h2 class="card-title" id="generationDetailTitle">世代の詳細</h2><div class="stack-actions"><button class="btn btn-ghost" id="latestGeneration">最新世代に戻る</button><a class="btn btn-ghost" id="downloadGeneration" download>世代データを保存</a></div></div><div id="generationDetail"></div></article>
+      <details class="raw-log"><summary>生ログを表示 <span id="jobLabel"></span></summary><pre id="jobLogs" class="log-view"></pre></details>
+    </section>
+    <section id="view-charts" class="view" aria-label="グラフ" hidden>
+      <div class="chart-pair"><article class="card"><div class="card-head"><h2 class="card-title">強さの推移</h2><span class="card-note">学習済みモデルへの得点率</span></div><div id="strengthChart" class="chart"></div></article><article class="card"><div class="card-head"><h2 class="card-title">学習損失</h2><span class="card-note">方策 / 価値</span></div><div id="lossChart" class="chart"></div></article></div>
+      <p class="hint">点を選ぶと世代の詳細を表示します。対戦相手の世代や学習条件が変わるため、得点率は一つの固定相手への上達曲線ではありません。</p>
+      <div class="chart-pair"><article class="card"><div class="card-head"><h2 class="card-title">平均対局ラウンド数</h2><span class="card-note">両者の同時着手で1ラウンド</span></div><div id="roundsChart" class="chart"></div></article><article class="card"><div class="card-head"><h2 class="card-title">引き分けと千日手</h2><span class="card-note">自己対戦の対局結果</span></div><div id="drawChart" class="chart"></div></article></div>
+      <article class="card"><div class="card-head"><h2 class="card-title">計算時間の内訳</h2></div><div id="efficiency"></div></article>
+    </section>
+    <section id="view-evaluation" class="view" aria-label="強さ・比較" hidden>
+      <article class="card"><div class="card-head"><h2 class="card-title">追加評価</h2><span class="card-note">1ペア = 陣営交換した2局</span></div><form id="evaluateForm" class="form-row"><label>対戦相手<select class="select" id="evalOpponent"><option value="adapted_self">現在モデル同士</option><option value="recent_checkpoint">最近の学習済みモデル</option></select></label><label>評価ペア数<input class="input" id="evalPairs" type="number" min="1" max="512" value="32"></label><button class="btn btn-primary" id="evaluateButton" type="submit">評価を実行</button></form></article>
+      <article class="card"><div class="card-head"><h2 class="card-title">対戦成績</h2><span class="card-note" id="evalGeneration"></span></div><div class="table-wrap"><table><thead><tr><th>相手</th><th>勝 / 分 / 負</th><th>得点率</th><th>信頼区間</th><th>対局数</th><th>判定</th></tr></thead><tbody id="evaluationTable"></tbody></table></div><p class="hint">区間が50%をまたぐ場合は判定保留。</p></article>
+      <article class="card"><div class="card-head"><h2 class="card-title">追加評価の記録</h2></div><div id="localEvaluations"></div></article>
+      <article class="card"><div class="card-head"><h2 class="card-title">実行を比較</h2><select class="select" id="compareRun" aria-label="比較する実行"><option value="">比較先を選択</option></select></div><div id="comparison"></div></article>
+      <details class="raw-log"><summary>評価条件・基準モデル</summary><div class="card" id="championInfo"></div></details>
+    </section>
+    <section id="view-analysis" class="view" aria-label="対局ビューア" hidden>
+      <div class="analysis-grid"><article class="card"><div class="card-head"><h2 class="card-title">盤面</h2><span class="badge" id="replayVerified">未選択</span></div><label class="field">対局<select class="select" id="replaySelect"><option value="">棋譜を選択</option></select></label><div class="replay-controls"><button class="btn btn-ghost btn-icon" id="prevRound" aria-label="前のラウンド">←</button><label>ラウンド <input class="input" id="replayRound" type="number" min="1" value="1"></label><button class="btn btn-ghost btn-icon" id="nextRound" aria-label="次のラウンド">→</button><label>段階 <select class="select" id="stageSelect"><option value="-1">最終局面</option></select></label></div><div id="board" class="board-container"></div><div id="replayHands" class="hands"></div></article><div><article class="card"><div class="card-head"><h2 class="card-title">このラウンドの出来事</h2></div><div id="replayEvents" class="event-list"></div><button id="probeButton" class="btn btn-ghost" disabled>16×16候補で再分析</button></article><article class="card"><div class="card-head"><h2 class="card-title">イベント集計</h2></div><div id="eventStats"></div></article></div></div>
+      <article class="card"><div class="card-head"><h2 class="card-title">戦術局面の分析</h2></div><select class="select" id="probeSelect" aria-label="分析記録"><option value="">分析記録を選択</option></select><div id="probeDetails"></div><p class="hint">限定候補での近似評価です。</p></article>
+    </section>
+    <section id="view-balance" class="view" aria-label="ルール比較" hidden>
+      <article class="card"><div class="card-head"><h2 class="card-title">同じモデルからルール別に分岐</h2></div>
+        <form id="balanceInitForm" class="form-row"><label>比較元の学習実行<select class="select" id="balanceSource"></select></label><label>評価ペア数<input class="input" id="balancePairs" type="number" min="1" max="4096" value="512" required></label><label>並列学習数<input class="input" id="balanceParallel" type="number" min="1" max="32" value="1" required></label><button class="btn btn-primary" id="balanceInit" type="submit">最新世代から比較を作成</button></form>
+        <p class="hint">主軸の1条件で学習し、節目の重みから各ルールへ分岐できます。短期は同じ重みのまま比較し、長期は全条件に同じ追加学習量を与えます。並列数1なら順番に実行します。</p>
+        <details><summary>D+の追加パラメーター（任意）</summary><label class="field">設定値の総当たりをJSONで指定<textarea class="input" id="balanceGrid" rows="4" placeholder='{"movement":["upgrade_only","progressive"],"consecutiveThreshold":[2,3,4],"defenseBonus":[1,2],"homeRows":[2,3,4]}'></textarea></label></details>
+      </article>
+      <article class="card"><div class="card-head"><h2 class="card-title">比較実験</h2><select class="select" id="balanceExperiment" aria-label="比較実験"></select></div>
+        <div class="form-row"><label>進める条件<select class="select" id="balanceRule"></select></label><button class="btn btn-ghost" id="balanceShort">① 同じ重みで短期比較</button><label>学習の到達世代（0＝継続）<input class="input" id="balanceGenerations" type="number" min="0" max="100000" value="75"></label><button class="btn btn-primary" id="balanceTrain">② 選んだ条件で学習</button><button class="btn btn-ghost" id="balanceLong">③ 適応後の長期比較</button><a class="btn btn-ghost" id="balanceExport" href="#">比較ログZIPを保存</a></div>
+        <div id="balanceProgress"></div><p class="hint">短期比較は重みを固定。長期比較は各ルールの学習済みAI同士で評価。全棋譜・ラウンド記録を保存し、格7の生存・温存・衝突・昇格・引き分けを追跡します。過去版の条件を新しい評価方法で続ける場合は、表示する学習データを選び「この状態を引き継ぐ」を使います。</p>
+      </article><article class="card"><div class="card-head"><h2 class="card-title">短期・長期の比較結果</h2><span class="card-note">母数と完全な集計はZIP内のreport.json</span></div><div id="balanceResults"></div></article>
+    </section>
+    <section id="view-colab" class="view" aria-label="Colab・Drive連携" hidden>
+      <div class="chart-pair"><article class="card"><div class="card-head"><h2 class="card-title">Colabで学習</h2></div><div class="stack-actions"><a class="btn btn-primary" href="/colab.ipynb" download>ノートブックを保存 ↓</a><a class="btn btn-ghost" href="/api/bundle" download>ソースZIPを保存 ↓</a><a class="btn btn-ghost" href="https://colab.research.google.com/" target="_blank" rel="noreferrer">Colabを開く ↗</a></div><p class="hint">GPUランタイムに変更し、ソースZIPを渡して実行。</p></article><article class="card"><div class="card-head"><h2 class="card-title">学習結果を取り込む</h2></div><label class="upload-zone" for="importZip">結果ZIPを選択<input type="file" id="importZip" accept=".zip,application/zip"></label><div id="importState" class="hint" role="status"></div><a class="text-button" id="exportRun" href="#">表示中の結果を保存 ↓</a></article></div>
+      <article class="card"><div class="card-head"><h2 class="card-title">Drive同期フォルダー</h2></div><form id="sourceForm" class="source-form"><label for="sourceDir" class="field-label">runsフォルダーの絶対パス</label><div><input class="input" id="sourceDir" placeholder="G:&#92;マイドライブ&#92;Simultaneous_Shogi&#92;runs"><button class="btn btn-ghost" type="submit">保存</button></div></form></article>
+      <details class="raw-log"><summary>学習時のソース</summary><div class="stack-actions"><a id="sourceSnapshot" class="btn btn-ghost" href="#">ソースZIPを保存 ↓</a></div></details>
+    </section>
+    <section id="view-research" class="view" aria-label="詳細" hidden>
+      <article class="card"><div class="card-head"><h2 class="card-title">実行環境</h2><button class="btn btn-ghost" id="runtimeRefresh">再確認</button></div><div id="hardwareInfo" class="meta-grid"></div></article>
+      <article class="card"><div class="card-head"><h2 class="card-title">行動生成ベンチマーク</h2><button class="btn btn-ghost" id="benchmarkButton">計測</button></div><div id="benchmarkResult"></div></article>
+      <details class="raw-log"><summary>研究・実装方針</summary><div id="researchCards" class="research-grid"></div></details>
+    </section>
+  </main>
+  <div class="overlay" id="settingsOverlay" hidden></div>
+  <aside class="panel" id="settingsPanel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
+    <div class="panel-head"><h2 class="panel-title" id="settingsTitle">⚙ 学習設定</h2><button class="btn btn-ghost btn-icon" id="settingsClose" aria-label="設定を閉じる">✕</button></div>
+    <form id="trainingForm" class="panel-body">
+      <div class="field"><label class="field-label" for="deviceInput">実行先</label><select class="select" id="deviceInput"><option value="cuda">Local GPU（CUDA）</option><option value="cpu">Local CPU</option><option value="auto">自動</option></select><div id="deviceHelp" class="field-help">GPUを確認しています…</div></div>
+      <div class="field-row"><label class="field"><span class="field-label">世代数（0＝無制限）</span><input class="input" data-setting="generations" type="number" min="0" max="100000" value="0" required></label><label class="field"><span class="field-label">1世代の対局数</span><input class="input" data-setting="games_per_generation" type="number" min="2" max="4096" value="32" required></label></div>
+      <div class="field-row"><label class="field"><span class="field-label">同時対局数</span><input class="input" data-setting="environments" type="number" min="1" max="256" value="8" required></label><label class="field"><span class="field-label">CPUワーカー数</span><input class="input" data-setting="workers" type="number" min="1" max="32" value="2" required></label></div>
+      <div class="field-row"><label class="field"><span class="field-label">バッチサイズ</span><input class="input" data-setting="batch_size" type="number" min="2" max="4096" value="128" required></label><label class="field"><span class="field-label">世代ごとの更新回数</span><input class="input" data-setting="updates" type="number" min="1" max="4096" value="64" required></label></div>
+      <div class="field-row"><label class="field"><span class="field-label">評価ペア数</span><input class="input" data-setting="eval_pairs" type="number" min="1" max="512" value="16" required></label><label class="field"><span class="field-label">評価間隔（世代）</span><input class="input" data-setting="eval_every" type="number" min="1" max="100000" value="5" required></label></div>
+      <label class="switch-row"><span>混合精度（GPU）</span><input type="checkbox" id="ampInput" checked></label>
+      <details class="advanced"><summary>探索設定</summary><div class="field-row"><label class="field"><span class="field-label">通常候補数</span><input class="input" data-setting="cheap_candidates" type="number" min="2" max="32" value="4" required></label><label class="field"><span class="field-label">最大候補数</span><input class="input" data-setting="candidates" type="number" min="2" max="32" value="8" required></label></div></details>
+      <p class="field-help">保存した設定は新規学習と次回の再開に反映します。実行中の変更は、停止して再開すると反映されます。重みと対局ルールは引き継ぎます。</p>
+      <button type="submit" class="btn btn-primary btn-block" id="saveSettings">設定を保存</button>
+      <button type="button" class="btn btn-ghost btn-block" id="smokeStart">CPUで短い動作確認</button>
+      <div id="settingsError" class="field-help" role="status"></div>
+    </form>
   </aside>
-  <div class="app-shell">
-    <header class="topbar"><div class="breadcrumb">ワークスペース <span>/</span> <b id="pageCrumb">学習の概要</b></div><div class="connection"><span class="live-dot" id="connectionDot"></span><span id="connectionText">接続中</span><button class="icon-button" id="refresh" aria-label="データを更新">↻</button></div></header>
-    <main>
-      <div class="page-heading"><div><div class="eyebrow">SHOGI INTELLIGENCE</div><h1 id="pageTitle">一手ずつ、強くする。</h1><p id="pageSubtitle">自己対戦、学習効率、棋力の変化をひとつの場所で。</p></div><div class="heading-actions"><button class="button secondary" id="localStart">CPUで動作確認</button><button class="button primary" data-view="colab">Colabで学習 <span>↗</span></button></div></div>
-      <div id="globalNotice" class="notice" hidden></div>
-      <div class="run-toolbar"><label for="runSelect">表示する実行</label><select id="runSelect"><option value="">実行記録なし</option></select><span class="tag" id="sourceTag">Local</span><span id="runFingerprint" class="muted small"></span><button id="stopJob" class="button stop small" disabled>ローカル処理を停止</button></div>
-
-      <section id="view-overview" class="view" aria-label="学習の概要">
-        <div id="welcome" class="welcome-card"><div class="welcome-art" aria-hidden="true"><span>歩</span><i>↗</i><span>と</span></div><div><div class="eyebrow">YOUR FIRST GENERATION</div><h2>最初の学習を始めましょう。</h2><p>ソース一式をColabに渡し、結果をこの画面で確認できます。<br>手元のCPUでも、学習から評価まで短い動作確認ができます。</p></div><button class="button primary" data-view="colab">セットアップ <span>→</span></button></div>
-        <div class="section-line"><h2>現在の学習</h2><span class="small muted" id="statusUpdated">記録待ち</span></div>
-        <div id="liveStatus" class="status-card"></div>
-        <div id="kpis" class="kpi-grid"></div>
-        <div class="two-columns charts-row"><article class="card"><div class="card-head"><div><h2>棋力の推移</h2><p>固定方策に対する得点率 · 引き分けは0.5</p></div><span class="tag">陣営交換</span></div><div id="strengthChart" class="chart"></div></article><article class="card"><div class="card-head"><div><h2>学習損失</h2><p>方策と価値の学習状況</p></div><span class="small muted">小さいほど整合</span></div><div id="lossChart" class="chart"></div></article></div>
-        <div class="two-columns"><article class="card"><div class="card-head"><div><h2>計算時間の使い道</h2><p>自己対戦の実測時間 · 選択中の世代</p></div></div><div id="efficiency"></div></article><article class="card"><div class="card-head"><div><h2>評価の結論</h2><p>損失とは別に、対戦で確かめる</p></div></div><div id="gateSummary"></div></article></div>
-        <article class="card generation-card"><div class="card-head"><div><h2>世代の記録</h2><p>世代を選ぶと、その世代の内訳と評価を表示します。</p></div><button class="text-button" data-view="evaluation">詳しい評価を見る →</button></div><div class="table-wrap"><table><thead><tr><th>世代</th><th>自己対戦</th><th>新規サンプル</th><th>round / 秒</th><th>方策損失</th><th>対・基準モデル</th><th>判定</th></tr></thead><tbody id="generationTable"></tbody></table></div></article>
-      </section>
-
-      <section id="view-evaluation" class="view" aria-label="棋力の評価・比較" hidden>
-        <div class="two-columns"><article class="card"><div class="card-head"><div><h2>同じ条件で対戦する</h2><p>ローカルCPUで、保存した最新モデルを検証します。</p></div></div><form id="evaluateForm" class="form-row"><label>対戦相手<select id="evalOpponent"><option value="champion">基準モデル（champion）</option><option value="hunter">hunter · 王捕獲優先</option><option value="defense">defense · 防御重視</option><option value="upgrade">upgrade · 昇格重視</option><option value="random">random · ランダム</option></select></label><label>評価ペア数<input id="evalPairs" type="number" min="1" max="512" value="32"></label><button class="button primary" id="evaluateButton" type="submit">評価を実行</button></form><p class="hint">1ペア＝陣営を交換した2局。同じ探索予算で評価し、ペア単位の保守的な区間を表示します。</p></article><article class="card"><div class="card-head"><div><h2>モデルの基準</h2><p>統計的な裏付けがある場合に昇格</p></div></div><div id="championInfo"></div><button class="text-button" id="resumeButton">中断した学習をCPUで再開 →</button></article></div>
-        <article class="card"><div class="card-head"><div><h2>対戦成績</h2><p id="evalGeneration">世代を選択してください</p></div><span class="tag">勝ち=1 / 引き分け=0.5</span></div><div class="table-wrap"><table><thead><tr><th>相手</th><th>勝 / 分 / 負</th><th>得点率</th><th>区間</th><th>対局数</th><th>判定</th></tr></thead><tbody id="evaluationTable"></tbody></table></div><p class="hint">区間が50%をまたぐ場合は判定保留。表示するElo差は、この対戦条件だけの換算値です。</p></article>
-        <article class="card"><div class="card-head"><div><h2>ローカルでの追加評価</h2><p>Colabの学習記録と分けて保存します。</p></div></div><div id="localEvaluations"></div></article>
-        <article class="card"><div class="card-head"><div><h2>実行条件を比較</h2><p>ルール、ソース、探索量を確認してから成績を比較します。</p></div><select id="compareRun" aria-label="比較する実行"><option value="">比較先を選択</option></select></div><div id="comparison"></div></article>
-      </section>
-
-      <section id="view-analysis" class="view" aria-label="棋譜・原因分析" hidden>
-        <div class="analysis-grid"><article class="card"><div class="card-head"><div><h2>対局を追う</h2><p>Rustでハッシュ連鎖を検証した棋譜を再生</p></div><span class="tag" id="replayVerified">未選択</span></div><label class="field">棋譜<select id="replaySelect"><option value="">棋譜を選択</option></select></label><div class="replay-controls"><button class="icon-button" id="prevRound" aria-label="前のラウンド">←</button><label>ラウンド <input id="replayRound" type="number" min="1" value="1"></label><button class="icon-button" id="nextRound" aria-label="次のラウンド">→</button><label>段階 <select id="stageSelect"><option value="-1">最終局面</option></select></label></div><div id="board" class="board-container"><div class="empty">棋譜を選ぶと、盤面と段階ごとの結果を表示します。</div></div><div id="replayHands" class="hands"></div></article><div class="analysis-details"><article class="card"><div class="card-head"><h2>このラウンドの因果関係</h2></div><div id="replayEvents" class="event-list"><div class="empty">捕獲理由、衝突、打ち込みを確認できます。</div></div><button id="probeButton" class="button secondary" disabled>候補を広げて再分析（16×16）</button><p class="hint">最新モデルで局面を再評価します。限定候補の近似評価のため、ルールの不均衡を証明するものではありません。</p></article><article class="card"><div class="card-head"><h2>頻出するイベント</h2></div><div id="eventStats"></div></article></div></div>
-        <article class="card"><div class="card-head"><div><h2>戦術局面の記録</h2><p>候補の組み合わせ、評価値、混合戦略を保存。強い動きの原因を調べる入口です。</p></div></div><label class="field">分析記録<select id="probeSelect"><option value="">分析記録を選択</option></select></label><div id="probeDetails" class="empty">自己対戦中の捕獲・衝突局面は自動で保存します。</div></article>
-      </section>
-
-      <section id="view-colab" class="view" aria-label="Colab・データ連携" hidden>
-        <div class="workflow-strip"><div><b>01</b><span>ソースを渡す<small>現在のルールと学習コード</small></span></div><span>→</span><div><b>02</b><span>Colabで学習<small>GPU推論 + Rust並列環境</small></span></div><span>→</span><div><b>03</b><span>手元で確かめる<small>世代・評価・棋譜を取り込む</small></span></div></div>
-        <div class="two-columns"><article class="card"><div class="step-number">01 / COLAB SETUP</div><h2>このプロジェクトをColabへ</h2><p class="body-copy">ノートブックをColabで開き、ランタイムをGPUに変更。ソースZIPをアップロードして、セルを上から実行してください。</p><div class="stack-actions"><a class="button primary" href="/colab.ipynb" download>Colabノートブックを保存 ↓</a><a class="button secondary" href="/api/bundle" download>現在のソースZIPを保存 ↓</a><a class="text-button" href="https://colab.research.google.com/" target="_blank" rel="noreferrer">Google Colabを開く ↗</a></div><p class="hint">重み、最適化器、乱数状態、リプレイを世代単位で保存。計算はColabの一時領域で進め、確定した世代をDriveに退避します。</p></article><article class="card"><div class="step-number">02 / BRING RESULTS HOME</div><h2>学習結果を読み込む</h2><p class="body-copy">Colabの最終セルで <code>shogi-results.zip</code> を保存し、ここに読み込みます。モデル・棋譜・学習再開用のデータも一緒に取り込めます。</p><label class="upload-zone" for="importZip"><span class="upload-symbol">⇣</span><b>結果ZIPを選択</b><span>shogi-results.zip · 最大256 MB</span><input type="file" id="importZip" accept=".zip,application/zip"></label><div id="importState" class="hint" role="status"></div><a class="text-button" id="exportRun" href="#">表示中の実行をZIPで保存 ↓</a></article></div>
-        <article class="card"><div class="card-head"><div><h2>Driveの同期フォルダーから読む</h2><p>Google Drive for desktop などで同期している場合、取得済みの世代を自動表示します。</p></div><span class="tag">任意</span></div><form id="sourceForm" class="source-form"><label for="sourceDir">runsフォルダー、または実行フォルダーの絶対パス</label><div><input id="sourceDir" placeholder="G:\マイドライブ\Simultaneous_Shogi\runs"><button class="button secondary" type="submit">保存して読み込む</button></div></form><p class="hint">この画面はローカル記録を定期的に読み取ります。Colabを遠隔操作する接続は不要です。進行中の世代は、確定後の同期までグラフに追加されません。</p></article>
-        <article class="card"><div class="card-head"><div><h2>学習時のソースを残す</h2><p>実行ごとのsource.zipに、ルールと学習コードを保存します。</p></div><a id="sourceSnapshot" class="button secondary" href="#">学習時のソースZIPを保存 ↓</a></div><p class="hint">現在のコードと一致しない古い実行は、このソースと同じ環境で再評価・再開します。</p></article>
-        <article class="card"><div class="card-head"><div><h2>実行ログ</h2><p>このPCで実行した学習・評価・ベンチマーク</p></div><span id="jobLabel" class="tag">待機中</span></div><pre id="jobLogs" class="logs">ローカル処理のログがここに表示されます。</pre></article>
-      </section>
-
-      <section id="view-research" class="view" aria-label="研究と実装方針" hidden>
-        <article class="card approach"><div><div class="eyebrow">RESEARCH → ENGINEERING</div><h2>同時着手に合う、計算の使い方。</h2><p>既存の将棋・チェスAIの設計を参考に、ルール解決は既存のRust核へ集約。双方の候補手の組み合わせを評価し、有限の利得行列から混合戦略を求め、方策・価値ネットワークへ学習します。</p></div><div class="method-diagram"><span>完全な着手集合</span><i>↓ 方策 + 探索</i><span>同時着手の利得行列</span><i>↓ regret matching</i><span>方策・価値の更新</span></div></article>
-        <article class="card"><div class="card-head"><div><h2>実測してから採用する</h2><p>完全な行動集合の一致を確認し、同じ局面群で交互に6回ずつ計測します。</p></div><button class="button secondary" id="benchmarkButton">行動生成を計測</button></div><div id="benchmarkResult"></div></article>
-        <div id="researchCards" class="research-grid"></div>
-        <article class="card"><h2>これから比較する項目</h2><p class="body-copy">探索候補数・深い探索の割合・過去モデル対戦・リプレイの再利用率を、一度にひとつずつ変更して同じ計算時間で比較します。Magic Bitboard、NNUE、深いSM-MCTS、優先度付きリプレイ、量子化は、現在の計測結果で効果を確認してから導入します。</p><p class="hint">1段の候補探索と近似局面評価による初期基盤です。ゲーム全体のNash均衡、万能な最適戦略、棋力の向上は未検証です。ルールの代替案は将来、別の版・ハッシュとして記録します。</p></article>
-      </section>
-      <footer><span>双刻 LAB <b>·</b> 同時着手将棋</span><span>実際の記録だけを表示します。サンプル成績は含みません。</span></footer>
-    </main>
-  </div><div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 </body></html>

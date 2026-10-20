@@ -8,3 +8,7 @@ playwright-report
 web/dist
 web/public/engine.wasm
 *.log
+.venv
+.cache
+dashboard/runs
+dashboard/local.json

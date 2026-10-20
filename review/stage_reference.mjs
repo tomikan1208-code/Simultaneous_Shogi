@@ -196,7 +196,7 @@ export function resolveStageRound(input) {
   const laterLost = kings.filter(k => captures.some(c => c.victim === k.captor && c.stage > k.stage));
   let outcome = null;
   if (laterLost.length > 1) throw new Error('Invariant: conflicting king-captor losses');
-  if (laterLost.length === 1) outcome = { winner: laterLost[0].victimSide, reason: 'king_captor_lost' };
+  if (laterLost.length === 1) outcome = { winner: laterLost[0].victimSide === 'A' ? 'B' : 'A', reason: 'king_capture_retained' };
   else if (kings.length === 2) {
     outcome = kings[0].captorRank === kings[1].captorRank ? { winner: 'draw', reason: 'both_kings' } :
       { winner: kings[0].captorRank > kings[1].captorRank ? kings[1].victimSide : kings[0].victimSide, reason: 'both_kings' };
@@ -217,5 +217,5 @@ export function resolveStageRound(input) {
   }).sort((a, b) => a.id.localeCompare(b.id));
   for (const side of ['A', 'B']) hands[side] = Object.fromEntries(Object.entries(hands[side]).filter(([, n]) => n > 0).sort());
   if (new Set(finalPieces.map(p => cellKey(p.at))).size !== finalPieces.length) throw new Error('Invariant: final overlap');
-  return { version: '0.6', pieces: finalPieces, hands, captures, outcome, dropBans: newDropBans, moveBans: [], frames, events };
+  return { version: '0.7', pieces: finalPieces, hands, captures, outcome, dropBans: newDropBans, moveBans: [], frames, events };
 }

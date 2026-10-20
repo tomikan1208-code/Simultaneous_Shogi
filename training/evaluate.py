@@ -6,10 +6,14 @@ from pathlib import Path
 import time
 import numpy as np
 import torch
-from .common import ROOT, SCHEMA, FORMAT, atomic_json, read_json, fingerprint, rules_for, rules_hash, load_config, hardware
+from .common import ROOT, SCHEMA, LEGACY_SCHEMA, FORMAT, atomic_json, read_json, fingerprint, rules_for, rules_hash, load_config, hardware
+from .compatibility import legacy_official_hash_valid, expanded_weights
 from .engine import EnginePool, key
 from .model import Net, device_for
 from .search import Searcher
+from .balance_metrics import EvidenceWriter, GameTracker
+from .compatibility import network_hash
+from .candidates import SEARCH_PROTOCOL
 
 
 def interval(pair_scores, alpha=.05):
@@ -25,19 +29,32 @@ def interval(pair_scores, alpha=.05):
 
 def load_model(path, config, device, source=None):
     checkpoint = torch.load(path, map_location="cpu", weights_only=True)
-    if checkpoint.get("schema") != SCHEMA or checkpoint.get("format") != FORMAT:
+    if checkpoint.get("schema") not in [SCHEMA, LEGACY_SCHEMA] or checkpoint.get("format") != FORMAT:
         raise ValueError("Unsupported checkpoint schema")
     if source is not None and checkpoint["source_fingerprint"] != source:
         raise ValueError("Source fingerprint differs; use the source bundle that created this run")
-    if checkpoint["rules_hash"] != rules_hash(rules_for(config)):
+    if checkpoint["rules_hash"] != rules_hash(rules_for(config)) and not legacy_official_hash_valid(path, checkpoint, rules_for(config)):
         raise ValueError("Rule fingerprint differs; evaluations cannot mix rules/limits")
     model = Net(checkpoint["channels"]).to(device)
-    model.load_state_dict(checkpoint["model"])
+    model.load_state_dict(expanded_weights(checkpoint["model"], model))
     model.eval()
     return model, checkpoint
 
 
 def paired_match(pool, model, opponent, config, device, generation, label, pairs, seed, out_dir=None, alpha=.05, progress=None):
+    evidence = EvidenceWriter(Path(out_dir) / f"{label}-evidence", dict(
+        phase="paired_evaluation", generation=generation, label=label, rules=rules_for(config),
+        rules_hash=rules_hash(rules_for(config)), source_fingerprint=fingerprint(), seed=seed, pairs=pairs,
+        model_weights_sha256=network_hash(model), opponent_weights_sha256=network_hash(opponent) if isinstance(opponent,Net) else opponent,
+        config=config)) if config.get("balance_logging") and out_dir else None
+    try:
+        return _paired_match(pool, model, opponent, config, device, generation, label, pairs, seed, out_dir, alpha, progress, evidence)
+    finally:
+        if evidence:
+            evidence.close()
+
+
+def _paired_match(pool, model, opponent, config, device, generation, label, pairs, seed, out_dir, alpha, progress, evidence):
     started = time.perf_counter()
     all_games, events, captures, representative = [], {}, {}, []
     searcher = Searcher(pool, model, config, device, generation)
@@ -48,11 +65,14 @@ def paired_match(pool, model, opponent, config, device, generation, label, pairs
         batch_pairs = min(pairs_per_wave, pairs - first)
         pool.reset(batch_pairs * 2, rules_for(config))
         rows = pool.call("observe")
-        identities, rngs, opponent_rngs, baseline_rngs = {}, {}, {}, {}
+        identities, rngs, opponent_rngs, baseline_rngs, trackers = {}, {}, {}, {}, {}
         for i, row in enumerate(rows):
             pair, swapped = first + i // 2, bool(i % 2)
             model_side = int(swapped)
             identities[key(row)] = (pair, swapped, model_side)
+            if evidence:
+                trackers[key(row)] = GameTracker(pair*2+int(swapped), dict(pair=pair, swapped=swapped, model_side=model_side,
+                                                                        round_limit=config["round_limit"]))
             streams = [np.random.default_rng(np.random.SeedSequence([seed, pair, role])) for role in range(2)]
             rngs[key(row)] = [streams[s ^ model_side] for s in range(2)]
             opponent_rngs[key(row)] = [np.random.default_rng(np.random.SeedSequence([seed, pair, 20 + (s ^ model_side)])) for s in range(2)]
@@ -71,14 +91,32 @@ def paired_match(pool, model, opponent, config, device, generation, label, pairs
                 pair, swapped, side = identities[identity]
                 selected = choices[identity]["actions"].copy()
                 selected[1 - side] = other[identity]["actions"][1 - side] if other_searcher else other[identity]["action"]
-                items.append({"_engine": identity[0], "env": identity[1], "actions": selected, "replay": pair == 0})
+                items.append({"_engine": identity[0], "env": identity[1], "actions": selected, "replay": bool(evidence) or pair == 0})
+            roots = {key(row): row for row in rows}
+            actual = {key(item): item["actions"] for item in items}
+            decisions = {}
+            for identity, choice in choices.items():
+                decision = dict(choice, selected=[list(x) for x in choice["selected"]], strategies=list(choice["strategies"]),
+                                sampling_strategies=list(choice['sampling_strategies']),coverage=list(choice['coverage']))
+                if other_searcher:
+                    opponent_side = 1-identities[identity][2]
+                    decision["selected"][opponent_side] = other[identity]["selected"][opponent_side]
+                    decision["strategies"][opponent_side] = other[identity]["strategies"][opponent_side]
+                    decision['sampling_strategies'][opponent_side] = other[identity]['sampling_strategies'][opponent_side]
+                    decision['coverage'][opponent_side] = other[identity]['coverage'][opponent_side]
+                    decision["opponent_gap"] = other[identity]["gap"]
+                decisions[identity] = decision
             for result in pool.call("step", items):
+                if evidence:
+                    evidence.write(trackers[key(result)].observe(roots[key(result)], result, actual[key(result)], decisions[key(result)]))
                 for name, count in result["metrics"].items():
                     events[name] = events.get(name, 0) + count
                 for capture in result["captures"]:
                     name = capture["reason"] + ":" + capture["kind"]
                     captures[name] = captures.get(name, 0) + 1
                 if result["outcome"]:
+                    if evidence:
+                        evidence.games.append(trackers[key(result)].finish())
                     pair, swapped, side = identities[key(result)]
                     winner = result["outcome"]["winner"]
                     score = .5 if winner == "draw" else float(winner == ["A", "B"][side])
@@ -99,7 +137,10 @@ def paired_match(pool, model, opponent, config, device, generation, label, pairs
                "decision": "better" if ci[0] > .5 else "worse" if ci[1] < .5 else "inconclusive",
                "seconds": time.perf_counter() - started, "results": all_games, "events": events,
                "captures": captures, "search": searcher.timing,
-               "budget": {k: config[k] for k in ["candidates", "regret_iterations", "round_limit", "bootstrap_weight", "bootstrap_generations"]}}
+               "budget": dict({k: config[k] for k in ["candidates", "regret_iterations", "round_limit", "bootstrap_weight", "bootstrap_generations"]},
+                              search_protocol=SEARCH_PROTOCOL,repetition_candidate_multiplier=2,training_exploration=0)}
+    if evidence:
+        results["balance"] = evidence.finish()
     if out_dir:
         out_dir = Path(out_dir)
         atomic_json(out_dir / f"{label}.json", results)
@@ -112,7 +153,7 @@ def main():
     parser = argparse.ArgumentParser(description="Paired local evaluation of a Colab checkpoint")
     parser.add_argument("--run-dir", required=True)
     parser.add_argument("--checkpoint", default="latest")
-    parser.add_argument("--opponent", default="hunter", choices=["hunter", "defense", "upgrade", "random", "champion"])
+    parser.add_argument("--opponent", default="adapted_self", choices=["adapted_self","recent_checkpoint","hunter", "defense", "upgrade", "random", "champion"])
     parser.add_argument("--pairs", type=int, default=32)
     parser.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda"])
     args = parser.parse_args()
@@ -126,12 +167,28 @@ def main():
     filename = manifest["latest_checkpoint"] if args.checkpoint == "latest" else f"checkpoints/g{int(args.checkpoint):04d}.pt"
     model, ckpt = load_model(run / filename, config, device, fingerprint())
     opponent = args.opponent
+    reference_generation = None
+    if opponent == 'adapted_self':
+        opponent = model
+    elif opponent == 'recent_checkpoint':
+        previous = sorted(p for p in (run/'checkpoints').glob('g*.pt') if 0<int(p.stem[1:])<ckpt['generation'] and int(p.stem[1:])!=manifest.get('initial_generation',0))
+        if not previous:parser.error('No prior learned checkpoint is available; use adapted_self')
+        path=previous[-1]
+        origin=manifest.get('checkpoint_origins',{}).get(path.relative_to(run).as_posix())
+        if origin:
+            from .compatibility import file_hash
+            if file_hash(path)!=origin['sha256']:raise ValueError('Inherited checkpoint changed')
+        opponent, saved=load_model(path,config,device,origin['source_fingerprint'] if origin else fingerprint())
+        reference_generation=saved['generation']
     if opponent == "champion":
         opponent, _ = load_model(run / manifest["champion_checkpoint"], config, device, fingerprint())
     stamp = str(int(time.time()))
     with EnginePool(config["workers"]) as pool:
         results = paired_match(pool, model, opponent, config, device, ckpt["generation"], args.opponent,
                                args.pairs, config["eval_seed"], run / "local-evaluations" / stamp)
+    if reference_generation is not None:
+        results['reference_generation']=reference_generation
+        atomic_json(run/'local-evaluations'/stamp/f'{args.opponent}.json',results)
     atomic_json(run / "local-evaluations" / stamp / "environment.json", hardware(device))
     print(f"Score {results['score']:.3f}, interval {results['interval']}, {results['decision']}")
 

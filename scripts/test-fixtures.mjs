@@ -1,12 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { WasmEngine } from '../web/dist/engine.js';
+import { PLAY_RULES } from '../web/dist/rules.js';
 const bytes = readFileSync(new URL('../web/dist/engine.wasm', import.meta.url));
 const p = (id, side, kind, at, changes = {}) => ({ id, side, kind, at, ...changes });
 const move = (side, piece, to) => ({ side, type: 'move', piece, to, choice: 'none' });
 async function replay(pieces, actions = [], hands = { A: {}, B: {} }) {
   const engine = await WasmEngine.fromBytes(bytes);
   const call = request => { const response = engine.call(request); if (!response.ok) throw new Error(response.error); return response.value; };
-  call({ cmd: 'new', position: { pieces, hands } });
+  call({ cmd: 'new', rules:PLAY_RULES,position: { pieces, hands } });
   for (const action of actions) call({ cmd: 'submit', side: action.side, action });
   return call({ cmd: 'export' });
 }

@@ -1,4 +1,4 @@
-//! Deterministic v0.6 rules. No clocks, I/O, drawing, or policy randomness here.
+//! Deterministic v0.7 rules with exact v0.6 replay support. No clocks or I/O here.
 pub mod action;
 pub mod api;
 pub mod game;

@@ -1,0 +1,941 @@
+--- a/crates/shogi-core/src/game.rs
++++ b/crates/shogi-core/src/game.rs
+@@ -92,7 +92,7 @@
+         let mut result = resolve_round_with_rules(&self.position, actions, &self.rules, false)?;
+         let count = self
+             .repetitions
+-            .get(&position_hash(&result.position))
++            .get(&result.after_hash)
+             .copied()
+             .unwrap_or(0)
+             + 1;
+@@ -111,11 +111,10 @@
+         Ok(result)
+     }
+     pub fn next_repetition_count(&self, position: &Position) -> u32 {
+-        self.repetitions
+-            .get(&position_hash(position))
+-            .copied()
+-            .unwrap_or(0)
+-            + 1
++        self.next_repetition_count_from_hash(&position_hash(position))
++    }
++    pub fn next_repetition_count_from_hash(&self, hash: &str) -> u32 {
++        self.repetitions.get(hash).copied().unwrap_or(0) + 1
+     }
+     pub fn state_hash(&self) -> String {
+         hash_value(&(
+--- a/crates/shogi-core/src/training.rs
++++ b/crates/shogi-core/src/training.rs
+@@ -1,10 +1,225 @@
+ //! Training-only complete action enumeration. The reference/UI generator stays
+ //! independent so equivalence and throughput can be measured on the same corpus.
+ use crate::{action::planned_path, types::*};
++use serde::Serialize;
+ use std::sync::OnceLock;
+ 
+ type Geometry = Vec<Vec<Square>>;
+ static GEOMETRY: OnceLock<Vec<Geometry>> = OnceLock::new();
++pub const BOARD_SIZE: usize = 9;
++pub const BOARD_CELLS: usize = BOARD_SIZE * BOARD_SIZE;
++pub const OBSERVATION_PLANES: usize = 62;
++
++#[derive(Serialize)]
++pub struct SparseObservation {
++    indices: Vec<usize>,
++    values: Vec<f32>,
++    planes: Vec<(usize, f32)>,
++}
++
++impl SparseObservation {
++    fn cell(&mut self, plane: usize, at: Square, value: f32) {
++        if value != 0.0 {
++            self.indices.push(plane * BOARD_CELLS + square_index(at));
++            self.values.push(value);
++        }
++    }
++    fn plane(&mut self, plane: usize, value: f32) {
++        if value != 0.0 {
++            self.planes.push((plane, value));
++        }
++    }
++}
++
++fn ratio(n: u32, d: u32) -> f32 {
++    (f64::from(n) / f64::from(d)) as f32
++}
++
++fn kind_index(kind: Kind) -> usize {
++    Kind::ALL.iter().position(|k| *k == kind).unwrap()
++}
++
++/// Exact net-v2 observation from A's perspective. B is a rotation plus plane swap.
++/// Sparse transport avoids serializing piece IDs, rules and full positions per leaf.
++pub fn sparse_observation(
++    position: &Position,
++    rules: &RuleSet,
++    round: u32,
++    repetition: u32,
++) -> SparseObservation {
++    let mut result = SparseObservation {
++        indices: Vec::with_capacity(256),
++        values: Vec::with_capacity(256),
++        planes: Vec::with_capacity(16),
++    };
++    for p in &position.pieces {
++        let side = p.side.index();
++        result.cell(side * 8 + kind_index(p.kind), p.at, 1.0);
++        result.cell(16 + side, p.at, f32::from(p.promoted));
++        result.cell(18 + side, p.at, f32::from(p.upgraded));
++        if let Some(balance) = &rules.balance {
++            let activity = position.activity.get(&p.id).cloned().unwrap_or_default();
++            result.cell(
++                54 + side,
++                p.at,
++                ratio(
++                    u32::from(activity.streak),
++                    u32::from(balance.consecutive_threshold),
++                ),
++            );
++            result.cell(56 + side, p.at, ratio(u32::from(activity.fatigue), 8));
++            result.cell(
++                58 + side,
++                p.at,
++                ratio(u32::from(balance.movement_rank(p, &activity, true)), 16),
++            );
++        }
++    }
++    for side in Side::ALL {
++        for kind in Kind::ALL.into_iter().skip(1) {
++            result.plane(
++                20 + side.index() * 7 + kind_index(kind) - 1,
++                ratio(
++                    u32::from(position.hands.count(side, kind)),
++                    if kind == Kind::P { 18 } else { 4 },
++                ),
++            );
++        }
++    }
++    for ban in &position.drop_bans {
++        result.cell(
++            34 + ban.side.index() * 7 + kind_index(ban.kind) - 1,
++            ban.to,
++            f32::from(ban.remaining),
++        );
++    }
++    for ban in &position.move_bans {
++        let plane = 48 + ban.side.index() * 2;
++        result.cell(plane, ban.from, f32::from(ban.remaining));
++        result.cell(plane + 1, ban.to, f32::from(ban.remaining));
++    }
++    result.plane(
++        52,
++        (1.0 - f64::from(round) / f64::from(rules.round_limit)).max(0.0) as f32,
++    );
++    result.plane(53, ratio(repetition, rules.repetition_limit));
++    if let Some(balance) = &rules.balance {
++        for side in Side::ALL {
++            for y in 1..=BOARD_SIZE as u8 {
++                for x in 1..=BOARD_SIZE as u8 {
++                    if balance.home(side, [x, y]) {
++                        result.cell(
++                            60 + side.index(),
++                            [x, y],
++                            ratio(u32::from(balance.defense_bonus), 8),
++                        );
++                    }
++                }
++            }
++        }
++    }
++    result
++}
++
++pub fn material_value(position: &Position) -> f64 {
++    let values = [0i32, 1, 3, 3, 5, 6, 10, 9];
++    let mut total = 0i32;
++    for p in &position.pieces {
++        let value = values[kind_index(p.kind)] + 2 * i32::from(p.promoted) + i32::from(p.upgraded);
++        total += if p.side == Side::A { value } else { -value };
++    }
++    for side in Side::ALL {
++        for (kind, count) in position.hands.get(side) {
++            let value = values[kind_index(*kind)] * i32::from(*count);
++            total += if side == Side::A { value } else { -value };
++        }
++    }
++    (f64::from(total) / 25.0).tanh()
++}
++
++#[derive(Debug, Serialize)]
++pub struct MixedStrategy {
++    pub p: Vec<f64>,
++    pub q: Vec<f64>,
++    pub gap: f64,
++}
++
++/// Same simultaneous, linearly weighted regret matching as the NumPy reference.
++pub fn regret_match(matrix: &[Vec<f64>], iterations: usize) -> EngineResult<MixedStrategy> {
++    let rows = matrix.len();
++    let cols = matrix.first().map_or(0, Vec::len);
++    if rows == 0
++        || cols == 0
++        || rows > 32
++        || cols > 32
++        || !(1..=8192).contains(&iterations)
++        || matrix
++            .iter()
++            .any(|row| row.len() != cols || row.iter().any(|v| !v.is_finite()))
++    {
++        return Err("Invalid finite payoff matrix / iteration count".into());
++    }
++    let (mut ra, mut rb) = (vec![0.0f64; rows], vec![0.0f64; cols]);
++    let (mut sa, mut sb) = (ra.clone(), rb.clone());
++    let (mut p, mut q) = (ra.clone(), rb.clone());
++    let (mut row_values, mut col_values) = (ra.clone(), rb.clone());
++    for t in 1..=iterations {
++        let a: f64 = ra.iter().sum();
++        let b: f64 = rb.iter().sum();
++        for i in 0..rows {
++            p[i] = if a > 1e-12 {
++                ra[i] / a
++            } else {
++                1.0 / rows as f64
++            };
++        }
++        for j in 0..cols {
++            q[j] = if b > 1e-12 {
++                rb[j] / b
++            } else {
++                1.0 / cols as f64
++            };
++        }
++        col_values.fill(0.0);
++        for i in 0..rows {
++            row_values[i] = 0.0;
++            for j in 0..cols {
++                row_values[i] += matrix[i][j] * q[j];
++                col_values[j] -= p[i] * matrix[i][j];
++            }
++        }
++        let expected_a: f64 = p.iter().zip(&row_values).map(|(p, v)| p * v).sum();
++        let expected_b: f64 = q.iter().zip(&col_values).map(|(q, v)| q * v).sum();
++        for i in 0..rows {
++            ra[i] = (ra[i] + row_values[i] - expected_a).max(0.0);
++            sa[i] += t as f64 * p[i];
++        }
++        for j in 0..cols {
++            rb[j] = (rb[j] + col_values[j] - expected_b).max(0.0);
++            sb[j] += t as f64 * q[j];
++        }
++    }
++    let a: f64 = sa.iter().sum();
++    let b: f64 = sb.iter().sum();
++    for i in 0..rows {
++        p[i] = sa[i] / a;
++    }
++    for j in 0..cols {
++        q[j] = sb[j] / b;
++    }
++    let best_a = matrix
++        .iter()
++        .map(|row| row.iter().zip(&q).map(|(v, q)| v * q).sum::<f64>())
++        .fold(f64::NEG_INFINITY, f64::max);
++    let best_b = (0..cols)
++        .map(|j| (0..rows).map(|i| p[i] * matrix[i][j]).sum::<f64>())
++        .fold(f64::INFINITY, f64::min);
++    Ok(MixedStrategy {
++        p,
++        q,
++        gap: (best_a - best_b).max(0.0),
++    })
++}
+ 
+ fn geometry(p: &Piece) -> &Geometry {
+     let table = GEOMETRY.get_or_init(|| {
+--- a/crates/shogi-cli/src/training.rs
++++ b/crates/shogi-cli/src/training.rs
+@@ -2,8 +2,7 @@
+ use serde_json::{json, Value};
+ use shogi_core::{
+     policy::{choose, Policy, Rng},
+-    replay::position_hash,
+-    training::fast_actions,
++    training::{fast_actions, material_value, regret_match, sparse_observation},
+     *,
+ };
+ use std::{
+@@ -71,10 +70,15 @@
+                         for a in &options[0] {
+                             for b in &options[1] {
+                                 let r = game.preview_round(&[a.clone(),b.clone()])?;
+-                                let key = position_hash(&r.position);
++                                let key = r.after_hash.clone();
+                                 let index = *cache.entry((key,json!(r.outcome).to_string())).or_insert_with(|| {
+                                     let index = states.len();
+-                                    states.push(json!({"position":r.position,"outcome":r.outcome,"round":game.round+1,"rules":game.rules,"repetition":game.next_repetition_count(&r.position)}));
++                                    let repetition = game.next_repetition_count_from_hash(&r.after_hash);
++                                    states.push(if item["compact"].as_bool() == Some(true) {
++                                        json!({"outcome":r.outcome,"features":sparse_observation(&r.position,&game.rules,game.round+1,repetition),"heuristic":material_value(&r.position)})
++                                    } else {
++                                        json!({"position":r.position,"outcome":r.outcome,"round":game.round+1,"rules":game.rules,"repetition":repetition})
++                                    });
+                                     index
+                                 });
+                                 cells.push(index);
+@@ -83,6 +87,13 @@
+                         rows.push(json!({"env":env,"states":states,"cells":cells}));
+                     }
+                     Ok(json!(rows))
++                }
++                "solve" => {
++                    v["items"].as_array().ok_or("Missing items")?.iter().map(|item| {
++                        let matrix: Vec<Vec<f64>> = parse(&item["matrix"])?;
++                        let strategy = regret_match(&matrix,number(item,"iterations")?)?;
++                        Ok(json!({"env":item["env"],"p":strategy.p,"q":strategy.q,"gap":strategy.gap}))
++                    }).collect::<Result<Vec<_>,String>>().map(|rows| json!(rows))
+                 }
+                 "step" => {
+                     let mut rows = Vec::new();
+--- a/training/common.py
++++ b/training/common.py
+@@ -75,6 +75,7 @@
+     limits = {"generations": (0, 100000), "games_per_generation": (2, 4096), "environments": (1, 256),
+               "workers": (1, 32), "candidates": (2, 32), "cheap_candidates": (2, 32),
+               "regret_iterations": (8, 8192), "batch_size": (2, 4096), "updates": (1, 4096),
++              "value_batch_size": (1, 4096),
+               "replay_capacity": (32, 100000), "eval_pairs": (1, 4096), "eval_every": (1, 100000), "history_size": (1, 32),
+               "round_limit": (1, 200), "bootstrap_generations": (1, 100000), "channels": (8, 128),
+               "seed": (0, 2**32-1), "eval_seed": (0, 2**32-1)}
+--- a/training/config.json
++++ b/training/config.json
+@@ -9,6 +9,7 @@
+   "deep_fraction": 0.25,
+   "regret_iterations": 128,
+   "batch_size": 128,
++  "value_batch_size": 256,
+   "updates": 64,
+   "replay_capacity": 4096,
+   "recent_fraction": 0.5,
+--- a/training/features.py
++++ b/training/features.py
+@@ -1,4 +1,5 @@
+ """Relative 9x9 observations, and sparse complete-action descriptors."""
++from functools import lru_cache
+ import numpy as np
+ from .rules import rank_details
+ 
+@@ -6,6 +7,39 @@
+ HAND = "PLNSGRB"
+ PLANES = 62
+ ACTION_FEATURES = 24
++BOARD_SIZE = 9
++BOARD_CELLS = BOARD_SIZE * BOARD_SIZE
++KIND_INDEX = {kind: index for index, kind in enumerate(KINDS)}
++HAND_INDEX = {kind: index for index, kind in enumerate(HAND)}
++BASE_RANK = dict(K=0, P=1, L=2, N=3, S=4, G=5, R=6, B=6)
++# Rotate by 180 degrees and exchange own/opponent feature planes.
++OTHER_PLANES = np.array([*range(8, 16), *range(8), 17, 16, 19, 18,
++                         *range(27, 34), *range(20, 27), *range(41, 48), *range(34, 41),
++                         50, 51, 48, 49, 52, 53, 55, 54, 57, 56, 59, 58, 61, 60])
++
++
++def other_observation(board):
++    return board[OTHER_PLANES, ::-1, ::-1].copy()
++
++
++def observation_pair(state):
++    board = observation(state, "A")
++    return board, other_observation(board)
++
++
++def compact_observations(states):
++    """Expand native sparse A observations; derive B with the same symmetry."""
++    boards = np.zeros((len(states), PLANES, BOARD_CELLS), np.float32)
++    flat = boards.reshape(len(states), -1)
++    for i, state in enumerate(states):
++        features = state["features"]
++        for plane, value in features["planes"]:
++            boards[i, plane] = value
++        flat[i, features["indices"]] = features["values"]
++    result = np.empty((len(states), 2, PLANES, BOARD_SIZE, BOARD_SIZE), np.float32)
++    result[:, 0] = boards.reshape(-1, PLANES, BOARD_SIZE, BOARD_SIZE)
++    result[:, 1] = result[:, 0, OTHER_PLANES, ::-1, ::-1]
++    return result.reshape(-1, PLANES, BOARD_SIZE, BOARD_SIZE)
+ 
+ 
+ def square(q, side):
+@@ -19,16 +53,16 @@
+     for p in pos["pieces"]:
+         rel = int(p["side"] != side)
+         cell = square(p["at"], side)
+-        board[rel * 8 + KINDS.index(p["kind"]), cell] = 1
++        board[rel * 8 + KIND_INDEX[p["kind"]], cell] = 1
+         board[16 + rel, cell] = p.get("promoted", False)
+         board[18 + rel, cell] = p.get("upgraded", False)
+     for owner in ["A", "B"]:
+         rel = int(owner != side)
+         for k, count in pos.get("hands", {}).get(owner, {}).items():
+             if k in HAND:
+-                board[20 + rel * 7 + HAND.index(k)] = count / (18 if k == "P" else 4)
++                board[20 + rel * 7 + HAND_INDEX[k]] = count / (18 if k == "P" else 4)
+     for ban in pos.get("dropBans", []):
+-        board[34 + int(ban["side"] != side) * 7 + HAND.index(ban["kind"]), square(ban["to"], side)] = ban["remaining"]
++        board[34 + int(ban["side"] != side) * 7 + HAND_INDEX[ban["kind"]], square(ban["to"], side)] = ban["remaining"]
+     for ban in pos.get("moveBans", []):
+         start = 48 + int(ban["side"] != side) * 2
+         board[start, square(ban["from"], side)] = ban["remaining"]
+@@ -52,42 +86,63 @@
+     return board.reshape(PLANES, 9, 9)
+ 
+ 
++@lru_cache(maxsize=2 * BOARD_CELLS * BOARD_CELLS)
++def path_geometry(start, end, leap):
++    """81-bit ray mask, first-hit direction, and promotion-zone coverage.
++
++    Occupancy only describes the first contact; it never removes destinations
++    from this game's complete set of precommitments.
++    """
++    x, y = start % BOARD_SIZE + 1, start // BOARD_SIZE + 1
++    tx, ty = end % BOARD_SIZE + 1, end // BOARD_SIZE + 1
++    dx, dy = tx - x, ty - y
++    distance = max(abs(dx), abs(dy))
++    sx, sy = (dx > 0) - (dx < 0), (dy > 0) - (dy < 0)
++    path = [(tx, ty)] if leap or not distance else [(x + sx * n, y + sy * n) for n in range(1, distance + 1)]
++    mask = sum(1 << ((py - 1) * BOARD_SIZE + px - 1) for px, py in path)
++    return mask, end > start, distance / 8, dx / 8, dy / 8, y <= 3 or any(py <= 3 for _, py in path), y >= 7 or any(py >= 7 for _, py in path)
++
++
+ def actions(state, side, choices):
+     pos = state["position"]
+     pieces = {p["id"]: p for p in pos["pieces"]}
+-    occupants = {tuple(p["at"]): p for p in pos["pieces"]}
++    occupants = {square(p["at"], "A"): p for p in pos["pieces"]}
++    occupied = sum(1 << cell for cell in occupants)
+     enemy_king = next((p["at"] for p in pos["pieces"] if p["side"] != side and p["kind"] == "K"), [5, 5])
+     indices = np.zeros((len(choices), 2), np.int64)
+     data = np.zeros((len(choices), ACTION_FEATURES), np.float32)
+     aliases = []
++    descriptors = {}
+     for i, action in enumerate(choices):
+         drop = action["type"] == "drop"
+         p = {"kind": action["kind"], "at": action["to"]} if drop else pieces[action["piece"]]
+         to, start = action["to"], p["at"]
+-        dx, dy = to[0] - start[0], to[1] - start[1]
+         choice = ["none", "promote", "upgrade"].index(action.get("choice", "none"))
+-        rank = {"K": 0, "P": 1, "L": 2, "N": 3, "S": 4, "G": 5, "R": 6, "B": 6}[p["kind"]]
+-        indices[i] = [square(start, side), square(to, side)]
+-        data[i, KINDS.index(p["kind"])] = 1
++        start_cell, end_cell = square(start, "A"), square(to, "A")
++        identity = drop, action.get("piece", p["kind"]), end_cell
++        cached = descriptors.get(identity)
++        if cached is None:
++            descriptor = np.zeros(ACTION_FEATURES, np.float32)
++            mask, ascending, distance, dx, dy, zone_a, zone_b = path_geometry(start_cell, end_cell, drop or p["kind"] == "N" and not p.get("promoted", False))
++            descriptor[KIND_INDEX[p["kind"]]] = 1
++            descriptor[11:18] = [drop, (BASE_RANK[p["kind"]] + p.get("upgraded", False)) / 7,
++                                 p.get("promoted", False), p.get("upgraded", False),
++                                 distance, dx * (1 if side == "A" else -1) if dx else 0., dy * (-1 if side == "A" else 1) if dy else 0.]
++            hit = occupied & mask
++            if hit:
++                cell = (hit & -hit).bit_length() - 1 if ascending else hit.bit_length() - 1
++                victim = occupants[cell]
++                descriptor[18 + int(victim["side"] != side)] = 1
++                if victim["side"] != side:
++                    descriptor[20] = BASE_RANK[victim["kind"]] / 7
++                    descriptor[21] = victim["kind"] == "K"
++            descriptor[22] = (abs(to[0] - enemy_king[0]) + abs(to[1] - enemy_king[1])) / 16
++            can_change = not drop and p["kind"] not in "KG" and not p.get("promoted", False) and not p.get("upgraded", False) and (zone_a if side == "A" else zone_b)
++            descriptor[23] = can_change
++            relative = (start_cell, end_cell) if side == "A" else (BOARD_CELLS - 1 - start_cell, BOARD_CELLS - 1 - end_cell)
++            cached = descriptors[identity] = relative, descriptor, can_change
++        indices[i], data[i], can_change = cached
+         data[i, 8 + choice] = 1
+-        data[i, 11:18] = [drop, (rank + p.get("upgraded", False)) / 7,
+-                           p.get("promoted", False), p.get("upgraded", False),
+-                           max(abs(dx), abs(dy)) / 8, dx * (1 if side == "A" else -1) / 8, dy * (-1 if side == "A" else 1) / 8]
+-        path = [to] if drop or (p["kind"] == "N" and not p.get("promoted", False)) else [
+-            [start[0] + int(np.sign(dx)) * n, start[1] + int(np.sign(dy)) * n]
+-            for n in range(1, max(abs(dx), abs(dy)) + 1)]
+-        for cell in path:
+-            victim = occupants.get(tuple(cell))
+-            if victim:
+-                data[i, 18 + int(victim["side"] != side)] = 1
+-                if victim["side"] != side:
+-                    data[i, 20] = {"K": 0, "P": 1, "L": 2, "N": 3, "S": 4, "G": 5, "R": 6, "B": 6}[victim["kind"]] / 7
+-                    data[i, 21] = victim["kind"] == "K"
+-                break
+-        data[i, 22] = (abs(to[0] - enemy_king[0]) + abs(to[1] - enemy_king[1])) / 16
+-        zone = lambda q: q[1] <= 3 if side == "A" else q[1] >= 7
+-        can_change = not drop and p["kind"] not in "KG" and not p.get("promoted", False) and not p.get("upgraded", False) and (zone(start) or any(zone(q) for q in path))
+-        data[i, 23] = can_change
+         # Search aliases only when a change cannot affect ANY actual endpoint.
+         effective_choice = choice if can_change and not (choice == 2 and p.get("upgraded", False)) else 0
+         aliases.append((action.get("piece", p["kind"]), tuple(to), effective_choice))
+--- a/training/model.py
++++ b/training/model.py
+@@ -41,10 +41,24 @@
+ def pack(samples, device):
+     boards = torch.as_tensor(np.stack([s["board"] for s in samples]), dtype=torch.float32, device=device)
+     counts = [len(s["data"]) for s in samples]
+-    owners = torch.repeat_interleave(torch.arange(len(samples), device=device), torch.tensor(counts, device=device))
++    owners = torch.repeat_interleave(torch.arange(len(samples), device=device), torch.tensor(counts, device=device), output_size=sum(counts))
+     indices = torch.as_tensor(np.concatenate([s["indices"] for s in samples]), dtype=torch.long, device=device)
+     data = torch.as_tensor(np.concatenate([s["data"] for s in samples]), dtype=torch.float32, device=device)
+     return boards, owners, indices, data, counts
++
++
++def segmented_policy_loss(logits, targets, owners, sample_count):
++    """Mean per-position cross entropy over ragged complete action sets.
++
++    A single segmented log-sum-exp replaces one softmax/autograd graph per
++    position. Detaching the stabilizing maxima preserves the exact gradient.
++    """
++    logits = logits.float()
++    maxima = logits.new_full((sample_count,), -torch.inf)
++    maxima.scatter_reduce_(0, owners, logits.detach(), reduce="amax", include_self=True)
++    shifted = logits - maxima[owners]
++    sums = logits.new_zeros(sample_count).scatter_add_(0, owners, shifted.exp())
++    return -(targets * (shifted - sums.log()[owners])).sum() / sample_count
+ 
+ 
+ @torch.inference_mode()
+--- a/training/search.py
++++ b/training/search.py
+@@ -7,7 +7,7 @@
+ import numpy as np
+ import torch
+ from .engine import key
+-from .features import observation, actions, heuristic_prior, heuristic_value
++from .features import observation_pair, compact_observations, actions, heuristic_prior, heuristic_value
+ from .model import predict, autocast
+ 
+ 
+@@ -47,11 +47,11 @@
+     def policy_samples(self, rows):
+         samples = []
+         for row in rows:
+-            for side, choices in zip(["A", "B"], row["actions"]):
++            for side, choices, board in zip(["A", "B"], row["actions"], observation_pair(row)):
+                 indices, data, aliases = actions(row, side, choices)
+                 if not len(data):
+                     raise RuntimeError("No specifiable action; the rules do not define pass/stalemate")
+-                samples.append({"board": observation(row, side), "indices": indices, "data": data,
++                samples.append({"board": board, "indices": indices, "data": data,
+                                 "aliases": aliases, "actions": choices, "side": side})
+         return samples
+ 
+@@ -59,16 +59,22 @@
+     def values(self, states):
+         result = np.array([terminal_value(s) if s["outcome"] else 0. for s in states], np.float32)
+         nonterminal = [i for i, s in enumerate(states) if not s["outcome"]]
+-        for start in range(0, len(nonterminal), 256):
+-            ids = nonterminal[start:start + 256]
+-            boards = np.stack([observation(states[i], side) for i in ids for side in ["A", "B"]])
++        batch_size = self.config.get("value_batch_size", 256)
++        for start in range(0, len(nonterminal), batch_size):
++            ids = nonterminal[start:start + batch_size]
++            batch = [states[i] for i in ids]
++            boards = compact_observations(batch) if "features" in batch[0] else np.stack([board for state in batch for board in observation_pair(state)])
+             tensor = torch.as_tensor(boards, device=self.device)
+             with autocast(self.device, self.config["amp"]):
+                 _, values = self.model.encode(tensor)
+             values = values.float().cpu().numpy().reshape(-1, 2)
+             estimates = (values[:, 0] - values[:, 1]) / 2
+             for i, estimate in zip(ids, estimates):
+-                result[i] = (1 - self.bootstrap) * estimate + self.bootstrap * heuristic_value(states[i])
++                if self.bootstrap:
++                    heuristic = states[i]["heuristic"] if "features" in states[i] else heuristic_value(states[i])
++                    result[i] = (1 - self.bootstrap) * estimate + self.bootstrap * heuristic
++                else:
++                    result[i] = estimate
+         return result
+ 
+     def search(self, rows, rngs, training=False, forced_actions=None):
+@@ -112,6 +118,7 @@
+                 sample["prior"] = prior
+             selected.append(chosen)
+             items.append({"_engine": row["_engine"], "env": row["env"],
++                          "compact": True,
+                           "candidates": [[row["actions"][s][j] for j in chosen[s]] for s in range(2)]})
+         self.timing["policy_seconds"] += time.perf_counter() - t
+         t = time.perf_counter()
+@@ -126,11 +133,17 @@
+         values = self.values(flat_states)
+         self.timing["value_seconds"] += time.perf_counter() - t
+         t = time.perf_counter()
++        matrices = [values[np.array(previews[key(row)]["cells"]) + ranges[i]].reshape(len(selected[i][0]), len(selected[i][1]))
++                    for i, row in enumerate(rows)]
++        strategies = {key(r): r for r in self.pool.call("solve", [
++            {"_engine": row["_engine"], "env": row["env"], "matrix": matrix.tolist(), "iterations": self.config["regret_iterations"]}
++            for row, matrix in zip(rows, matrices)])}
+         result = []
+         for i, row in enumerate(rows):
+             preview, chosen = previews[key(row)], selected[i]
+-            matrix = values[np.array(preview["cells"]) + ranges[i]].reshape(len(chosen[0]), len(chosen[1]))
+-            p, q, gap = regret_match(matrix, self.config["regret_iterations"])
++            matrix = matrices[i]
++            strategy = strategies[key(row)]
++            p, q, gap = np.array(strategy["p"]), np.array(strategy["q"]), strategy["gap"]
+             policies, selected_actions = [], []
+             for s, marginal in enumerate([p, q]):
+                 sample = samples[i * 2 + s]
+--- a/training/train.py
++++ b/training/train.py
+@@ -15,7 +15,7 @@
+ from .engine import EnginePool, key
+ from .evaluate import load_model, paired_match
+ from .features import heuristic_prior, mirror_sample
+-from .model import Net, device_for, pack, autocast, predict
++from .model import Net, device_for, pack, autocast, predict, segmented_policy_loss
+ from .replay import ReplayBuffer
+ from .search import Searcher, softmax
+ from .storage import replace_file
+@@ -77,7 +77,7 @@
+             if not existing:
+                 raise ValueError("No manifest to resume")
+             # Training semantics stay fixed; only runtime location/device may change.
+-            allowed = {"device", "amp", "workers"}
++            allowed = {"device", "amp", "workers", "value_batch_size"}
+             if any(config[k] != existing["config"].get(k, None if k == "balance" else False if k == "balance_logging" else object()) for k in config if k not in allowed):
+                 raise ValueError("Resume configuration differs. Restore the saved config or create a separate run.")
+             self.model, checkpoint = load_model(self.run / existing["latest_checkpoint"], config, self.device, self.source)
+@@ -308,8 +308,7 @@
+             with autocast(self.device, self.config["amp"]):
+                 x, values = self.model.encode(board)
+                 logits = self.model.policy(x, owners, indices, data)
+-                policy_loss = torch.stack([-(target * torch.log_softmax(logit.float(), 0)).sum()
+-                                           for target, logit in zip(torch.split(targets, counts), torch.split(logits, counts))]).mean()
++                policy_loss = segmented_policy_loss(logits, targets, owners, len(counts))
+                 value_loss = torch.nn.functional.mse_loss(values.float(), value_targets)
+                 loss = policy_loss + value_loss
+             self.scaler.scale(loss).backward()
+@@ -317,11 +316,12 @@
+             torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.)
+             self.scaler.step(self.optimizer)
+             self.scaler.update()
+-            losses.append([float(policy_loss.detach()), float(value_loss.detach())])
++            losses.append(torch.stack([policy_loss.detach(), value_loss.detach()]))
+             if update % 16 == 0:
+                 self.status("optimizing", generation=generation, update=update, target_updates=self.config["updates"])
+         self.model.eval()
+-        return {"policy_loss": float(np.mean(losses, 0)[0]), "value_loss": float(np.mean(losses, 0)[1]),
++        policy_loss, value_loss = torch.stack(losses).mean(0).cpu().tolist()
++        return {"policy_loss": policy_loss, "value_loss": value_loss,
+                 "seconds": time.perf_counter() - start, "updates": len(losses), "presentations": len(losses) * self.config["batch_size"]}
+ 
+     def train(self, until_generation=None):
+@@ -377,7 +377,9 @@
+     parser = argparse.ArgumentParser(description="Colab-first simultaneous-shogi self-play training")
+     parser.add_argument("--run-dir", required=True)
+     parser.add_argument("--config")
+-    parser.add_argument("--resume", action="store_true")
++    mode = parser.add_mutually_exclusive_group()
++    mode.add_argument("--resume", action="store_true")
++    mode.add_argument("--init-from", help="Start a new run with the latest weights of this run directory; optimizer/replay start fresh")
+     parser.add_argument("--until-generation", type=int, help="Runtime scheduling boundary; does not change training semantics")
+     parser.add_argument("--mirror-dir", help="Copy durable generation snapshots to Drive; train on local scratch")
+     parser.add_argument("--smoke", action="store_true", help="Short CPU integration run; never evidence of strength")
+@@ -385,6 +387,16 @@
+     config = load_config(args.config, {"generations": 1, "games_per_generation": 2, "environments": 2, "workers": 1,
+                                      "candidates": 3, "cheap_candidates": 2, "regret_iterations": 32, "updates": 2,
+                                      "batch_size": 8, "eval_pairs": 1, "round_limit": 12, "channels": 8, "device": "cpu"} if args.smoke else None)
++    initial_checkpoint, initial_config = None, None
++    if args.init_from:
++        source_run = Path(args.init_from).resolve()
++        manifest = read_json(source_run / "manifest.json")
++        if not manifest or manifest.get("format") != FORMAT:
++            parser.error("--init-from must point to a training run with a valid manifest")
++        initial_checkpoint = (source_run / manifest["latest_checkpoint"]).resolve()
++        if not initial_checkpoint.is_relative_to(source_run):
++            parser.error("The source checkpoint must be inside --init-from")
++        initial_config = load_config(overrides=manifest["config"])
+     run = Path(args.run_dir).resolve()
+     run.mkdir(parents=True, exist_ok=True)
+     lock = run / "RUNNING"
+@@ -397,7 +409,8 @@
+     os.close(fd)
+     trainer = None
+     try:
+-        trainer = Trainer(run, config, args.resume, args.mirror_dir)
++        trainer = Trainer(run, config, args.resume, args.mirror_dir,
++                          initial_checkpoint=initial_checkpoint, initial_config=initial_config)
+         def stop(*_):
+             trainer.stopping = True
+         signal.signal(signal.SIGINT, stop)
+--- /dev/null
++++ b/tests/reference_features.py
+@@ -0,0 +1,119 @@
++# Frozen pre-optimization encoder for independent equivalence checks.
++"""Relative 9x9 observations, and sparse complete-action descriptors."""
++import numpy as np
++from training.rules import rank_details
++
++KINDS = "KPLNSGRB"
++HAND = "PLNSGRB"
++PLANES = 62
++ACTION_FEATURES = 24
++
++
++def square(q, side):
++    x, y = q if side == "A" else (10 - q[0], 10 - q[1])
++    return (y - 1) * 9 + x - 1
++
++
++def observation(state, side):
++    pos = state["position"]
++    board = np.zeros((PLANES, 81), np.float32)
++    for p in pos["pieces"]:
++        rel = int(p["side"] != side)
++        cell = square(p["at"], side)
++        board[rel * 8 + KINDS.index(p["kind"]), cell] = 1
++        board[16 + rel, cell] = p.get("promoted", False)
++        board[18 + rel, cell] = p.get("upgraded", False)
++    for owner in ["A", "B"]:
++        rel = int(owner != side)
++        for k, count in pos.get("hands", {}).get(owner, {}).items():
++            if k in HAND:
++                board[20 + rel * 7 + HAND.index(k)] = count / (18 if k == "P" else 4)
++    for ban in pos.get("dropBans", []):
++        board[34 + int(ban["side"] != side) * 7 + HAND.index(ban["kind"]), square(ban["to"], side)] = ban["remaining"]
++    for ban in pos.get("moveBans", []):
++        start = 48 + int(ban["side"] != side) * 2
++        board[start, square(ban["from"], side)] = ban["remaining"]
++        board[start + 1, square(ban["to"], side)] = ban["remaining"]
++    rules = state["rules"]
++    board[52] = max(0, 1 - state["round"] / rules["roundLimit"])
++    board[53] = state["repetition"] / rules["repetitionLimit"]
++    balance = rules.get("balance")
++    if balance:
++        for p in pos["pieces"]:
++            rel, cell = int(p["side"] != side), square(p["at"], side)
++            details = rank_details(p, pos, rules, moving=True)
++            board[54 + rel, cell] = details["streak"] / balance["consecutiveThreshold"]
++            board[56 + rel, cell] = details["fatigue"] / 8
++            board[58 + rel, cell] = details["movement"] / 16
++        for owner in ["A", "B"]:
++            for y in range(1, 10):
++                if (y > 9-balance["homeRows"] if owner == "A" else y <= balance["homeRows"]):
++                    for x in range(1, 10):
++                        board[60 + int(owner != side), square([x, y], side)] = balance["defenseBonus"] / 8
++    return board.reshape(PLANES, 9, 9)
++
++
++def actions(state, side, choices):
++    pos = state["position"]
++    pieces = {p["id"]: p for p in pos["pieces"]}
++    occupants = {tuple(p["at"]): p for p in pos["pieces"]}
++    enemy_king = next((p["at"] for p in pos["pieces"] if p["side"] != side and p["kind"] == "K"), [5, 5])
++    indices = np.zeros((len(choices), 2), np.int64)
++    data = np.zeros((len(choices), ACTION_FEATURES), np.float32)
++    aliases = []
++    for i, action in enumerate(choices):
++        drop = action["type"] == "drop"
++        p = {"kind": action["kind"], "at": action["to"]} if drop else pieces[action["piece"]]
++        to, start = action["to"], p["at"]
++        dx, dy = to[0] - start[0], to[1] - start[1]
++        choice = ["none", "promote", "upgrade"].index(action.get("choice", "none"))
++        rank = {"K": 0, "P": 1, "L": 2, "N": 3, "S": 4, "G": 5, "R": 6, "B": 6}[p["kind"]]
++        indices[i] = [square(start, side), square(to, side)]
++        data[i, KINDS.index(p["kind"])] = 1
++        data[i, 8 + choice] = 1
++        data[i, 11:18] = [drop, (rank + p.get("upgraded", False)) / 7,
++                           p.get("promoted", False), p.get("upgraded", False),
++                           max(abs(dx), abs(dy)) / 8, dx * (1 if side == "A" else -1) / 8, dy * (-1 if side == "A" else 1) / 8]
++        path = [to] if drop or (p["kind"] == "N" and not p.get("promoted", False)) else [
++            [start[0] + int(np.sign(dx)) * n, start[1] + int(np.sign(dy)) * n]
++            for n in range(1, max(abs(dx), abs(dy)) + 1)]
++        for cell in path:
++            victim = occupants.get(tuple(cell))
++            if victim:
++                data[i, 18 + int(victim["side"] != side)] = 1
++                if victim["side"] != side:
++                    data[i, 20] = {"K": 0, "P": 1, "L": 2, "N": 3, "S": 4, "G": 5, "R": 6, "B": 6}[victim["kind"]] / 7
++                    data[i, 21] = victim["kind"] == "K"
++                break
++        data[i, 22] = (abs(to[0] - enemy_king[0]) + abs(to[1] - enemy_king[1])) / 16
++        zone = lambda q: q[1] <= 3 if side == "A" else q[1] >= 7
++        can_change = not drop and p["kind"] not in "KG" and not p.get("promoted", False) and not p.get("upgraded", False) and (zone(start) or any(zone(q) for q in path))
++        data[i, 23] = can_change
++        # Search aliases only when a change cannot affect ANY actual endpoint.
++        effective_choice = choice if can_change and not (choice == 2 and p.get("upgraded", False)) else 0
++        aliases.append((action.get("piece", p["kind"]), tuple(to), effective_choice))
++    return indices, data, aliases
++
++
++def heuristic_prior(data):
++    return 8 * data[:, 21] + 2 * data[:, 20] - 3 * data[:, 18] - data[:, 22] + .25 * data[:, 23] * (data[:, 9] + data[:, 10])
++
++
++def mirror_sample(sample):
++    """Horizontal symmetry preserves forward motion, ranks and all rule cases."""
++    mirrored = dict(sample)
++    mirrored["board"] = sample["board"][:, :, ::-1].copy()
++    indices = sample["indices"].copy()
++    mirrored["indices"] = (indices // 9) * 9 + 8 - indices % 9
++    data = sample["data"].copy()
++    data[:, 16] *= -1
++    mirrored["data"] = data
++    return mirrored
++
++
++def heuristic_value(state):
++    values = {"K": 0, "P": 1, "L": 3, "N": 3, "S": 5, "G": 6, "R": 10, "B": 9}
++    pos = state["position"]
++    total = sum((1 if p["side"] == "A" else -1) * (values[p["kind"]] + 2 * p.get("promoted", False) + p.get("upgraded", False)) for p in pos["pieces"])
++    total += sum((1 if s == "A" else -1) * values[k] * n for s, h in pos.get("hands", {}).items() for k, n in h.items())
++    return float(np.tanh(total / 25))
+--- /dev/null
++++ b/tests/test_performance.py
+@@ -0,0 +1,151 @@
++"""Guard the numerical/game semantics of the accelerated training path."""
++import copy
++import contextlib
++import io
++from pathlib import Path
++import sys
++import tempfile
++import unittest
++from unittest.mock import patch
++import numpy as np
++import torch
++
++import reference_features as reference
++from training.common import ROOT, load_config, rules_for, atomic_json, read_json
++from training.engine import EnginePool, key
++from training.features import actions, observation, observation_pair, compact_observations
++from training.model import segmented_policy_loss
++from training.rules import balance_for, PRESETS
++from training.search import regret_match, Searcher
++from training.model import Net
++from training.train import Trainer, main
++
++
++class PerformanceTests(unittest.TestCase):
++    @classmethod
++    def setUpClass(cls):
++        torch.set_num_threads(2)
++        cls.config = load_config(overrides=dict(device='cpu', channels=8, candidates=4, cheap_candidates=2))
++
++    def test_ray_masks_descriptors_and_compact_observations_match_frozen_encoder(self):
++        rng = np.random.default_rng(3402)
++        compared = 0
++        with EnginePool(2) as pool:
++            for label in PRESETS:
++                config = dict(self.config, balance=balance_for(label))
++                pool.reset(2, rules_for(config))
++                for _ in range(12):
++                    rows = pool.call('observe')
++                    if not rows:
++                        break
++                    items = []
++                    for row in rows:
++                        for side, choices, board in zip(['A', 'B'], row['actions'], observation_pair(row)):
++                            expected_indices, expected_data, expected_aliases = reference.actions(row, side, choices)
++                            indices, data, aliases = actions(row, side, choices)
++                            np.testing.assert_array_equal(indices, expected_indices)
++                            np.testing.assert_array_equal(data, expected_data)
++                            self.assertEqual(data.tobytes(), expected_data.tobytes())
++                            self.assertEqual(aliases, expected_aliases)
++                            np.testing.assert_array_equal(board, reference.observation(row, side))
++                            compared += len(choices)
++                        candidates = [[choices[int(j)] for j in rng.choice(len(choices), min(4, len(choices)), replace=False)] for choices in row['actions']]
++                        items.append(dict(_engine=row['_engine'], env=row['env'], candidates=candidates))
++                    full = {key(row): row for row in pool.call('preview', items)}
++                    compact = pool.call('preview', [dict(item, compact=True) for item in items])
++                    for row in compact:
++                        expected = full[key(row)]
++                        self.assertEqual(row['cells'], expected['cells'])
++                        self.assertEqual(len(row['states']), len(expected['states']))
++                        boards = compact_observations(row['states'])
++                        for i, (packed, state) in enumerate(zip(row['states'], expected['states'])):
++                            self.assertEqual(packed['outcome'], state['outcome'])
++                            for side, board in zip(['A', 'B'], boards[2*i:2*i+2]):
++                                np.testing.assert_array_equal(board, reference.observation(state, side))
++                            self.assertAlmostEqual(packed['heuristic'], reference.heuristic_value(state), places=14)
++                    pool.call('step', [dict(_engine=item['_engine'], env=item['env'], actions=[a[0] for a in item['candidates']]) for item in items])
++        self.assertGreater(compared, 20_000)
++
++    def test_compact_features_preserve_bans_activity_and_terminal_values(self):
++        config = dict(self.config, balance=balance_for('D+BP-C2'), round_limit=1)
++        with EnginePool(1) as pool:
++            pool.reset(1, rules_for(config))
++            root = pool.call('observe')[0]
++            position = copy.deepcopy(root['position'])
++            position['hands']['A'] = {'P': 2, 'R': 1}
++            piece = next(p for p in position['pieces'] if p['side'] == 'A' and p['kind'] == 'P')
++            position['activity'] = {piece['id']: dict(streak=3, fatigue=2)}
++            position['dropBans'] = [dict(side='A', kind='P', to=[5, 5], remaining=1)]
++            position['moveBans'] = [dict(side='A', piece=piece['id'], **{'from':piece['at']}, to=[piece['at'][0], 6], remaining=1)]
++            pool.reset(1, rules_for(config), position)
++            root = pool.call('observe')[0]
++            item = dict(_engine=0, env=0, candidates=[[choices[-1]] for choices in root['actions']])
++            full = pool.call('preview', [item])[0]['states']
++            compact = pool.call('preview', [dict(item, compact=True)])[0]['states']
++            for side, board in zip(['A', 'B'], compact_observations(compact)):
++                np.testing.assert_array_equal(board, reference.observation(full[0], side))
++            searcher = Searcher(pool, Net(8), config, torch.device('cpu'))
++            np.testing.assert_array_equal(searcher.values(full), searcher.values(compact))
++            self.assertIsNotNone(full[0]['outcome'])
++
++    def test_native_solver_matches_reference_and_rejects_invalid_inputs(self):
++        rng = np.random.default_rng(119)
++        matrices = [rng.normal(size=shape) for shape in [(1, 1), (1, 8), (8, 1), (3, 5), (8, 8), (32, 32)]]
++        matrices += [np.zeros((4, 3)), np.ones((5, 2)), np.array([[1., -1.], [-1., 1.]])]
++        with EnginePool(1) as pool:
++            pool.reset(1, rules_for(self.config))
++            items = [dict(_engine=0, env=i, matrix=matrix.tolist(), iterations=128) for i, matrix in enumerate(matrices)]
++            result = pool.call('solve', items)
++            for row, matrix in zip(result, matrices):
++                p, q, gap = regret_match(matrix, 128)
++                np.testing.assert_allclose(row['p'], p, rtol=1e-10, atol=1e-12)
++                np.testing.assert_allclose(row['q'], q, rtol=1e-10, atol=1e-12)
++                self.assertAlmostEqual(row['gap'], gap, places=11)
++            for matrix, iterations in [([], 8), ([[]], 8), ([[1], [1, 2]], 8), ([[1]], 0), ([[1]], 8193)]:
++                with self.assertRaises(RuntimeError):
++                    pool.call('solve', [dict(_engine=0, env=0, matrix=matrix, iterations=iterations)])
++
++    def test_batched_policy_loss_and_gradients_match_ragged_reference(self):
++        counts = [1, 2, 31, 5, 128, 3]
++        for device in ['cpu'] + (['cuda'] if torch.cuda.is_available() else []):
++            for dtype in [torch.float32, torch.float16]:
++                generator = torch.Generator().manual_seed(110)
++                raw = torch.randn(sum(counts), generator=generator) * 20
++                raw[1:3] = torch.tensor([1000., -1000.])
++                logits = raw.to(device=device, dtype=dtype).requires_grad_()
++                expected_logits = logits.detach().clone().requires_grad_()
++                owners = torch.repeat_interleave(torch.arange(len(counts), device=device), torch.tensor(counts, device=device), output_size=sum(counts))
++                targets = torch.cat([torch.softmax(torch.randn(c, generator=generator), 0) for c in counts]).to(device)
++                expected = torch.stack([-(target * torch.log_softmax(logit.float(), 0)).sum() for target, logit in zip(torch.split(targets, counts), torch.split(expected_logits, counts))]).mean()
++                actual = segmented_policy_loss(logits, targets, owners, len(counts))
++                expected.backward()
++                actual.backward()
++                torch.testing.assert_close(actual, expected, rtol=1e-6, atol=1e-6)
++                torch.testing.assert_close(logits.grad, expected_logits.grad, rtol=2e-5, atol=1e-6)
++
++    def test_cli_warm_start_preserves_weights_and_owns_new_optimizer_and_run(self):
++        config = load_config(overrides=dict(device='cpu', channels=8, generations=1, games_per_generation=2,
++            environments=2, workers=1, candidates=2, cheap_candidates=2, regret_iterations=8,
++            batch_size=2, updates=1, round_limit=2, eval_pairs=1, history_fraction=0))
++        (ROOT/'.cache/tests').mkdir(parents=True, exist_ok=True)
++        with tempfile.TemporaryDirectory(dir=ROOT/'.cache/tests') as directory:
++            base = Path(directory)
++            parent = Trainer(base/'parent', config)
++            original_manifest = (parent.run/'manifest.json').read_bytes()
++            atomic_json(base/'config.json', config)
++            args = ['training.train', '--run-dir', str(base/'child'), '--config', str(base/'config.json'), '--init-from', str(parent.run)]
++            with patch.object(sys, 'argv', args), contextlib.redirect_stdout(io.StringIO()):
++                main()
++            child = read_json(base/'child/manifest.json')
++            self.assertEqual(child['generation'], 1)
++            initial = torch.load(base/'child/checkpoints/g0000.pt', weights_only=True)
++            for name, tensor in parent.model.state_dict().items():
++                torch.testing.assert_close(tensor, initial['model'][name], rtol=0, atol=0)
++            self.assertEqual(initial['optimizer']['state'], {})
++            self.assertEqual(child['parent']['generation'], 0)
++            self.assertFalse((base/'child/RUNNING').exists())
++            self.assertEqual((parent.run/'manifest.json').read_bytes(), original_manifest)
++
++
++if __name__ == '__main__':
++    unittest.main()

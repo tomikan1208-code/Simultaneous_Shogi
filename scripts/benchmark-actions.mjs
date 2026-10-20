@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { cpus } from 'node:os';
 import { root, codeFiles, sourceFingerprint } from '../dashboard/server.mjs';
 
-const binary = join(root, 'target/release', process.platform === 'win32' ? 'shogi.exe' : 'shogi');
+const binary = join(root, 'target/balance/release', process.platform === 'win32' ? 'shogi.exe' : 'shogi');
 const built = await stat(binary).catch(() => null);
 const sources = (await codeFiles()).filter(p => p.endsWith('.rs') || p.endsWith('Cargo.toml') || p.endsWith('Cargo.lock'));
 if (!built || (await Promise.all(sources.map(p => stat(p)))).some(s => s.mtimeMs > built.mtimeMs)) throw new Error('先に npm run ai:build を実行してください。');

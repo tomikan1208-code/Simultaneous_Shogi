@@ -1,0 +1,4465 @@
+{
+  "format": "simultaneous-shogi/performance-comparison-v1",
+  "summary": [
+    {
+      "scenario": "official",
+      "metrics": {
+        "baseline": {
+          "total_seconds": 8.529341700021178,
+          "self_play_seconds": 4.835662900004536,
+          "optimization_seconds": 3.7924411999993026,
+          "evaluation_seconds": 5.519516700005624,
+          "search": {
+            "policy_seconds": 0.8497460999642499,
+            "preview_seconds": 1.8480272999731824,
+            "value_seconds": 1.1178460000664927,
+            "solver_seconds": 0.5105022000498138
+          }
+        },
+        "optimized": {
+          "total_seconds": 4.0306170000112616,
+          "self_play_seconds": 2.5486718000029214,
+          "optimization_seconds": 1.4748825000133365,
+          "evaluation_seconds": 1.8734104000031948,
+          "search": {
+            "policy_seconds": 0.7890153002226725,
+            "preview_seconds": 0.49701539997477084,
+            "value_seconds": 0.5384457999025472,
+            "solver_seconds": 0.036096300289500505
+          }
+        }
+      },
+      "speedup": 2.1161379758973244,
+      "evaluation_speedup": 2.946240023006284,
+      "equivalent_replay": true,
+      "equivalent_evaluation": true
+    },
+    {
+      "scenario": "balance",
+      "metrics": {
+        "baseline": {
+          "total_seconds": 11.309394299983978,
+          "self_play_seconds": 7.751413099991623,
+          "optimization_seconds": 3.89436040003784,
+          "evaluation_seconds": 8.472747699997853,
+          "search": {
+            "policy_seconds": 1.1055354998097755,
+            "preview_seconds": 2.082807600090746,
+            "value_seconds": 2.9689847000990994,
+            "solver_seconds": 0.5672790998942219
+          }
+        },
+        "optimized": {
+          "total_seconds": 4.203529099992011,
+          "self_play_seconds": 3.011069000000134,
+          "optimization_seconds": 1.3119040000019595,
+          "evaluation_seconds": 2.231976599956397,
+          "search": {
+            "policy_seconds": 0.7595189000130631,
+            "preview_seconds": 0.7365046999184415,
+            "value_seconds": 0.6323158997693099,
+            "solver_seconds": 0.0392160001792945
+          }
+        }
+      },
+      "speedup": 2.690452244045479,
+      "evaluation_speedup": 3.796073713390801,
+      "equivalent_replay": true,
+      "equivalent_evaluation": true
+    }
+  ],
+  "trials": [
+    {
+      "scenario": "official",
+      "trial": 0,
+      "variant": "baseline",
+      "result": {
+        "format": "simultaneous-shogi/training-benchmark-v1",
+        "root": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\training-performance\\baseline",
+        "source_fingerprint": "64bf599308979b05f2f8fd6570fb32ea96dc2decdd4ab3c44a3ce1bbe82e2a89",
+        "config": {
+          "seed": 20261020,
+          "generations": 1,
+          "games_per_generation": 16,
+          "environments": 8,
+          "workers": 2,
+          "candidates": 8,
+          "cheap_candidates": 4,
+          "deep_fraction": 0.25,
+          "regret_iterations": 128,
+          "batch_size": 128,
+          "updates": 64,
+          "replay_capacity": 4096,
+          "recent_fraction": 0.5,
+          "history_fraction": 0,
+          "history_size": 6,
+          "learning_rate": 0.0003,
+          "bootstrap_generations": 20,
+          "bootstrap_weight": 0.0,
+          "eval_pairs": 16,
+          "eval_every": 5,
+          "eval_seed": 719005,
+          "round_limit": 200,
+          "device": "cuda",
+          "amp": true,
+          "mirror_augmentation": true,
+          "channels": 32,
+          "balance": null,
+          "balance_logging": false
+        },
+        "hardware": {
+          "python": "3.11.9",
+          "torch": "2.11.0+cu128",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "cpu_threads": 4,
+          "device": "cuda",
+          "gpu": "NVIDIA GeForce RTX 3050",
+          "cuda": "12.8",
+          "runtime": "local",
+          "timestamp": 1792493812.9230917
+        },
+        "seconds": 8.516926899959799,
+        "self_play": {
+          "games": 16,
+          "rounds": 205,
+          "seconds": 4.721753399993759,
+          "new_samples": 410,
+          "history_games": 0,
+          "history_checkpoint": null,
+          "events": {
+            "move": 250,
+            "move_reached": 96,
+            "capture": 128,
+            "contact": 64,
+            "move_captured": 128,
+            "equal_drop_failure": 45,
+            "drop": 96
+          },
+          "captures": {
+            "mutual:B": 128
+          },
+          "outcomes": [
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            }
+          ],
+          "search": {
+            "policy_seconds": 0.8379916000412777,
+            "preview_seconds": 1.8488239002763294,
+            "value_seconds": 0.9868998999008909,
+            "solver_seconds": 0.5112359999329783,
+            "cells": 8880,
+            "unique_leaves": 7604,
+            "roots": 205,
+            "gap_sum": 0.04560325300164651
+          }
+        },
+        "optimization": {
+          "policy_loss": 0.7496679099276662,
+          "value_loss": 0.014398048672319419,
+          "seconds": 3.7924411999993026,
+          "updates": 64,
+          "presentations": 8192
+        },
+        "replay_sha256": "b3873b1583ce4a8638c7d0c615aa331d69a4ec0ccb105d800e648f3cd860fc59",
+        "evaluation": {
+          "opponent": "same_weights",
+          "pairs": 4,
+          "games": 8,
+          "seed": 719005,
+          "wins": 0,
+          "draws": 8,
+          "losses": 0,
+          "score": 0.5,
+          "interval": [
+            0.0,
+            1.0
+          ],
+          "confidence": 0.95,
+          "interval_method": "Hoeffding on independent color-swapped pairs",
+          "elo_difference": 0.0,
+          "decision": "inconclusive",
+          "seconds": 5.184924400004093,
+          "results": [
+            {
+              "pair": 0,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 0,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            }
+          ],
+          "events": {
+            "move": 128,
+            "move_reached": 48,
+            "capture": 64,
+            "contact": 32,
+            "move_captured": 64,
+            "equal_drop_failure": 24,
+            "drop": 48
+          },
+          "captures": {
+            "mutual:B": 64
+          },
+          "search": {
+            "policy_seconds": 0.4330776000279002,
+            "preview_seconds": 0.987731300003361,
+            "value_seconds": 0.7477163000730798,
+            "solver_seconds": 0.26018590008607134,
+            "cells": 6656,
+            "unique_leaves": 4808,
+            "roots": 104,
+            "gap_sum": 0.02135518561520013
+          },
+          "budget": {
+            "candidates": 8,
+            "regret_iterations": 128,
+            "round_limit": 200,
+            "bootstrap_weight": 0.0,
+            "bootstrap_generations": 20
+          }
+        },
+        "generation": 145,
+        "checkpoint_sha256": "d92cf1e80943c20ee7327b995e454edaca9c46528e4fbcd7975dd502107490c5",
+        "weights_updated": true,
+        "finite_weights": true
+      }
+    },
+    {
+      "scenario": "official",
+      "trial": 0,
+      "variant": "optimized",
+      "result": {
+        "format": "simultaneous-shogi/training-benchmark-v1",
+        "root": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\training-fast",
+        "source_fingerprint": "f23df1877cf6b20c70a9afaa0cfcbea09c3e65e5c7f708f2d093cb45cd7fc516",
+        "config": {
+          "seed": 20261020,
+          "generations": 1,
+          "games_per_generation": 16,
+          "environments": 8,
+          "workers": 2,
+          "candidates": 8,
+          "cheap_candidates": 4,
+          "deep_fraction": 0.25,
+          "regret_iterations": 128,
+          "batch_size": 128,
+          "value_batch_size": 256,
+          "updates": 64,
+          "replay_capacity": 4096,
+          "recent_fraction": 0.5,
+          "history_fraction": 0,
+          "history_size": 6,
+          "learning_rate": 0.0003,
+          "bootstrap_generations": 20,
+          "bootstrap_weight": 0.0,
+          "eval_pairs": 16,
+          "eval_every": 5,
+          "eval_seed": 719005,
+          "round_limit": 200,
+          "device": "cuda",
+          "amp": true,
+          "mirror_augmentation": true,
+          "channels": 32,
+          "balance": null,
+          "balance_logging": false
+        },
+        "hardware": {
+          "python": "3.11.9",
+          "torch": "2.11.0+cu128",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "cpu_threads": 4,
+          "device": "cuda",
+          "gpu": "NVIDIA GeForce RTX 3050",
+          "cuda": "12.8",
+          "runtime": "local",
+          "timestamp": 1792493825.4091156
+        },
+        "seconds": 4.0306170000112616,
+        "self_play": {
+          "games": 16,
+          "rounds": 205,
+          "seconds": 2.5486718000029214,
+          "new_samples": 410,
+          "history_games": 0,
+          "history_checkpoint": null,
+          "events": {
+            "move": 250,
+            "move_reached": 96,
+            "capture": 128,
+            "contact": 64,
+            "move_captured": 128,
+            "equal_drop_failure": 45,
+            "drop": 96
+          },
+          "captures": {
+            "mutual:B": 128
+          },
+          "outcomes": [
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            }
+          ],
+          "search": {
+            "policy_seconds": 0.7890153002226725,
+            "preview_seconds": 0.49701539997477084,
+            "value_seconds": 0.5384457999025472,
+            "solver_seconds": 0.03866260027280077,
+            "cells": 8880,
+            "unique_leaves": 7604,
+            "roots": 205,
+            "gap_sum": 0.04560325300164651
+          }
+        },
+        "optimization": {
+          "policy_loss": 0.7501716613769531,
+          "value_loss": 0.013288220390677452,
+          "seconds": 1.4748825000133365,
+          "updates": 64,
+          "presentations": 8192
+        },
+        "replay_sha256": "b3873b1583ce4a8638c7d0c615aa331d69a4ec0ccb105d800e648f3cd860fc59",
+        "evaluation": {
+          "opponent": "same_weights",
+          "pairs": 4,
+          "games": 8,
+          "seed": 719005,
+          "wins": 0,
+          "draws": 8,
+          "losses": 0,
+          "score": 0.5,
+          "interval": [
+            0.0,
+            1.0
+          ],
+          "confidence": 0.95,
+          "interval_method": "Hoeffding on independent color-swapped pairs",
+          "elo_difference": 0.0,
+          "decision": "inconclusive",
+          "seconds": 1.8734104000031948,
+          "results": [
+            {
+              "pair": 0,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 0,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            }
+          ],
+          "events": {
+            "move": 128,
+            "move_reached": 48,
+            "capture": 64,
+            "contact": 32,
+            "move_captured": 64,
+            "equal_drop_failure": 24,
+            "drop": 48
+          },
+          "captures": {
+            "mutual:B": 64
+          },
+          "search": {
+            "policy_seconds": 0.3242633000481874,
+            "preview_seconds": 0.24924749991623685,
+            "value_seconds": 0.2969021000317298,
+            "solver_seconds": 0.015290299954358488,
+            "cells": 6656,
+            "unique_leaves": 4808,
+            "roots": 104,
+            "gap_sum": 0.02135518561520013
+          },
+          "budget": {
+            "candidates": 8,
+            "regret_iterations": 128,
+            "round_limit": 200,
+            "bootstrap_weight": 0.0,
+            "bootstrap_generations": 20
+          }
+        },
+        "generation": 145,
+        "checkpoint_sha256": "d92cf1e80943c20ee7327b995e454edaca9c46528e4fbcd7975dd502107490c5",
+        "weights_updated": true,
+        "finite_weights": true
+      }
+    },
+    {
+      "scenario": "official",
+      "trial": 1,
+      "variant": "optimized",
+      "result": {
+        "format": "simultaneous-shogi/training-benchmark-v1",
+        "root": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\training-fast",
+        "source_fingerprint": "f23df1877cf6b20c70a9afaa0cfcbea09c3e65e5c7f708f2d093cb45cd7fc516",
+        "config": {
+          "seed": 20261020,
+          "generations": 1,
+          "games_per_generation": 16,
+          "environments": 8,
+          "workers": 2,
+          "candidates": 8,
+          "cheap_candidates": 4,
+          "deep_fraction": 0.25,
+          "regret_iterations": 128,
+          "batch_size": 128,
+          "value_batch_size": 256,
+          "updates": 64,
+          "replay_capacity": 4096,
+          "recent_fraction": 0.5,
+          "history_fraction": 0,
+          "history_size": 6,
+          "learning_rate": 0.0003,
+          "bootstrap_generations": 20,
+          "bootstrap_weight": 0.0,
+          "eval_pairs": 16,
+          "eval_every": 5,
+          "eval_seed": 719005,
+          "round_limit": 200,
+          "device": "cuda",
+          "amp": true,
+          "mirror_augmentation": true,
+          "channels": 32,
+          "balance": null,
+          "balance_logging": false
+        },
+        "hardware": {
+          "python": "3.11.9",
+          "torch": "2.11.0+cu128",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "cpu_threads": 4,
+          "device": "cuda",
+          "gpu": "NVIDIA GeForce RTX 3050",
+          "cuda": "12.8",
+          "runtime": "local",
+          "timestamp": 1792493836.572
+        },
+        "seconds": 3.1299173000152223,
+        "self_play": {
+          "games": 16,
+          "rounds": 205,
+          "seconds": 1.904712199990172,
+          "new_samples": 410,
+          "history_games": 0,
+          "history_checkpoint": null,
+          "events": {
+            "move": 250,
+            "move_reached": 96,
+            "capture": 128,
+            "contact": 64,
+            "move_captured": 128,
+            "equal_drop_failure": 45,
+            "drop": 96
+          },
+          "captures": {
+            "mutual:B": 128
+          },
+          "outcomes": [
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            }
+          ],
+          "search": {
+            "policy_seconds": 0.5873033999232575,
+            "preview_seconds": 0.3307456001639366,
+            "value_seconds": 0.45289299997966737,
+            "solver_seconds": 0.025501699943561107,
+            "cells": 8880,
+            "unique_leaves": 7604,
+            "roots": 205,
+            "gap_sum": 0.04560325300164651
+          }
+        },
+        "optimization": {
+          "policy_loss": 0.7496597170829773,
+          "value_loss": 0.013752243481576443,
+          "seconds": 1.2227905999752693,
+          "updates": 64,
+          "presentations": 8192
+        },
+        "replay_sha256": "b3873b1583ce4a8638c7d0c615aa331d69a4ec0ccb105d800e648f3cd860fc59",
+        "evaluation": {
+          "opponent": "same_weights",
+          "pairs": 4,
+          "games": 8,
+          "seed": 719005,
+          "wins": 0,
+          "draws": 8,
+          "losses": 0,
+          "score": 0.5,
+          "interval": [
+            0.0,
+            1.0
+          ],
+          "confidence": 0.95,
+          "interval_method": "Hoeffding on independent color-swapped pairs",
+          "elo_difference": 0.0,
+          "decision": "inconclusive",
+          "seconds": 1.7830497000250034,
+          "results": [
+            {
+              "pair": 0,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 0,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            }
+          ],
+          "events": {
+            "move": 128,
+            "move_reached": 48,
+            "capture": 64,
+            "contact": 32,
+            "move_captured": 64,
+            "equal_drop_failure": 24,
+            "drop": 48
+          },
+          "captures": {
+            "mutual:B": 64
+          },
+          "search": {
+            "policy_seconds": 0.301037700031884,
+            "preview_seconds": 0.24500090000219643,
+            "value_seconds": 0.2687632998568006,
+            "solver_seconds": 0.014763900078833103,
+            "cells": 6656,
+            "unique_leaves": 4808,
+            "roots": 104,
+            "gap_sum": 0.02135518561520013
+          },
+          "budget": {
+            "candidates": 8,
+            "regret_iterations": 128,
+            "round_limit": 200,
+            "bootstrap_weight": 0.0,
+            "bootstrap_generations": 20
+          }
+        },
+        "generation": 145,
+        "checkpoint_sha256": "d92cf1e80943c20ee7327b995e454edaca9c46528e4fbcd7975dd502107490c5",
+        "weights_updated": true,
+        "finite_weights": true
+      }
+    },
+    {
+      "scenario": "official",
+      "trial": 1,
+      "variant": "baseline",
+      "result": {
+        "format": "simultaneous-shogi/training-benchmark-v1",
+        "root": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\training-performance\\baseline",
+        "source_fingerprint": "64bf599308979b05f2f8fd6570fb32ea96dc2decdd4ab3c44a3ce1bbe82e2a89",
+        "config": {
+          "seed": 20261020,
+          "generations": 1,
+          "games_per_generation": 16,
+          "environments": 8,
+          "workers": 2,
+          "candidates": 8,
+          "cheap_candidates": 4,
+          "deep_fraction": 0.25,
+          "regret_iterations": 128,
+          "batch_size": 128,
+          "updates": 64,
+          "replay_capacity": 4096,
+          "recent_fraction": 0.5,
+          "history_fraction": 0,
+          "history_size": 6,
+          "learning_rate": 0.0003,
+          "bootstrap_generations": 20,
+          "bootstrap_weight": 0.0,
+          "eval_pairs": 16,
+          "eval_every": 5,
+          "eval_seed": 719005,
+          "round_limit": 200,
+          "device": "cuda",
+          "amp": true,
+          "mirror_augmentation": true,
+          "channels": 32,
+          "balance": null,
+          "balance_logging": false
+        },
+        "hardware": {
+          "python": "3.11.9",
+          "torch": "2.11.0+cu128",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "cpu_threads": 4,
+          "device": "cuda",
+          "gpu": "NVIDIA GeForce RTX 3050",
+          "cuda": "12.8",
+          "runtime": "local",
+          "timestamp": 1792493857.2547793
+        },
+        "seconds": 8.529341700021178,
+        "self_play": {
+          "games": 16,
+          "rounds": 205,
+          "seconds": 4.914354700013064,
+          "new_samples": 410,
+          "history_games": 0,
+          "history_checkpoint": null,
+          "events": {
+            "move": 250,
+            "move_reached": 96,
+            "capture": 128,
+            "contact": 64,
+            "move_captured": 128,
+            "equal_drop_failure": 45,
+            "drop": 96
+          },
+          "captures": {
+            "mutual:B": 128
+          },
+          "outcomes": [
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            }
+          ],
+          "search": {
+            "policy_seconds": 0.8720221000839956,
+            "preview_seconds": 1.8480272999731824,
+            "value_seconds": 1.1253889999352396,
+            "solver_seconds": 0.50918079999974,
+            "cells": 8880,
+            "unique_leaves": 7604,
+            "roots": 205,
+            "gap_sum": 0.04560325300164651
+          }
+        },
+        "optimization": {
+          "policy_loss": 0.7496679099276662,
+          "value_loss": 0.014398048672319419,
+          "seconds": 3.611976100015454,
+          "updates": 64,
+          "presentations": 8192
+        },
+        "replay_sha256": "b3873b1583ce4a8638c7d0c615aa331d69a4ec0ccb105d800e648f3cd860fc59",
+        "evaluation": {
+          "opponent": "same_weights",
+          "pairs": 4,
+          "games": 8,
+          "seed": 719005,
+          "wins": 0,
+          "draws": 8,
+          "losses": 0,
+          "score": 0.5,
+          "interval": [
+            0.0,
+            1.0
+          ],
+          "confidence": 0.95,
+          "interval_method": "Hoeffding on independent color-swapped pairs",
+          "elo_difference": 0.0,
+          "decision": "inconclusive",
+          "seconds": 5.519516700005624,
+          "results": [
+            {
+              "pair": 0,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 0,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            }
+          ],
+          "events": {
+            "move": 128,
+            "move_reached": 48,
+            "capture": 64,
+            "contact": 32,
+            "move_captured": 64,
+            "equal_drop_failure": 24,
+            "drop": 48
+          },
+          "captures": {
+            "mutual:B": 64
+          },
+          "search": {
+            "policy_seconds": 0.4333074999740347,
+            "preview_seconds": 1.0315312998718582,
+            "value_seconds": 0.8153516000020318,
+            "solver_seconds": 0.2740879000048153,
+            "cells": 6656,
+            "unique_leaves": 4808,
+            "roots": 104,
+            "gap_sum": 0.02135518561520013
+          },
+          "budget": {
+            "candidates": 8,
+            "regret_iterations": 128,
+            "round_limit": 200,
+            "bootstrap_weight": 0.0,
+            "bootstrap_generations": 20
+          }
+        },
+        "generation": 145,
+        "checkpoint_sha256": "d92cf1e80943c20ee7327b995e454edaca9c46528e4fbcd7975dd502107490c5",
+        "weights_updated": true,
+        "finite_weights": true
+      }
+    },
+    {
+      "scenario": "official",
+      "trial": 2,
+      "variant": "baseline",
+      "result": {
+        "format": "simultaneous-shogi/training-benchmark-v1",
+        "root": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\training-performance\\baseline",
+        "source_fingerprint": "64bf599308979b05f2f8fd6570fb32ea96dc2decdd4ab3c44a3ce1bbe82e2a89",
+        "config": {
+          "seed": 20261020,
+          "generations": 1,
+          "games_per_generation": 16,
+          "environments": 8,
+          "workers": 2,
+          "candidates": 8,
+          "cheap_candidates": 4,
+          "deep_fraction": 0.25,
+          "regret_iterations": 128,
+          "batch_size": 128,
+          "updates": 64,
+          "replay_capacity": 4096,
+          "recent_fraction": 0.5,
+          "history_fraction": 0,
+          "history_size": 6,
+          "learning_rate": 0.0003,
+          "bootstrap_generations": 20,
+          "bootstrap_weight": 0.0,
+          "eval_pairs": 16,
+          "eval_every": 5,
+          "eval_seed": 719005,
+          "round_limit": 200,
+          "device": "cuda",
+          "amp": true,
+          "mirror_augmentation": true,
+          "channels": 32,
+          "balance": null,
+          "balance_logging": false
+        },
+        "hardware": {
+          "python": "3.11.9",
+          "torch": "2.11.0+cu128",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "cpu_threads": 4,
+          "device": "cuda",
+          "gpu": "NVIDIA GeForce RTX 3050",
+          "cuda": "12.8",
+          "runtime": "local",
+          "timestamp": 1792493878.7189577
+        },
+        "seconds": 8.833892000024207,
+        "self_play": {
+          "games": 16,
+          "rounds": 205,
+          "seconds": 4.835662900004536,
+          "new_samples": 410,
+          "history_games": 0,
+          "history_checkpoint": null,
+          "events": {
+            "move": 250,
+            "move_reached": 96,
+            "capture": 128,
+            "contact": 64,
+            "move_captured": 128,
+            "equal_drop_failure": 45,
+            "drop": 96
+          },
+          "captures": {
+            "mutual:B": 128
+          },
+          "outcomes": [
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            }
+          ],
+          "search": {
+            "policy_seconds": 0.8497460999642499,
+            "preview_seconds": 1.7971077998518012,
+            "value_seconds": 1.1178460000664927,
+            "solver_seconds": 0.5105022000498138,
+            "cells": 8880,
+            "unique_leaves": 7604,
+            "roots": 205,
+            "gap_sum": 0.04560325300164651
+          }
+        },
+        "optimization": {
+          "policy_loss": 0.7496679099276662,
+          "value_loss": 0.014398048672319419,
+          "seconds": 3.995730900031049,
+          "updates": 64,
+          "presentations": 8192
+        },
+        "replay_sha256": "b3873b1583ce4a8638c7d0c615aa331d69a4ec0ccb105d800e648f3cd860fc59",
+        "evaluation": {
+          "opponent": "same_weights",
+          "pairs": 4,
+          "games": 8,
+          "seed": 719005,
+          "wins": 0,
+          "draws": 8,
+          "losses": 0,
+          "score": 0.5,
+          "interval": [
+            0.0,
+            1.0
+          ],
+          "confidence": 0.95,
+          "interval_method": "Hoeffding on independent color-swapped pairs",
+          "elo_difference": 0.0,
+          "decision": "inconclusive",
+          "seconds": 6.055443499993999,
+          "results": [
+            {
+              "pair": 0,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 0,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            }
+          ],
+          "events": {
+            "move": 128,
+            "move_reached": 48,
+            "capture": 64,
+            "contact": 32,
+            "move_captured": 64,
+            "equal_drop_failure": 24,
+            "drop": 48
+          },
+          "captures": {
+            "mutual:B": 64
+          },
+          "search": {
+            "policy_seconds": 0.4791931000072509,
+            "preview_seconds": 1.0942987999878824,
+            "value_seconds": 0.7621936001232825,
+            "solver_seconds": 0.2900760000338778,
+            "cells": 6656,
+            "unique_leaves": 4808,
+            "roots": 104,
+            "gap_sum": 0.02135518561520013
+          },
+          "budget": {
+            "candidates": 8,
+            "regret_iterations": 128,
+            "round_limit": 200,
+            "bootstrap_weight": 0.0,
+            "bootstrap_generations": 20
+          }
+        },
+        "generation": 145,
+        "checkpoint_sha256": "d92cf1e80943c20ee7327b995e454edaca9c46528e4fbcd7975dd502107490c5",
+        "weights_updated": true,
+        "finite_weights": true
+      }
+    },
+    {
+      "scenario": "official",
+      "trial": 2,
+      "variant": "optimized",
+      "result": {
+        "format": "simultaneous-shogi/training-benchmark-v1",
+        "root": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\training-fast",
+        "source_fingerprint": "f23df1877cf6b20c70a9afaa0cfcbea09c3e65e5c7f708f2d093cb45cd7fc516",
+        "config": {
+          "seed": 20261020,
+          "generations": 1,
+          "games_per_generation": 16,
+          "environments": 8,
+          "workers": 2,
+          "candidates": 8,
+          "cheap_candidates": 4,
+          "deep_fraction": 0.25,
+          "regret_iterations": 128,
+          "batch_size": 128,
+          "value_batch_size": 256,
+          "updates": 64,
+          "replay_capacity": 4096,
+          "recent_fraction": 0.5,
+          "history_fraction": 0,
+          "history_size": 6,
+          "learning_rate": 0.0003,
+          "bootstrap_generations": 20,
+          "bootstrap_weight": 0.0,
+          "eval_pairs": 16,
+          "eval_every": 5,
+          "eval_seed": 719005,
+          "round_limit": 200,
+          "device": "cuda",
+          "amp": true,
+          "mirror_augmentation": true,
+          "channels": 32,
+          "balance": null,
+          "balance_logging": false
+        },
+        "hardware": {
+          "python": "3.11.9",
+          "torch": "2.11.0+cu128",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "cpu_threads": 4,
+          "device": "cuda",
+          "gpu": "NVIDIA GeForce RTX 3050",
+          "cuda": "12.8",
+          "runtime": "local",
+          "timestamp": 1792493893.6627743
+        },
+        "seconds": 4.9294389999704435,
+        "self_play": {
+          "games": 16,
+          "rounds": 205,
+          "seconds": 2.9083158999565057,
+          "new_samples": 410,
+          "history_games": 0,
+          "history_checkpoint": null,
+          "events": {
+            "move": 250,
+            "move_reached": 96,
+            "capture": 128,
+            "contact": 64,
+            "move_captured": 128,
+            "equal_drop_failure": 45,
+            "drop": 96
+          },
+          "captures": {
+            "mutual:B": 128
+          },
+          "outcomes": [
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            }
+          ],
+          "search": {
+            "policy_seconds": 0.8422741001122631,
+            "preview_seconds": 0.53405329992529,
+            "value_seconds": 0.682880099862814,
+            "solver_seconds": 0.036096300289500505,
+            "cells": 8880,
+            "unique_leaves": 7604,
+            "roots": 205,
+            "gap_sum": 0.04560325300164651
+          }
+        },
+        "optimization": {
+          "policy_loss": 0.7497307658195496,
+          "value_loss": 0.013838241808116436,
+          "seconds": 2.017530800017994,
+          "updates": 64,
+          "presentations": 8192
+        },
+        "replay_sha256": "b3873b1583ce4a8638c7d0c615aa331d69a4ec0ccb105d800e648f3cd860fc59",
+        "evaluation": {
+          "opponent": "same_weights",
+          "pairs": 4,
+          "games": 8,
+          "seed": 719005,
+          "wins": 0,
+          "draws": 8,
+          "losses": 0,
+          "score": 0.5,
+          "interval": [
+            0.0,
+            1.0
+          ],
+          "confidence": 0.95,
+          "interval_method": "Hoeffding on independent color-swapped pairs",
+          "elo_difference": 0.0,
+          "decision": "inconclusive",
+          "seconds": 2.312640599964652,
+          "results": [
+            {
+              "pair": 0,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 0,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            }
+          ],
+          "events": {
+            "move": 128,
+            "move_reached": 48,
+            "capture": 64,
+            "contact": 32,
+            "move_captured": 64,
+            "equal_drop_failure": 24,
+            "drop": 48
+          },
+          "captures": {
+            "mutual:B": 64
+          },
+          "search": {
+            "policy_seconds": 0.3894107000087388,
+            "preview_seconds": 0.33636959991417825,
+            "value_seconds": 0.3368007999379188,
+            "solver_seconds": 0.020421900029759854,
+            "cells": 6656,
+            "unique_leaves": 4808,
+            "roots": 104,
+            "gap_sum": 0.02135518561520013
+          },
+          "budget": {
+            "candidates": 8,
+            "regret_iterations": 128,
+            "round_limit": 200,
+            "bootstrap_weight": 0.0,
+            "bootstrap_generations": 20
+          }
+        },
+        "generation": 145,
+        "checkpoint_sha256": "d92cf1e80943c20ee7327b995e454edaca9c46528e4fbcd7975dd502107490c5",
+        "weights_updated": true,
+        "finite_weights": true
+      }
+    },
+    {
+      "scenario": "balance",
+      "trial": 0,
+      "variant": "baseline",
+      "result": {
+        "format": "simultaneous-shogi/training-benchmark-v1",
+        "root": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\training-performance\\baseline",
+        "source_fingerprint": "64bf599308979b05f2f8fd6570fb32ea96dc2decdd4ab3c44a3ce1bbe82e2a89",
+        "config": {
+          "seed": 20261020,
+          "generations": 1,
+          "games_per_generation": 16,
+          "environments": 8,
+          "workers": 2,
+          "candidates": 8,
+          "cheap_candidates": 4,
+          "deep_fraction": 0.25,
+          "regret_iterations": 128,
+          "batch_size": 128,
+          "updates": 64,
+          "replay_capacity": 4096,
+          "recent_fraction": 0.5,
+          "history_fraction": 0,
+          "history_size": 6,
+          "learning_rate": 0.0003,
+          "bootstrap_generations": 20,
+          "bootstrap_weight": 0.0,
+          "eval_pairs": 16,
+          "eval_every": 5,
+          "eval_seed": 719005,
+          "round_limit": 200,
+          "device": "cuda",
+          "amp": true,
+          "mirror_augmentation": true,
+          "channels": 32,
+          "balance": {
+            "movement": "upgrade_only",
+            "consecutiveThreshold": 2,
+            "rankOffset": 0,
+            "minimumRank": 0,
+            "restRecovery": 1,
+            "homeRows": 3,
+            "defenseBonus": 1,
+            "defensePosition": "destination",
+            "defenseCap": null
+          },
+          "balance_logging": true
+        },
+        "hardware": {
+          "python": "3.11.9",
+          "torch": "2.11.0+cu128",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "cpu_threads": 4,
+          "device": "cuda",
+          "gpu": "NVIDIA GeForce RTX 3050",
+          "cuda": "12.8",
+          "runtime": "local",
+          "timestamp": 1792493922.9155214
+        },
+        "seconds": 12.358823999995366,
+        "self_play": {
+          "games": 16,
+          "rounds": 205,
+          "seconds": 7.751413099991623,
+          "new_samples": 410,
+          "history_games": 0,
+          "history_checkpoint": null,
+          "events": {
+            "move": 250,
+            "move_reached": 96,
+            "capture": 128,
+            "contact": 64,
+            "move_captured": 128,
+            "equal_drop_failure": 45,
+            "drop": 96
+          },
+          "captures": {
+            "mutual:B": 128
+          },
+          "outcomes": [
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            }
+          ],
+          "search": {
+            "policy_seconds": 1.1055354998097755,
+            "preview_seconds": 2.195782099966891,
+            "value_seconds": 2.9689847000990994,
+            "solver_seconds": 0.6868436000077054,
+            "cells": 8880,
+            "unique_leaves": 7604,
+            "roots": 205,
+            "gap_sum": 0.04560325300164651
+          },
+          "balance": {
+            "games": 16,
+            "rounds": 205,
+            "mean_rounds": 12.8125,
+            "draws": 16,
+            "draw_rate": 1.0,
+            "repetition_rate": 1.0,
+            "elite_upgrades_per_game": 0.0,
+            "elite_upgrades_per_100_piece_rounds": 0.0,
+            "elite_survival": {
+              "n": 0,
+              "captured": 0,
+              "censored": 0,
+              "mean_observed_rounds": null,
+              "mean_completed_rounds": null,
+              "km_restricted_mean_rounds": null,
+              "horizon": 0
+            },
+            "elite_collision_wins": 0,
+            "elite_stationary_captures": 0,
+            "elite_ownership": {
+              "neither_games": 16,
+              "only_one_win_rate": null,
+              "only_one_score": null,
+              "first_owner_win_rate": null,
+              "holder_round_win_rate": null
+            },
+            "elite_idle_when_mobile_rate": null,
+            "elite_consecutive_move_rate": null,
+            "elite_rest_after_move_rate": null,
+            "max_elite_move_streak": 0,
+            "elite_upgrade_attempt_rate": 0.06097560975609756,
+            "wins_by_side": {
+              "A": 0,
+              "B": 0
+            },
+            "unique_openings": 1,
+            "action_entropy": 2.8126586175333905,
+            "unique_actions": 34,
+            "counts": {
+              "elite_upgrade_opportunity_side_rounds": 410,
+              "elite_upgrade_attempts": 25,
+              "actions:G": 64,
+              "board_piece_rounds": 8014,
+              "rounds": 205,
+              "actions:P": 32,
+              "actions:B": 314,
+              "contacts": 64,
+              "rank_contacts": 64,
+              "elite_collision_wins": 0,
+              "elite_rank_contacts": 0,
+              "elite_mutual_collisions": 0,
+              "defense_boosted_contacts": 0,
+              "captures:B": 128,
+              "capture_reason:mutual": 128
+            },
+            "outcome_reasons": {
+              "repetition": 16
+            },
+            "paired_95_intervals": {},
+            "interval_note": "Unpaired training statistics; no confidence claim",
+            "ownership_note": "Observational association, not the causal value of acquiring an elite",
+            "survival_note": "Right censoring at game end; compare KM restricted means only at a shared supported horizon"
+          }
+        },
+        "optimization": {
+          "policy_loss": 0.748477996326983,
+          "value_loss": 0.011760216076709185,
+          "seconds": 4.58709370001452,
+          "updates": 64,
+          "presentations": 8192
+        },
+        "replay_sha256": "055ef13850801d39ce305d385c44a3f2958f048ac370dcd1b846044fe705bbf2",
+        "evaluation": {
+          "opponent": "same_weights",
+          "pairs": 4,
+          "games": 8,
+          "seed": 719005,
+          "wins": 0,
+          "draws": 8,
+          "losses": 0,
+          "score": 0.5,
+          "interval": [
+            0.0,
+            1.0
+          ],
+          "confidence": 0.95,
+          "interval_method": "Hoeffding on independent color-swapped pairs",
+          "elo_difference": 0.0,
+          "decision": "inconclusive",
+          "seconds": 8.472747699997853,
+          "results": [
+            {
+              "pair": 0,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 0,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            }
+          ],
+          "events": {
+            "move": 128,
+            "move_reached": 48,
+            "capture": 64,
+            "contact": 32,
+            "move_captured": 64,
+            "equal_drop_failure": 24,
+            "drop": 48
+          },
+          "captures": {
+            "mutual:B": 64
+          },
+          "search": {
+            "policy_seconds": 0.5806735999649391,
+            "preview_seconds": 1.431368600053247,
+            "value_seconds": 1.9575374000123702,
+            "solver_seconds": 0.3039389999466948,
+            "cells": 6656,
+            "unique_leaves": 4808,
+            "roots": 104,
+            "gap_sum": 0.02135518561520013
+          },
+          "budget": {
+            "candidates": 8,
+            "regret_iterations": 128,
+            "round_limit": 200,
+            "bootstrap_weight": 0.0,
+            "bootstrap_generations": 20
+          },
+          "balance": {
+            "games": 8,
+            "rounds": 104,
+            "mean_rounds": 13.0,
+            "draws": 8,
+            "draw_rate": 1.0,
+            "repetition_rate": 1.0,
+            "elite_upgrades_per_game": 0.0,
+            "elite_upgrades_per_100_piece_rounds": 0.0,
+            "elite_survival": {
+              "n": 0,
+              "captured": 0,
+              "censored": 0,
+              "mean_observed_rounds": null,
+              "mean_completed_rounds": null,
+              "km_restricted_mean_rounds": null,
+              "horizon": 0
+            },
+            "elite_collision_wins": 0,
+            "elite_stationary_captures": 0,
+            "elite_ownership": {
+              "neither_games": 8,
+              "only_one_win_rate": null,
+              "only_one_score": null,
+              "first_owner_win_rate": null,
+              "holder_round_win_rate": null
+            },
+            "elite_idle_when_mobile_rate": null,
+            "elite_consecutive_move_rate": null,
+            "elite_rest_after_move_rate": null,
+            "max_elite_move_streak": 0,
+            "elite_upgrade_attempt_rate": 0.04807692307692308,
+            "wins_by_side": {
+              "A": 0,
+              "B": 0
+            },
+            "unique_openings": 1,
+            "action_entropy": 2.715826087421279,
+            "unique_actions": 23,
+            "counts": {
+              "elite_upgrade_opportunity_side_rounds": 208,
+              "elite_upgrade_attempts": 10,
+              "actions:G": 32,
+              "board_piece_rounds": 4064,
+              "rounds": 104,
+              "actions:P": 16,
+              "actions:B": 160,
+              "contacts": 32,
+              "rank_contacts": 32,
+              "elite_collision_wins": 0,
+              "elite_rank_contacts": 0,
+              "elite_mutual_collisions": 0,
+              "defense_boosted_contacts": 0,
+              "captures:B": 64,
+              "capture_reason:mutual": 64
+            },
+            "outcome_reasons": {
+              "repetition": 8
+            },
+            "paired_95_intervals": {
+              "mean_rounds": [
+                0,
+                148.81015157406196
+              ],
+              "draw_rate": [
+                0.3209492421296902,
+                1
+              ],
+              "repetition_rate": [
+                0.3209492421296902,
+                1
+              ]
+            },
+            "interval_note": "Unadjusted descriptive Hoeffding intervals on color-swapped pairs",
+            "ownership_note": "Observational association, not the causal value of acquiring an elite",
+            "survival_note": "Right censoring at game end; compare KM restricted means only at a shared supported horizon"
+          }
+        },
+        "generation": 145,
+        "checkpoint_sha256": "d92cf1e80943c20ee7327b995e454edaca9c46528e4fbcd7975dd502107490c5",
+        "weights_updated": true,
+        "finite_weights": true
+      }
+    },
+    {
+      "scenario": "balance",
+      "trial": 0,
+      "variant": "optimized",
+      "result": {
+        "format": "simultaneous-shogi/training-benchmark-v1",
+        "root": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\training-fast",
+        "source_fingerprint": "f23df1877cf6b20c70a9afaa0cfcbea09c3e65e5c7f708f2d093cb45cd7fc516",
+        "config": {
+          "seed": 20261020,
+          "generations": 1,
+          "games_per_generation": 16,
+          "environments": 8,
+          "workers": 2,
+          "candidates": 8,
+          "cheap_candidates": 4,
+          "deep_fraction": 0.25,
+          "regret_iterations": 128,
+          "batch_size": 128,
+          "value_batch_size": 256,
+          "updates": 64,
+          "replay_capacity": 4096,
+          "recent_fraction": 0.5,
+          "history_fraction": 0,
+          "history_size": 6,
+          "learning_rate": 0.0003,
+          "bootstrap_generations": 20,
+          "bootstrap_weight": 0.0,
+          "eval_pairs": 16,
+          "eval_every": 5,
+          "eval_seed": 719005,
+          "round_limit": 200,
+          "device": "cuda",
+          "amp": true,
+          "mirror_augmentation": true,
+          "channels": 32,
+          "balance": {
+            "movement": "upgrade_only",
+            "consecutiveThreshold": 2,
+            "rankOffset": 0,
+            "minimumRank": 0,
+            "restRecovery": 1,
+            "homeRows": 3,
+            "defenseBonus": 1,
+            "defensePosition": "destination",
+            "defenseCap": null
+          },
+          "balance_logging": true
+        },
+        "hardware": {
+          "python": "3.11.9",
+          "torch": "2.11.0+cu128",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "cpu_threads": 4,
+          "device": "cuda",
+          "gpu": "NVIDIA GeForce RTX 3050",
+          "cuda": "12.8",
+          "runtime": "local",
+          "timestamp": 1792493936.2905498
+        },
+        "seconds": 4.1400421999860555,
+        "self_play": {
+          "games": 16,
+          "rounds": 205,
+          "seconds": 2.795583800005261,
+          "new_samples": 410,
+          "history_games": 0,
+          "history_checkpoint": null,
+          "events": {
+            "move": 250,
+            "move_reached": 96,
+            "capture": 128,
+            "contact": 64,
+            "move_captured": 128,
+            "equal_drop_failure": 45,
+            "drop": 96
+          },
+          "captures": {
+            "mutual:B": 128
+          },
+          "outcomes": [
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            }
+          ],
+          "search": {
+            "policy_seconds": 0.7004131999565288,
+            "preview_seconds": 0.6561128001194447,
+            "value_seconds": 0.5816451000282541,
+            "solver_seconds": 0.030677200003992766,
+            "cells": 8880,
+            "unique_leaves": 7604,
+            "roots": 205,
+            "gap_sum": 0.04560325300164651
+          },
+          "balance": {
+            "games": 16,
+            "rounds": 205,
+            "mean_rounds": 12.8125,
+            "draws": 16,
+            "draw_rate": 1.0,
+            "repetition_rate": 1.0,
+            "elite_upgrades_per_game": 0.0,
+            "elite_upgrades_per_100_piece_rounds": 0.0,
+            "elite_survival": {
+              "n": 0,
+              "captured": 0,
+              "censored": 0,
+              "mean_observed_rounds": null,
+              "mean_completed_rounds": null,
+              "km_restricted_mean_rounds": null,
+              "horizon": 0
+            },
+            "elite_collision_wins": 0,
+            "elite_stationary_captures": 0,
+            "elite_ownership": {
+              "neither_games": 16,
+              "only_one_win_rate": null,
+              "only_one_score": null,
+              "first_owner_win_rate": null,
+              "holder_round_win_rate": null
+            },
+            "elite_idle_when_mobile_rate": null,
+            "elite_consecutive_move_rate": null,
+            "elite_rest_after_move_rate": null,
+            "max_elite_move_streak": 0,
+            "elite_upgrade_attempt_rate": 0.06097560975609756,
+            "wins_by_side": {
+              "A": 0,
+              "B": 0
+            },
+            "unique_openings": 1,
+            "action_entropy": 2.8126586175333905,
+            "unique_actions": 34,
+            "counts": {
+              "elite_upgrade_opportunity_side_rounds": 410,
+              "elite_upgrade_attempts": 25,
+              "actions:G": 64,
+              "board_piece_rounds": 8014,
+              "rounds": 205,
+              "actions:P": 32,
+              "actions:B": 314,
+              "contacts": 64,
+              "rank_contacts": 64,
+              "elite_collision_wins": 0,
+              "elite_rank_contacts": 0,
+              "elite_mutual_collisions": 0,
+              "defense_boosted_contacts": 0,
+              "captures:B": 128,
+              "capture_reason:mutual": 128
+            },
+            "outcome_reasons": {
+              "repetition": 16
+            },
+            "paired_95_intervals": {},
+            "interval_note": "Unpaired training statistics; no confidence claim",
+            "ownership_note": "Observational association, not the causal value of acquiring an elite",
+            "survival_note": "Right censoring at game end; compare KM restricted means only at a shared supported horizon"
+          }
+        },
+        "optimization": {
+          "policy_loss": 0.7471138834953308,
+          "value_loss": 0.010691476985812187,
+          "seconds": 1.3242489999975078,
+          "updates": 64,
+          "presentations": 8192
+        },
+        "replay_sha256": "055ef13850801d39ce305d385c44a3f2958f048ac370dcd1b846044fe705bbf2",
+        "evaluation": {
+          "opponent": "same_weights",
+          "pairs": 4,
+          "games": 8,
+          "seed": 719005,
+          "wins": 0,
+          "draws": 8,
+          "losses": 0,
+          "score": 0.5,
+          "interval": [
+            0.0,
+            1.0
+          ],
+          "confidence": 0.95,
+          "interval_method": "Hoeffding on independent color-swapped pairs",
+          "elo_difference": 0.0,
+          "decision": "inconclusive",
+          "seconds": 2.182720100041479,
+          "results": [
+            {
+              "pair": 0,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 0,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            }
+          ],
+          "events": {
+            "move": 128,
+            "move_reached": 48,
+            "capture": 64,
+            "contact": 32,
+            "move_captured": 64,
+            "equal_drop_failure": 24,
+            "drop": 48
+          },
+          "captures": {
+            "mutual:B": 64
+          },
+          "search": {
+            "policy_seconds": 0.30769850010983646,
+            "preview_seconds": 0.3967538000433706,
+            "value_seconds": 0.29833089991007,
+            "solver_seconds": 0.014611800026614219,
+            "cells": 6656,
+            "unique_leaves": 4808,
+            "roots": 104,
+            "gap_sum": 0.02135518561520013
+          },
+          "budget": {
+            "candidates": 8,
+            "regret_iterations": 128,
+            "round_limit": 200,
+            "bootstrap_weight": 0.0,
+            "bootstrap_generations": 20
+          },
+          "balance": {
+            "games": 8,
+            "rounds": 104,
+            "mean_rounds": 13.0,
+            "draws": 8,
+            "draw_rate": 1.0,
+            "repetition_rate": 1.0,
+            "elite_upgrades_per_game": 0.0,
+            "elite_upgrades_per_100_piece_rounds": 0.0,
+            "elite_survival": {
+              "n": 0,
+              "captured": 0,
+              "censored": 0,
+              "mean_observed_rounds": null,
+              "mean_completed_rounds": null,
+              "km_restricted_mean_rounds": null,
+              "horizon": 0
+            },
+            "elite_collision_wins": 0,
+            "elite_stationary_captures": 0,
+            "elite_ownership": {
+              "neither_games": 8,
+              "only_one_win_rate": null,
+              "only_one_score": null,
+              "first_owner_win_rate": null,
+              "holder_round_win_rate": null
+            },
+            "elite_idle_when_mobile_rate": null,
+            "elite_consecutive_move_rate": null,
+            "elite_rest_after_move_rate": null,
+            "max_elite_move_streak": 0,
+            "elite_upgrade_attempt_rate": 0.04807692307692308,
+            "wins_by_side": {
+              "A": 0,
+              "B": 0
+            },
+            "unique_openings": 1,
+            "action_entropy": 2.715826087421279,
+            "unique_actions": 23,
+            "counts": {
+              "elite_upgrade_opportunity_side_rounds": 208,
+              "elite_upgrade_attempts": 10,
+              "actions:G": 32,
+              "board_piece_rounds": 4064,
+              "rounds": 104,
+              "actions:P": 16,
+              "actions:B": 160,
+              "contacts": 32,
+              "rank_contacts": 32,
+              "elite_collision_wins": 0,
+              "elite_rank_contacts": 0,
+              "elite_mutual_collisions": 0,
+              "defense_boosted_contacts": 0,
+              "captures:B": 64,
+              "capture_reason:mutual": 64
+            },
+            "outcome_reasons": {
+              "repetition": 8
+            },
+            "paired_95_intervals": {
+              "mean_rounds": [
+                0,
+                148.81015157406196
+              ],
+              "draw_rate": [
+                0.3209492421296902,
+                1
+              ],
+              "repetition_rate": [
+                0.3209492421296902,
+                1
+              ]
+            },
+            "interval_note": "Unadjusted descriptive Hoeffding intervals on color-swapped pairs",
+            "ownership_note": "Observational association, not the causal value of acquiring an elite",
+            "survival_note": "Right censoring at game end; compare KM restricted means only at a shared supported horizon"
+          }
+        },
+        "generation": 145,
+        "checkpoint_sha256": "d92cf1e80943c20ee7327b995e454edaca9c46528e4fbcd7975dd502107490c5",
+        "weights_updated": true,
+        "finite_weights": true
+      }
+    },
+    {
+      "scenario": "balance",
+      "trial": 1,
+      "variant": "optimized",
+      "result": {
+        "format": "simultaneous-shogi/training-benchmark-v1",
+        "root": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\training-fast",
+        "source_fingerprint": "f23df1877cf6b20c70a9afaa0cfcbea09c3e65e5c7f708f2d093cb45cd7fc516",
+        "config": {
+          "seed": 20261020,
+          "generations": 1,
+          "games_per_generation": 16,
+          "environments": 8,
+          "workers": 2,
+          "candidates": 8,
+          "cheap_candidates": 4,
+          "deep_fraction": 0.25,
+          "regret_iterations": 128,
+          "batch_size": 128,
+          "value_batch_size": 256,
+          "updates": 64,
+          "replay_capacity": 4096,
+          "recent_fraction": 0.5,
+          "history_fraction": 0,
+          "history_size": 6,
+          "learning_rate": 0.0003,
+          "bootstrap_generations": 20,
+          "bootstrap_weight": 0.0,
+          "eval_pairs": 16,
+          "eval_every": 5,
+          "eval_seed": 719005,
+          "round_limit": 200,
+          "device": "cuda",
+          "amp": true,
+          "mirror_augmentation": true,
+          "channels": 32,
+          "balance": {
+            "movement": "upgrade_only",
+            "consecutiveThreshold": 2,
+            "rankOffset": 0,
+            "minimumRank": 0,
+            "restRecovery": 1,
+            "homeRows": 3,
+            "defenseBonus": 1,
+            "defensePosition": "destination",
+            "defenseCap": null
+          },
+          "balance_logging": true
+        },
+        "hardware": {
+          "python": "3.11.9",
+          "torch": "2.11.0+cu128",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "cpu_threads": 4,
+          "device": "cuda",
+          "gpu": "NVIDIA GeForce RTX 3050",
+          "cuda": "12.8",
+          "runtime": "local",
+          "timestamp": 1792493949.3779957
+        },
+        "seconds": 4.203529099992011,
+        "self_play": {
+          "games": 16,
+          "rounds": 205,
+          "seconds": 3.011069000000134,
+          "new_samples": 410,
+          "history_games": 0,
+          "history_checkpoint": null,
+          "events": {
+            "move": 250,
+            "move_reached": 96,
+            "capture": 128,
+            "contact": 64,
+            "move_captured": 128,
+            "equal_drop_failure": 45,
+            "drop": 96
+          },
+          "captures": {
+            "mutual:B": 128
+          },
+          "outcomes": [
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            }
+          ],
+          "search": {
+            "policy_seconds": 0.7595189000130631,
+            "preview_seconds": 0.7578790000407025,
+            "value_seconds": 0.6323158997693099,
+            "solver_seconds": 0.045472700032405555,
+            "cells": 8880,
+            "unique_leaves": 7604,
+            "roots": 205,
+            "gap_sum": 0.04560325300164651
+          },
+          "balance": {
+            "games": 16,
+            "rounds": 205,
+            "mean_rounds": 12.8125,
+            "draws": 16,
+            "draw_rate": 1.0,
+            "repetition_rate": 1.0,
+            "elite_upgrades_per_game": 0.0,
+            "elite_upgrades_per_100_piece_rounds": 0.0,
+            "elite_survival": {
+              "n": 0,
+              "captured": 0,
+              "censored": 0,
+              "mean_observed_rounds": null,
+              "mean_completed_rounds": null,
+              "km_restricted_mean_rounds": null,
+              "horizon": 0
+            },
+            "elite_collision_wins": 0,
+            "elite_stationary_captures": 0,
+            "elite_ownership": {
+              "neither_games": 16,
+              "only_one_win_rate": null,
+              "only_one_score": null,
+              "first_owner_win_rate": null,
+              "holder_round_win_rate": null
+            },
+            "elite_idle_when_mobile_rate": null,
+            "elite_consecutive_move_rate": null,
+            "elite_rest_after_move_rate": null,
+            "max_elite_move_streak": 0,
+            "elite_upgrade_attempt_rate": 0.06097560975609756,
+            "wins_by_side": {
+              "A": 0,
+              "B": 0
+            },
+            "unique_openings": 1,
+            "action_entropy": 2.8126586175333905,
+            "unique_actions": 34,
+            "counts": {
+              "elite_upgrade_opportunity_side_rounds": 410,
+              "elite_upgrade_attempts": 25,
+              "actions:G": 64,
+              "board_piece_rounds": 8014,
+              "rounds": 205,
+              "actions:P": 32,
+              "actions:B": 314,
+              "contacts": 64,
+              "rank_contacts": 64,
+              "elite_collision_wins": 0,
+              "elite_rank_contacts": 0,
+              "elite_mutual_collisions": 0,
+              "defense_boosted_contacts": 0,
+              "captures:B": 128,
+              "capture_reason:mutual": 128
+            },
+            "outcome_reasons": {
+              "repetition": 16
+            },
+            "paired_95_intervals": {},
+            "interval_note": "Unpaired training statistics; no confidence claim",
+            "ownership_note": "Observational association, not the causal value of acquiring an elite",
+            "survival_note": "Right censoring at game end; compare KM restricted means only at a shared supported horizon"
+          }
+        },
+        "optimization": {
+          "policy_loss": 0.747930109500885,
+          "value_loss": 0.010890280827879906,
+          "seconds": 1.173383399960585,
+          "updates": 64,
+          "presentations": 8192
+        },
+        "replay_sha256": "055ef13850801d39ce305d385c44a3f2958f048ac370dcd1b846044fe705bbf2",
+        "evaluation": {
+          "opponent": "same_weights",
+          "pairs": 4,
+          "games": 8,
+          "seed": 719005,
+          "wins": 0,
+          "draws": 8,
+          "losses": 0,
+          "score": 0.5,
+          "interval": [
+            0.0,
+            1.0
+          ],
+          "confidence": 0.95,
+          "interval_method": "Hoeffding on independent color-swapped pairs",
+          "elo_difference": 0.0,
+          "decision": "inconclusive",
+          "seconds": 2.231976599956397,
+          "results": [
+            {
+              "pair": 0,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 0,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            }
+          ],
+          "events": {
+            "move": 128,
+            "move_reached": 48,
+            "capture": 64,
+            "contact": 32,
+            "move_captured": 64,
+            "equal_drop_failure": 24,
+            "drop": 48
+          },
+          "captures": {
+            "mutual:B": 64
+          },
+          "search": {
+            "policy_seconds": 0.3154722001054324,
+            "preview_seconds": 0.3846741000888869,
+            "value_seconds": 0.3212686999468133,
+            "solver_seconds": 0.016280900046695024,
+            "cells": 6656,
+            "unique_leaves": 4808,
+            "roots": 104,
+            "gap_sum": 0.02135518561520013
+          },
+          "budget": {
+            "candidates": 8,
+            "regret_iterations": 128,
+            "round_limit": 200,
+            "bootstrap_weight": 0.0,
+            "bootstrap_generations": 20
+          },
+          "balance": {
+            "games": 8,
+            "rounds": 104,
+            "mean_rounds": 13.0,
+            "draws": 8,
+            "draw_rate": 1.0,
+            "repetition_rate": 1.0,
+            "elite_upgrades_per_game": 0.0,
+            "elite_upgrades_per_100_piece_rounds": 0.0,
+            "elite_survival": {
+              "n": 0,
+              "captured": 0,
+              "censored": 0,
+              "mean_observed_rounds": null,
+              "mean_completed_rounds": null,
+              "km_restricted_mean_rounds": null,
+              "horizon": 0
+            },
+            "elite_collision_wins": 0,
+            "elite_stationary_captures": 0,
+            "elite_ownership": {
+              "neither_games": 8,
+              "only_one_win_rate": null,
+              "only_one_score": null,
+              "first_owner_win_rate": null,
+              "holder_round_win_rate": null
+            },
+            "elite_idle_when_mobile_rate": null,
+            "elite_consecutive_move_rate": null,
+            "elite_rest_after_move_rate": null,
+            "max_elite_move_streak": 0,
+            "elite_upgrade_attempt_rate": 0.04807692307692308,
+            "wins_by_side": {
+              "A": 0,
+              "B": 0
+            },
+            "unique_openings": 1,
+            "action_entropy": 2.715826087421279,
+            "unique_actions": 23,
+            "counts": {
+              "elite_upgrade_opportunity_side_rounds": 208,
+              "elite_upgrade_attempts": 10,
+              "actions:G": 32,
+              "board_piece_rounds": 4064,
+              "rounds": 104,
+              "actions:P": 16,
+              "actions:B": 160,
+              "contacts": 32,
+              "rank_contacts": 32,
+              "elite_collision_wins": 0,
+              "elite_rank_contacts": 0,
+              "elite_mutual_collisions": 0,
+              "defense_boosted_contacts": 0,
+              "captures:B": 64,
+              "capture_reason:mutual": 64
+            },
+            "outcome_reasons": {
+              "repetition": 8
+            },
+            "paired_95_intervals": {
+              "mean_rounds": [
+                0,
+                148.81015157406196
+              ],
+              "draw_rate": [
+                0.3209492421296902,
+                1
+              ],
+              "repetition_rate": [
+                0.3209492421296902,
+                1
+              ]
+            },
+            "interval_note": "Unadjusted descriptive Hoeffding intervals on color-swapped pairs",
+            "ownership_note": "Observational association, not the causal value of acquiring an elite",
+            "survival_note": "Right censoring at game end; compare KM restricted means only at a shared supported horizon"
+          }
+        },
+        "generation": 145,
+        "checkpoint_sha256": "d92cf1e80943c20ee7327b995e454edaca9c46528e4fbcd7975dd502107490c5",
+        "weights_updated": true,
+        "finite_weights": true
+      }
+    },
+    {
+      "scenario": "balance",
+      "trial": 1,
+      "variant": "baseline",
+      "result": {
+        "format": "simultaneous-shogi/training-benchmark-v1",
+        "root": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\training-performance\\baseline",
+        "source_fingerprint": "64bf599308979b05f2f8fd6570fb32ea96dc2decdd4ab3c44a3ce1bbe82e2a89",
+        "config": {
+          "seed": 20261020,
+          "generations": 1,
+          "games_per_generation": 16,
+          "environments": 8,
+          "workers": 2,
+          "candidates": 8,
+          "cheap_candidates": 4,
+          "deep_fraction": 0.25,
+          "regret_iterations": 128,
+          "batch_size": 128,
+          "updates": 64,
+          "replay_capacity": 4096,
+          "recent_fraction": 0.5,
+          "history_fraction": 0,
+          "history_size": 6,
+          "learning_rate": 0.0003,
+          "bootstrap_generations": 20,
+          "bootstrap_weight": 0.0,
+          "eval_pairs": 16,
+          "eval_every": 5,
+          "eval_seed": 719005,
+          "round_limit": 200,
+          "device": "cuda",
+          "amp": true,
+          "mirror_augmentation": true,
+          "channels": 32,
+          "balance": {
+            "movement": "upgrade_only",
+            "consecutiveThreshold": 2,
+            "rankOffset": 0,
+            "minimumRank": 0,
+            "restRecovery": 1,
+            "homeRows": 3,
+            "defenseBonus": 1,
+            "defensePosition": "destination",
+            "defenseCap": null
+          },
+          "balance_logging": true
+        },
+        "hardware": {
+          "python": "3.11.9",
+          "torch": "2.11.0+cu128",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "cpu_threads": 4,
+          "device": "cuda",
+          "gpu": "NVIDIA GeForce RTX 3050",
+          "cuda": "12.8",
+          "runtime": "local",
+          "timestamp": 1792493976.0859673
+        },
+        "seconds": 11.309394299983978,
+        "self_play": {
+          "games": 16,
+          "rounds": 205,
+          "seconds": 7.838742199994158,
+          "new_samples": 410,
+          "history_games": 0,
+          "history_checkpoint": null,
+          "events": {
+            "move": 250,
+            "move_reached": 96,
+            "capture": 128,
+            "contact": 64,
+            "move_captured": 128,
+            "equal_drop_failure": 45,
+            "drop": 96
+          },
+          "captures": {
+            "mutual:B": 128
+          },
+          "outcomes": [
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            }
+          ],
+          "search": {
+            "policy_seconds": 1.1413340998697095,
+            "preview_seconds": 2.082807600090746,
+            "value_seconds": 3.2555977000738494,
+            "solver_seconds": 0.5672790998942219,
+            "cells": 8880,
+            "unique_leaves": 7604,
+            "roots": 205,
+            "gap_sum": 0.04560325300164651
+          },
+          "balance": {
+            "games": 16,
+            "rounds": 205,
+            "mean_rounds": 12.8125,
+            "draws": 16,
+            "draw_rate": 1.0,
+            "repetition_rate": 1.0,
+            "elite_upgrades_per_game": 0.0,
+            "elite_upgrades_per_100_piece_rounds": 0.0,
+            "elite_survival": {
+              "n": 0,
+              "captured": 0,
+              "censored": 0,
+              "mean_observed_rounds": null,
+              "mean_completed_rounds": null,
+              "km_restricted_mean_rounds": null,
+              "horizon": 0
+            },
+            "elite_collision_wins": 0,
+            "elite_stationary_captures": 0,
+            "elite_ownership": {
+              "neither_games": 16,
+              "only_one_win_rate": null,
+              "only_one_score": null,
+              "first_owner_win_rate": null,
+              "holder_round_win_rate": null
+            },
+            "elite_idle_when_mobile_rate": null,
+            "elite_consecutive_move_rate": null,
+            "elite_rest_after_move_rate": null,
+            "max_elite_move_streak": 0,
+            "elite_upgrade_attempt_rate": 0.06097560975609756,
+            "wins_by_side": {
+              "A": 0,
+              "B": 0
+            },
+            "unique_openings": 1,
+            "action_entropy": 2.8126586175333905,
+            "unique_actions": 34,
+            "counts": {
+              "elite_upgrade_opportunity_side_rounds": 410,
+              "elite_upgrade_attempts": 25,
+              "actions:G": 64,
+              "board_piece_rounds": 8014,
+              "rounds": 205,
+              "actions:P": 32,
+              "actions:B": 314,
+              "contacts": 64,
+              "rank_contacts": 64,
+              "elite_collision_wins": 0,
+              "elite_rank_contacts": 0,
+              "elite_mutual_collisions": 0,
+              "defense_boosted_contacts": 0,
+              "captures:B": 128,
+              "capture_reason:mutual": 128
+            },
+            "outcome_reasons": {
+              "repetition": 16
+            },
+            "paired_95_intervals": {},
+            "interval_note": "Unpaired training statistics; no confidence claim",
+            "ownership_note": "Observational association, not the causal value of acquiring an elite",
+            "survival_note": "Right censoring at game end; compare KM restricted means only at a shared supported horizon"
+          }
+        },
+        "optimization": {
+          "policy_loss": 0.748477996326983,
+          "value_loss": 0.011760216076709185,
+          "seconds": 3.442368099989835,
+          "updates": 64,
+          "presentations": 8192
+        },
+        "replay_sha256": "055ef13850801d39ce305d385c44a3f2958f048ac370dcd1b846044fe705bbf2",
+        "evaluation": {
+          "opponent": "same_weights",
+          "pairs": 4,
+          "games": 8,
+          "seed": 719005,
+          "wins": 0,
+          "draws": 8,
+          "losses": 0,
+          "score": 0.5,
+          "interval": [
+            0.0,
+            1.0
+          ],
+          "confidence": 0.95,
+          "interval_method": "Hoeffding on independent color-swapped pairs",
+          "elo_difference": 0.0,
+          "decision": "inconclusive",
+          "seconds": 8.70586970000295,
+          "results": [
+            {
+              "pair": 0,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 0,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            }
+          ],
+          "events": {
+            "move": 128,
+            "move_reached": 48,
+            "capture": 64,
+            "contact": 32,
+            "move_captured": 64,
+            "equal_drop_failure": 24,
+            "drop": 48
+          },
+          "captures": {
+            "mutual:B": 64
+          },
+          "search": {
+            "policy_seconds": 0.6027449000976048,
+            "preview_seconds": 1.4660337998648174,
+            "value_seconds": 2.020886000012979,
+            "solver_seconds": 0.3090574999223463,
+            "cells": 6656,
+            "unique_leaves": 4808,
+            "roots": 104,
+            "gap_sum": 0.02135518561520013
+          },
+          "budget": {
+            "candidates": 8,
+            "regret_iterations": 128,
+            "round_limit": 200,
+            "bootstrap_weight": 0.0,
+            "bootstrap_generations": 20
+          },
+          "balance": {
+            "games": 8,
+            "rounds": 104,
+            "mean_rounds": 13.0,
+            "draws": 8,
+            "draw_rate": 1.0,
+            "repetition_rate": 1.0,
+            "elite_upgrades_per_game": 0.0,
+            "elite_upgrades_per_100_piece_rounds": 0.0,
+            "elite_survival": {
+              "n": 0,
+              "captured": 0,
+              "censored": 0,
+              "mean_observed_rounds": null,
+              "mean_completed_rounds": null,
+              "km_restricted_mean_rounds": null,
+              "horizon": 0
+            },
+            "elite_collision_wins": 0,
+            "elite_stationary_captures": 0,
+            "elite_ownership": {
+              "neither_games": 8,
+              "only_one_win_rate": null,
+              "only_one_score": null,
+              "first_owner_win_rate": null,
+              "holder_round_win_rate": null
+            },
+            "elite_idle_when_mobile_rate": null,
+            "elite_consecutive_move_rate": null,
+            "elite_rest_after_move_rate": null,
+            "max_elite_move_streak": 0,
+            "elite_upgrade_attempt_rate": 0.04807692307692308,
+            "wins_by_side": {
+              "A": 0,
+              "B": 0
+            },
+            "unique_openings": 1,
+            "action_entropy": 2.715826087421279,
+            "unique_actions": 23,
+            "counts": {
+              "elite_upgrade_opportunity_side_rounds": 208,
+              "elite_upgrade_attempts": 10,
+              "actions:G": 32,
+              "board_piece_rounds": 4064,
+              "rounds": 104,
+              "actions:P": 16,
+              "actions:B": 160,
+              "contacts": 32,
+              "rank_contacts": 32,
+              "elite_collision_wins": 0,
+              "elite_rank_contacts": 0,
+              "elite_mutual_collisions": 0,
+              "defense_boosted_contacts": 0,
+              "captures:B": 64,
+              "capture_reason:mutual": 64
+            },
+            "outcome_reasons": {
+              "repetition": 8
+            },
+            "paired_95_intervals": {
+              "mean_rounds": [
+                0,
+                148.81015157406196
+              ],
+              "draw_rate": [
+                0.3209492421296902,
+                1
+              ],
+              "repetition_rate": [
+                0.3209492421296902,
+                1
+              ]
+            },
+            "interval_note": "Unadjusted descriptive Hoeffding intervals on color-swapped pairs",
+            "ownership_note": "Observational association, not the causal value of acquiring an elite",
+            "survival_note": "Right censoring at game end; compare KM restricted means only at a shared supported horizon"
+          }
+        },
+        "generation": 145,
+        "checkpoint_sha256": "d92cf1e80943c20ee7327b995e454edaca9c46528e4fbcd7975dd502107490c5",
+        "weights_updated": true,
+        "finite_weights": true
+      }
+    },
+    {
+      "scenario": "balance",
+      "trial": 2,
+      "variant": "baseline",
+      "result": {
+        "format": "simultaneous-shogi/training-benchmark-v1",
+        "root": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\.cache\\training-performance\\baseline",
+        "source_fingerprint": "64bf599308979b05f2f8fd6570fb32ea96dc2decdd4ab3c44a3ce1bbe82e2a89",
+        "config": {
+          "seed": 20261020,
+          "generations": 1,
+          "games_per_generation": 16,
+          "environments": 8,
+          "workers": 2,
+          "candidates": 8,
+          "cheap_candidates": 4,
+          "deep_fraction": 0.25,
+          "regret_iterations": 128,
+          "batch_size": 128,
+          "updates": 64,
+          "replay_capacity": 4096,
+          "recent_fraction": 0.5,
+          "history_fraction": 0,
+          "history_size": 6,
+          "learning_rate": 0.0003,
+          "bootstrap_generations": 20,
+          "bootstrap_weight": 0.0,
+          "eval_pairs": 16,
+          "eval_every": 5,
+          "eval_seed": 719005,
+          "round_limit": 200,
+          "device": "cuda",
+          "amp": true,
+          "mirror_augmentation": true,
+          "channels": 32,
+          "balance": {
+            "movement": "upgrade_only",
+            "consecutiveThreshold": 2,
+            "rankOffset": 0,
+            "minimumRank": 0,
+            "restRecovery": 1,
+            "homeRows": 3,
+            "defenseBonus": 1,
+            "defensePosition": "destination",
+            "defenseCap": null
+          },
+          "balance_logging": true
+        },
+        "hardware": {
+          "python": "3.11.9",
+          "torch": "2.11.0+cu128",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "cpu_threads": 4,
+          "device": "cuda",
+          "gpu": "NVIDIA GeForce RTX 3050",
+          "cuda": "12.8",
+          "runtime": "local",
+          "timestamp": 1792494001.0632484
+        },
+        "seconds": 10.72642340004677,
+        "self_play": {
+          "games": 16,
+          "rounds": 205,
+          "seconds": 6.808840500016231,
+          "new_samples": 410,
+          "history_games": 0,
+          "history_checkpoint": null,
+          "events": {
+            "move": 250,
+            "move_reached": 96,
+            "capture": 128,
+            "contact": 64,
+            "move_captured": 128,
+            "equal_drop_failure": 45,
+            "drop": 96
+          },
+          "captures": {
+            "mutual:B": 128
+          },
+          "outcomes": [
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            }
+          ],
+          "search": {
+            "policy_seconds": 1.0012896999251097,
+            "preview_seconds": 1.8916728000622243,
+            "value_seconds": 2.742417200061027,
+            "solver_seconds": 0.504656899778638,
+            "cells": 8880,
+            "unique_leaves": 7604,
+            "roots": 205,
+            "gap_sum": 0.04560325300164651
+          },
+          "balance": {
+            "games": 16,
+            "rounds": 205,
+            "mean_rounds": 12.8125,
+            "draws": 16,
+            "draw_rate": 1.0,
+            "repetition_rate": 1.0,
+            "elite_upgrades_per_game": 0.0,
+            "elite_upgrades_per_100_piece_rounds": 0.0,
+            "elite_survival": {
+              "n": 0,
+              "captured": 0,
+              "censored": 0,
+              "mean_observed_rounds": null,
+              "mean_completed_rounds": null,
+              "km_restricted_mean_rounds": null,
+              "horizon": 0
+            },
+            "elite_collision_wins": 0,
+            "elite_stationary_captures": 0,
+            "elite_ownership": {
+              "neither_games": 16,
+              "only_one_win_rate": null,
+              "only_one_score": null,
+              "first_owner_win_rate": null,
+              "holder_round_win_rate": null
+            },
+            "elite_idle_when_mobile_rate": null,
+            "elite_consecutive_move_rate": null,
+            "elite_rest_after_move_rate": null,
+            "max_elite_move_streak": 0,
+            "elite_upgrade_attempt_rate": 0.06097560975609756,
+            "wins_by_side": {
+              "A": 0,
+              "B": 0
+            },
+            "unique_openings": 1,
+            "action_entropy": 2.8126586175333905,
+            "unique_actions": 34,
+            "counts": {
+              "elite_upgrade_opportunity_side_rounds": 410,
+              "elite_upgrade_attempts": 25,
+              "actions:G": 64,
+              "board_piece_rounds": 8014,
+              "rounds": 205,
+              "actions:P": 32,
+              "actions:B": 314,
+              "contacts": 64,
+              "rank_contacts": 64,
+              "elite_collision_wins": 0,
+              "elite_rank_contacts": 0,
+              "elite_mutual_collisions": 0,
+              "defense_boosted_contacts": 0,
+              "captures:B": 128,
+              "capture_reason:mutual": 128
+            },
+            "outcome_reasons": {
+              "repetition": 16
+            },
+            "paired_95_intervals": {},
+            "interval_note": "Unpaired training statistics; no confidence claim",
+            "ownership_note": "Observational association, not the causal value of acquiring an elite",
+            "survival_note": "Right censoring at game end; compare KM restricted means only at a shared supported horizon"
+          }
+        },
+        "optimization": {
+          "policy_loss": 0.748477996326983,
+          "value_loss": 0.011760216076709185,
+          "seconds": 3.89436040003784,
+          "updates": 64,
+          "presentations": 8192
+        },
+        "replay_sha256": "055ef13850801d39ce305d385c44a3f2958f048ac370dcd1b846044fe705bbf2",
+        "evaluation": {
+          "opponent": "same_weights",
+          "pairs": 4,
+          "games": 8,
+          "seed": 719005,
+          "wins": 0,
+          "draws": 8,
+          "losses": 0,
+          "score": 0.5,
+          "interval": [
+            0.0,
+            1.0
+          ],
+          "confidence": 0.95,
+          "interval_method": "Hoeffding on independent color-swapped pairs",
+          "elo_difference": 0.0,
+          "decision": "inconclusive",
+          "seconds": 7.693592700001318,
+          "results": [
+            {
+              "pair": 0,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 0,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            }
+          ],
+          "events": {
+            "move": 128,
+            "move_reached": 48,
+            "capture": 64,
+            "contact": 32,
+            "move_captured": 64,
+            "equal_drop_failure": 24,
+            "drop": 48
+          },
+          "captures": {
+            "mutual:B": 64
+          },
+          "search": {
+            "policy_seconds": 0.5130766999791376,
+            "preview_seconds": 1.2964732000255026,
+            "value_seconds": 1.5477747999830171,
+            "solver_seconds": 0.24806199996965006,
+            "cells": 6656,
+            "unique_leaves": 4808,
+            "roots": 104,
+            "gap_sum": 0.02135518561520013
+          },
+          "budget": {
+            "candidates": 8,
+            "regret_iterations": 128,
+            "round_limit": 200,
+            "bootstrap_weight": 0.0,
+            "bootstrap_generations": 20
+          },
+          "balance": {
+            "games": 8,
+            "rounds": 104,
+            "mean_rounds": 13.0,
+            "draws": 8,
+            "draw_rate": 1.0,
+            "repetition_rate": 1.0,
+            "elite_upgrades_per_game": 0.0,
+            "elite_upgrades_per_100_piece_rounds": 0.0,
+            "elite_survival": {
+              "n": 0,
+              "captured": 0,
+              "censored": 0,
+              "mean_observed_rounds": null,
+              "mean_completed_rounds": null,
+              "km_restricted_mean_rounds": null,
+              "horizon": 0
+            },
+            "elite_collision_wins": 0,
+            "elite_stationary_captures": 0,
+            "elite_ownership": {
+              "neither_games": 8,
+              "only_one_win_rate": null,
+              "only_one_score": null,
+              "first_owner_win_rate": null,
+              "holder_round_win_rate": null
+            },
+            "elite_idle_when_mobile_rate": null,
+            "elite_consecutive_move_rate": null,
+            "elite_rest_after_move_rate": null,
+            "max_elite_move_streak": 0,
+            "elite_upgrade_attempt_rate": 0.04807692307692308,
+            "wins_by_side": {
+              "A": 0,
+              "B": 0
+            },
+            "unique_openings": 1,
+            "action_entropy": 2.715826087421279,
+            "unique_actions": 23,
+            "counts": {
+              "elite_upgrade_opportunity_side_rounds": 208,
+              "elite_upgrade_attempts": 10,
+              "actions:G": 32,
+              "board_piece_rounds": 4064,
+              "rounds": 104,
+              "actions:P": 16,
+              "actions:B": 160,
+              "contacts": 32,
+              "rank_contacts": 32,
+              "elite_collision_wins": 0,
+              "elite_rank_contacts": 0,
+              "elite_mutual_collisions": 0,
+              "defense_boosted_contacts": 0,
+              "captures:B": 64,
+              "capture_reason:mutual": 64
+            },
+            "outcome_reasons": {
+              "repetition": 8
+            },
+            "paired_95_intervals": {
+              "mean_rounds": [
+                0,
+                148.81015157406196
+              ],
+              "draw_rate": [
+                0.3209492421296902,
+                1
+              ],
+              "repetition_rate": [
+                0.3209492421296902,
+                1
+              ]
+            },
+            "interval_note": "Unadjusted descriptive Hoeffding intervals on color-swapped pairs",
+            "ownership_note": "Observational association, not the causal value of acquiring an elite",
+            "survival_note": "Right censoring at game end; compare KM restricted means only at a shared supported horizon"
+          }
+        },
+        "generation": 145,
+        "checkpoint_sha256": "d92cf1e80943c20ee7327b995e454edaca9c46528e4fbcd7975dd502107490c5",
+        "weights_updated": true,
+        "finite_weights": true
+      }
+    },
+    {
+      "scenario": "balance",
+      "trial": 2,
+      "variant": "optimized",
+      "result": {
+        "format": "simultaneous-shogi/training-benchmark-v1",
+        "root": "C:\\Users\\tomik\\vibe\\games\\Simultaneous_Shogi\\training-fast",
+        "source_fingerprint": "f23df1877cf6b20c70a9afaa0cfcbea09c3e65e5c7f708f2d093cb45cd7fc516",
+        "config": {
+          "seed": 20261020,
+          "generations": 1,
+          "games_per_generation": 16,
+          "environments": 8,
+          "workers": 2,
+          "candidates": 8,
+          "cheap_candidates": 4,
+          "deep_fraction": 0.25,
+          "regret_iterations": 128,
+          "batch_size": 128,
+          "value_batch_size": 256,
+          "updates": 64,
+          "replay_capacity": 4096,
+          "recent_fraction": 0.5,
+          "history_fraction": 0,
+          "history_size": 6,
+          "learning_rate": 0.0003,
+          "bootstrap_generations": 20,
+          "bootstrap_weight": 0.0,
+          "eval_pairs": 16,
+          "eval_every": 5,
+          "eval_seed": 719005,
+          "round_limit": 200,
+          "device": "cuda",
+          "amp": true,
+          "mirror_augmentation": true,
+          "channels": 32,
+          "balance": {
+            "movement": "upgrade_only",
+            "consecutiveThreshold": 2,
+            "rankOffset": 0,
+            "minimumRank": 0,
+            "restRecovery": 1,
+            "homeRows": 3,
+            "defenseBonus": 1,
+            "defensePosition": "destination",
+            "defenseCap": null
+          },
+          "balance_logging": true
+        },
+        "hardware": {
+          "python": "3.11.9",
+          "torch": "2.11.0+cu128",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "cpu_threads": 4,
+          "device": "cuda",
+          "gpu": "NVIDIA GeForce RTX 3050",
+          "cuda": "12.8",
+          "runtime": "local",
+          "timestamp": 1792494014.4863448
+        },
+        "seconds": 4.469106899981853,
+        "self_play": {
+          "games": 16,
+          "rounds": 205,
+          "seconds": 3.1387222999474034,
+          "new_samples": 410,
+          "history_games": 0,
+          "history_checkpoint": null,
+          "events": {
+            "move": 250,
+            "move_reached": 96,
+            "capture": 128,
+            "contact": 64,
+            "move_captured": 128,
+            "equal_drop_failure": 45,
+            "drop": 96
+          },
+          "captures": {
+            "mutual:B": 128
+          },
+          "outcomes": [
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            },
+            {
+              "reason": "repetition",
+              "winner": "draw"
+            }
+          ],
+          "search": {
+            "policy_seconds": 0.7675046999356709,
+            "preview_seconds": 0.7365046999184415,
+            "value_seconds": 0.6807953999377787,
+            "solver_seconds": 0.0392160001792945,
+            "cells": 8880,
+            "unique_leaves": 7604,
+            "roots": 205,
+            "gap_sum": 0.04560325300164651
+          },
+          "balance": {
+            "games": 16,
+            "rounds": 205,
+            "mean_rounds": 12.8125,
+            "draws": 16,
+            "draw_rate": 1.0,
+            "repetition_rate": 1.0,
+            "elite_upgrades_per_game": 0.0,
+            "elite_upgrades_per_100_piece_rounds": 0.0,
+            "elite_survival": {
+              "n": 0,
+              "captured": 0,
+              "censored": 0,
+              "mean_observed_rounds": null,
+              "mean_completed_rounds": null,
+              "km_restricted_mean_rounds": null,
+              "horizon": 0
+            },
+            "elite_collision_wins": 0,
+            "elite_stationary_captures": 0,
+            "elite_ownership": {
+              "neither_games": 16,
+              "only_one_win_rate": null,
+              "only_one_score": null,
+              "first_owner_win_rate": null,
+              "holder_round_win_rate": null
+            },
+            "elite_idle_when_mobile_rate": null,
+            "elite_consecutive_move_rate": null,
+            "elite_rest_after_move_rate": null,
+            "max_elite_move_streak": 0,
+            "elite_upgrade_attempt_rate": 0.06097560975609756,
+            "wins_by_side": {
+              "A": 0,
+              "B": 0
+            },
+            "unique_openings": 1,
+            "action_entropy": 2.8126586175333905,
+            "unique_actions": 34,
+            "counts": {
+              "elite_upgrade_opportunity_side_rounds": 410,
+              "elite_upgrade_attempts": 25,
+              "actions:G": 64,
+              "board_piece_rounds": 8014,
+              "rounds": 205,
+              "actions:P": 32,
+              "actions:B": 314,
+              "contacts": 64,
+              "rank_contacts": 64,
+              "elite_collision_wins": 0,
+              "elite_rank_contacts": 0,
+              "elite_mutual_collisions": 0,
+              "defense_boosted_contacts": 0,
+              "captures:B": 128,
+              "capture_reason:mutual": 128
+            },
+            "outcome_reasons": {
+              "repetition": 16
+            },
+            "paired_95_intervals": {},
+            "interval_note": "Unpaired training statistics; no confidence claim",
+            "ownership_note": "Observational association, not the causal value of acquiring an elite",
+            "survival_note": "Right censoring at game end; compare KM restricted means only at a shared supported horizon"
+          }
+        },
+        "optimization": {
+          "policy_loss": 0.746506929397583,
+          "value_loss": 0.01076698862016201,
+          "seconds": 1.3119040000019595,
+          "updates": 64,
+          "presentations": 8192
+        },
+        "replay_sha256": "055ef13850801d39ce305d385c44a3f2958f048ac370dcd1b846044fe705bbf2",
+        "evaluation": {
+          "opponent": "same_weights",
+          "pairs": 4,
+          "games": 8,
+          "seed": 719005,
+          "wins": 0,
+          "draws": 8,
+          "losses": 0,
+          "score": 0.5,
+          "interval": [
+            0.0,
+            1.0
+          ],
+          "confidence": 0.95,
+          "interval_method": "Hoeffding on independent color-swapped pairs",
+          "elo_difference": 0.0,
+          "decision": "inconclusive",
+          "seconds": 2.3560484999907203,
+          "results": [
+            {
+              "pair": 0,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 0,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 1,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 2,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": false,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            },
+            {
+              "pair": 3,
+              "swapped": true,
+              "score": 0.5,
+              "rounds": 13,
+              "outcome": {
+                "reason": "repetition",
+                "winner": "draw"
+              }
+            }
+          ],
+          "events": {
+            "move": 128,
+            "move_reached": 48,
+            "capture": 64,
+            "contact": 32,
+            "move_captured": 64,
+            "equal_drop_failure": 24,
+            "drop": 48
+          },
+          "captures": {
+            "mutual:B": 64
+          },
+          "search": {
+            "policy_seconds": 0.32072719983989373,
+            "preview_seconds": 0.42110600002342835,
+            "value_seconds": 0.3218551998725161,
+            "solver_seconds": 0.01659850007854402,
+            "cells": 6656,
+            "unique_leaves": 4808,
+            "roots": 104,
+            "gap_sum": 0.02135518561520013
+          },
+          "budget": {
+            "candidates": 8,
+            "regret_iterations": 128,
+            "round_limit": 200,
+            "bootstrap_weight": 0.0,
+            "bootstrap_generations": 20
+          },
+          "balance": {
+            "games": 8,
+            "rounds": 104,
+            "mean_rounds": 13.0,
+            "draws": 8,
+            "draw_rate": 1.0,
+            "repetition_rate": 1.0,
+            "elite_upgrades_per_game": 0.0,
+            "elite_upgrades_per_100_piece_rounds": 0.0,
+            "elite_survival": {
+              "n": 0,
+              "captured": 0,
+              "censored": 0,
+              "mean_observed_rounds": null,
+              "mean_completed_rounds": null,
+              "km_restricted_mean_rounds": null,
+              "horizon": 0
+            },
+            "elite_collision_wins": 0,
+            "elite_stationary_captures": 0,
+            "elite_ownership": {
+              "neither_games": 8,
+              "only_one_win_rate": null,
+              "only_one_score": null,
+              "first_owner_win_rate": null,
+              "holder_round_win_rate": null
+            },
+            "elite_idle_when_mobile_rate": null,
+            "elite_consecutive_move_rate": null,
+            "elite_rest_after_move_rate": null,
+            "max_elite_move_streak": 0,
+            "elite_upgrade_attempt_rate": 0.04807692307692308,
+            "wins_by_side": {
+              "A": 0,
+              "B": 0
+            },
+            "unique_openings": 1,
+            "action_entropy": 2.715826087421279,
+            "unique_actions": 23,
+            "counts": {
+              "elite_upgrade_opportunity_side_rounds": 208,
+              "elite_upgrade_attempts": 10,
+              "actions:G": 32,
+              "board_piece_rounds": 4064,
+              "rounds": 104,
+              "actions:P": 16,
+              "actions:B": 160,
+              "contacts": 32,
+              "rank_contacts": 32,
+              "elite_collision_wins": 0,
+              "elite_rank_contacts": 0,
+              "elite_mutual_collisions": 0,
+              "defense_boosted_contacts": 0,
+              "captures:B": 64,
+              "capture_reason:mutual": 64
+            },
+            "outcome_reasons": {
+              "repetition": 8
+            },
+            "paired_95_intervals": {
+              "mean_rounds": [
+                0,
+                148.81015157406196
+              ],
+              "draw_rate": [
+                0.3209492421296902,
+                1
+              ],
+              "repetition_rate": [
+                0.3209492421296902,
+                1
+              ]
+            },
+            "interval_note": "Unadjusted descriptive Hoeffding intervals on color-swapped pairs",
+            "ownership_note": "Observational association, not the causal value of acquiring an elite",
+            "survival_note": "Right censoring at game end; compare KM restricted means only at a shared supported horizon"
+          }
+        },
+        "generation": 145,
+        "checkpoint_sha256": "d92cf1e80943c20ee7327b995e454edaca9c46528e4fbcd7975dd502107490c5",
+        "weights_updated": true,
+        "finite_weights": true
+      }
+    }
+  ]
+}

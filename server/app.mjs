@@ -3,16 +3,19 @@ import { readFile, stat } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { RoomService, HttpError } from './rooms.mjs';
+import { ModelService } from './models.mjs';
+import { WasmEngine } from '../web/dist/engine.js';
+import { PLAY_RULES } from '../web/dist/rules.js';
 
 const webRoot = fileURLToPath(new URL('../web/dist/', import.meta.url));
 const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.wasm': 'application/wasm', '.svg': 'image/svg+xml', '.map': 'application/json', '.ttf': 'font/ttf', '.txt': 'text/plain; charset=utf-8', '.wav': 'audio/wav' };
 const json = (res, status, value) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(value)); };
-async function body(req) {
+async function body(req, maximum = 16_384) {
   if (!req.headers['content-type']?.startsWith('application/json')) throw new HttpError(415, 'JSON形式で送信してください。');
   let value = '';
   for await (const chunk of req) {
     value += chunk;
-    if (Buffer.byteLength(value) > 16_384) throw new HttpError(413, '送信データが大きすぎます。');
+    if (Buffer.byteLength(value) > maximum) throw new HttpError(413, '送信データが大きすぎます。');
   }
   try {
     const result = JSON.parse(value);
@@ -24,6 +27,8 @@ async function body(req) {
 export async function createApplication(options = {}) {
   const bytes = await readFile(new URL('../web/dist/engine.wasm', import.meta.url));
   const service = await RoomService.open({ bytes, dataDir: resolve(process.env.DATA_DIR || 'data/rooms'), ...options });
+  const probe = await WasmEngine.fromBytes(bytes);
+  const models = new ModelService({ ...options.models, rules: probe.call({ cmd: 'new',rules:PLAY_RULES }).value.rules });
   const rates = new Map();
   function rate(req, lobby = false) {
     const key = `${req.socket.remoteAddress}:${lobby ? 'lobby' : 'api'}`;
@@ -45,6 +50,14 @@ export async function createApplication(options = {}) {
         if (origin && (process.env.PUBLIC_ORIGIN ? origin !== process.env.PUBLIC_ORIGIN : new URL(origin).host !== req.headers.host)) throw new HttpError(403, 'この接続元からは操作できません。');
         if (!['GET', 'POST'].includes(req.method)) throw new HttpError(405, '対応していない操作です。');
         rate(req, path === '/api/rooms' || path === '/api/join');
+        if (path.startsWith('/api/ai/')) {
+          const address = req.socket.remoteAddress, hostname = new URL(`http://${req.headers.host}`).hostname;
+          if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address) || !['localhost', '127.0.0.1', '[::1]'].includes(hostname)) throw new HttpError(403, '学習済みモデルは、サーバーを起動したPCのlocalhostから利用してください。');
+          if (req.method === 'GET' && path === '/api/ai/models') { json(res, 200, await models.catalogue()); return; }
+          if (req.method === 'POST' && path === '/api/ai/load') { json(res, 200, await models.load((await body(req)).model)); return; }
+          if (req.method === 'POST' && path === '/api/ai/move') { json(res, 200, await models.choose(await body(req, 2 * 1024 * 1024))); return; }
+          throw new HttpError(404, 'モデル操作が見つかりません。');
+        }
         if (req.method === 'POST' && path === '/api/rooms') { json(res, 201, await service.create((await body(req)).name)); return; }
         if (req.method === 'POST' && path === '/api/join') { const input = await body(req); json(res, 200, await service.join(input.code, input.name)); return; }
         const session = service.authenticate(req.headers.authorization);
@@ -99,7 +112,7 @@ export async function createApplication(options = {}) {
   return {
     server, service,
     async close() {
-      clearInterval(tick); clearInterval(heartbeat); await service.close(); server.closeIdleConnections();
+      clearInterval(tick); clearInterval(heartbeat); await models.close(); await service.close(); server.closeIdleConnections();
       await new Promise((resolveClose, reject) => server.close(error => error ? reject(error) : resolveClose()));
     },
   };

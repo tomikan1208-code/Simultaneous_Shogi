@@ -25,6 +25,14 @@
 .is-playing #context-label {
   display:none
 }
+.is-playing #game-mode {
+  display:block;
+  min-width:0;
+  max-width:min(42vw,560px);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap
+}
 .is-playing .header-actions {
   align-items:center
 }

@@ -171,7 +171,7 @@ fn run() -> Result<(), String> {
             println!("{}",json!({"verified":true,"rounds":game.round,"hash":game.state_hash(),"outcome":game.outcome}));
         }
         "arena" => println!("{}",arena(&args[1..])?),
-        _ => println!("Simultaneous Shogi v0.6\n  shogi initial\n  shogi resolve    JSONL round fixtures on stdin\n  shogi api        JSONL session requests on stdin\n  shogi actions A  Position JSON on stdin\n  shogi verify     Replay JSON on stdin\n  shogi arena [pairs=10] [seed=1] [hunter] [random] [diagnostics=off]\nPolicies: random, hunter, defense, interference, upgrade"),
+        _ => println!("Simultaneous Shogi v{}\n  shogi initial\n  shogi resolve    JSONL round fixtures on stdin\n  shogi api        JSONL session requests on stdin\n  shogi actions A  Position JSON on stdin\n  shogi verify     Replay JSON on stdin\n  shogi arena [pairs=10] [seed=1] [hunter] [random] [diagnostics=off]\nPolicies: random, hunter, defense, interference, upgrade", shogi_core::RULE_VERSION),
     }
     Ok(())
 }

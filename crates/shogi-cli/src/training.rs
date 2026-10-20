@@ -2,8 +2,7 @@
 use serde_json::{json, Value};
 use shogi_core::{
     policy::{choose, Policy, Rng},
-    replay::position_hash,
-    training::fast_actions,
+    training::{fast_actions, material_value, regret_match, sparse_observation},
     *,
 };
 use std::{
@@ -71,10 +70,15 @@ pub fn run() -> Result<(), String> {
                         for a in &options[0] {
                             for b in &options[1] {
                                 let r = game.preview_round(&[a.clone(),b.clone()])?;
-                                let key = position_hash(&r.position);
+                                let key = r.after_hash.clone();
                                 let index = *cache.entry((key,json!(r.outcome).to_string())).or_insert_with(|| {
                                     let index = states.len();
-                                    states.push(json!({"position":r.position,"outcome":r.outcome,"round":game.round+1,"rules":game.rules,"repetition":game.next_repetition_count(&r.position)}));
+                                    let repetition = game.next_repetition_count_from_hash(&r.after_hash);
+                                    states.push(if item["compact"].as_bool() == Some(true) {
+                                        json!({"outcome":r.outcome,"features":sparse_observation(&r.position,&game.rules,game.round+1,repetition),"heuristic":material_value(&r.position)})
+                                    } else {
+                                        json!({"position":r.position,"outcome":r.outcome,"round":game.round+1,"rules":game.rules,"repetition":repetition})
+                                    });
                                     index
                                 });
                                 cells.push(index);
@@ -83,6 +87,13 @@ pub fn run() -> Result<(), String> {
                         rows.push(json!({"env":env,"states":states,"cells":cells}));
                     }
                     Ok(json!(rows))
+                }
+                "solve" => {
+                    v["items"].as_array().ok_or("Missing items")?.iter().map(|item| {
+                        let matrix: Vec<Vec<f64>> = parse(&item["matrix"])?;
+                        let strategy = regret_match(&matrix,number(item,"iterations")?)?;
+                        Ok(json!({"env":item["env"],"p":strategy.p,"q":strategy.q,"gap":strategy.gap}))
+                    }).collect::<Result<Vec<_>,String>>().map(|rows| json!(rows))
                 }
                 "step" => {
                     let mut rows = Vec::new();
@@ -93,8 +104,12 @@ pub fn run() -> Result<(), String> {
                         let result = game.play_round(&actions)?;
                         let metrics = json!(result.metrics);
                         let captures = json!(result.captures);
+                        let contacts = json!(result.contacts);
+                        let movements = json!(result.movements);
                         let mut s = state(game);
                         s["env"] = json!(env); s["metrics"] = metrics; s["captures"] = captures;
+                        s["contacts"] = contacts;
+                        s["movements"] = movements;
                         if game.outcome.is_some() && item["replay"].as_bool() == Some(true) { s["replay"] = json!(game.replay); }
                         rows.push(s);
                     }

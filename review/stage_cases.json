@@ -1,5 +1,5 @@
 {
-  "version": "0.6",
+  "version": "0.7",
   "description": "現行の段階位置判定。期待結果は仕様の手計算。旧累積経路の期待値は使わない。",
   "cases": [
     {
@@ -1023,8 +1023,8 @@
           }
         },
         "outcome": {
-          "winner": "B",
-          "reason": "king_captor_lost"
+          "winner": "A",
+          "reason": "king_capture_retained"
         },
         "dropBans": [],
         "contacts": [
@@ -1214,8 +1214,8 @@
           "B": {}
         },
         "outcome": {
-          "winner": "B",
-          "reason": "king_captor_lost"
+          "winner": "A",
+          "reason": "king_capture_retained"
         },
         "dropBans": [],
         "contacts": [

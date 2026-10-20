@@ -1,0 +1,582 @@
+{
+  "format": "simultaneous-shogi/replay-v1",
+  "initial": {
+    "dropBans": [],
+    "hands": {
+      "A": {},
+      "B": {}
+    },
+    "moveBans": [],
+    "nextPieceId": 0,
+    "pieces": [
+      {
+        "at": [
+          8,
+          8
+        ],
+        "id": "A:B",
+        "kind": "B",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          4,
+          9
+        ],
+        "id": "A:G:4",
+        "kind": "G",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          6,
+          9
+        ],
+        "id": "A:G:6",
+        "kind": "G",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          5,
+          9
+        ],
+        "id": "A:K:5",
+        "kind": "K",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          1,
+          9
+        ],
+        "id": "A:L:1",
+        "kind": "L",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          9,
+          9
+        ],
+        "id": "A:L:9",
+        "kind": "L",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          2,
+          9
+        ],
+        "id": "A:N:2",
+        "kind": "N",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          8,
+          9
+        ],
+        "id": "A:N:8",
+        "kind": "N",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          1,
+          7
+        ],
+        "id": "A:P:1",
+        "kind": "P",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          2,
+          7
+        ],
+        "id": "A:P:2",
+        "kind": "P",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          3,
+          7
+        ],
+        "id": "A:P:3",
+        "kind": "P",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          4,
+          7
+        ],
+        "id": "A:P:4",
+        "kind": "P",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          5,
+          7
+        ],
+        "id": "A:P:5",
+        "kind": "P",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          6,
+          7
+        ],
+        "id": "A:P:6",
+        "kind": "P",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          7,
+          7
+        ],
+        "id": "A:P:7",
+        "kind": "P",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          8,
+          7
+        ],
+        "id": "A:P:8",
+        "kind": "P",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          9,
+          7
+        ],
+        "id": "A:P:9",
+        "kind": "P",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          2,
+          8
+        ],
+        "id": "A:R",
+        "kind": "R",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          3,
+          9
+        ],
+        "id": "A:S:3",
+        "kind": "S",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          7,
+          9
+        ],
+        "id": "A:S:7",
+        "kind": "S",
+        "promoted": false,
+        "side": "A",
+        "upgraded": false
+      },
+      {
+        "at": [
+          2,
+          2
+        ],
+        "id": "B:B",
+        "kind": "B",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      },
+      {
+        "at": [
+          4,
+          1
+        ],
+        "id": "B:G:4",
+        "kind": "G",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      },
+      {
+        "at": [
+          6,
+          1
+        ],
+        "id": "B:G:6",
+        "kind": "G",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      },
+      {
+        "at": [
+          5,
+          1
+        ],
+        "id": "B:K:5",
+        "kind": "K",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      },
+      {
+        "at": [
+          1,
+          1
+        ],
+        "id": "B:L:1",
+        "kind": "L",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      },
+      {
+        "at": [
+          9,
+          1
+        ],
+        "id": "B:L:9",
+        "kind": "L",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      },
+      {
+        "at": [
+          2,
+          1
+        ],
+        "id": "B:N:2",
+        "kind": "N",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      },
+      {
+        "at": [
+          8,
+          1
+        ],
+        "id": "B:N:8",
+        "kind": "N",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      },
+      {
+        "at": [
+          1,
+          3
+        ],
+        "id": "B:P:1",
+        "kind": "P",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      },
+      {
+        "at": [
+          2,
+          3
+        ],
+        "id": "B:P:2",
+        "kind": "P",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      },
+      {
+        "at": [
+          3,
+          3
+        ],
+        "id": "B:P:3",
+        "kind": "P",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      },
+      {
+        "at": [
+          4,
+          3
+        ],
+        "id": "B:P:4",
+        "kind": "P",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      },
+      {
+        "at": [
+          5,
+          3
+        ],
+        "id": "B:P:5",
+        "kind": "P",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      },
+      {
+        "at": [
+          6,
+          3
+        ],
+        "id": "B:P:6",
+        "kind": "P",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      },
+      {
+        "at": [
+          7,
+          3
+        ],
+        "id": "B:P:7",
+        "kind": "P",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      },
+      {
+        "at": [
+          8,
+          3
+        ],
+        "id": "B:P:8",
+        "kind": "P",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      },
+      {
+        "at": [
+          9,
+          3
+        ],
+        "id": "B:P:9",
+        "kind": "P",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      },
+      {
+        "at": [
+          8,
+          2
+        ],
+        "id": "B:R",
+        "kind": "R",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      },
+      {
+        "at": [
+          3,
+          1
+        ],
+        "id": "B:S:3",
+        "kind": "S",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      },
+      {
+        "at": [
+          7,
+          1
+        ],
+        "id": "B:S:7",
+        "kind": "S",
+        "promoted": false,
+        "side": "B",
+        "upgraded": false
+      }
+    ]
+  },
+  "rounds": [
+    {
+      "actions": [
+        {
+          "choice": "none",
+          "piece": "A:P:7",
+          "side": "A",
+          "to": [
+            7,
+            6
+          ],
+          "type": "move"
+        },
+        {
+          "choice": "none",
+          "piece": "B:P:3",
+          "side": "B",
+          "to": [
+            3,
+            4
+          ],
+          "type": "move"
+        }
+      ],
+      "afterHash": "16b0853461763fc4d5a650acd08cbc577ecdb39defbd2620744c41ac67c5ac52",
+      "beforeHash": "1cc81d929c2e59ef9180a86518dba55191bbb0d0035f2dc472f24431a2d1bd75",
+      "chainHash": "a30a80d953678edf6a38921a8a595af3837cfdea6d1b26862b4f69ffe14fa8c5",
+      "outcome": null,
+      "resolutionHash": "0d02e4cca6788069dfee2933ce9c1c21acb0a279dc86f1048bed0db59b63463a",
+      "round": 1
+    },
+    {
+      "actions": [
+        {
+          "choice": "none",
+          "piece": "A:P:7",
+          "side": "A",
+          "to": [
+            7,
+            5
+          ],
+          "type": "move"
+        },
+        {
+          "choice": "none",
+          "piece": "B:P:3",
+          "side": "B",
+          "to": [
+            3,
+            5
+          ],
+          "type": "move"
+        }
+      ],
+      "afterHash": "6a679023322624f16440d200448f1b777f1793e33f4aa12af4b9687f7b832dad",
+      "beforeHash": "16b0853461763fc4d5a650acd08cbc577ecdb39defbd2620744c41ac67c5ac52",
+      "chainHash": "e33f644810263d596f86456dc7536c20baa10135ca5cd6f1280171bd62fa66ef",
+      "outcome": null,
+      "resolutionHash": "3361cc53d770d9aefdfd035fee31c8f77ce3afcda2990e75e48e3888f205fba1",
+      "round": 2
+    },
+    {
+      "actions": [
+        {
+          "choice": "none",
+          "piece": "A:P:7",
+          "side": "A",
+          "to": [
+            7,
+            4
+          ],
+          "type": "move"
+        },
+        {
+          "choice": "none",
+          "piece": "B:P:3",
+          "side": "B",
+          "to": [
+            3,
+            6
+          ],
+          "type": "move"
+        }
+      ],
+      "afterHash": "a811130494de7d3be406ce279d23c0bc4c5fd994df2f78d82fc9eefc717c543c",
+      "beforeHash": "6a679023322624f16440d200448f1b777f1793e33f4aa12af4b9687f7b832dad",
+      "chainHash": "a99a34beaf4105fe9a654523e174f923ec4b6af90b9c60a6e277db9ebc9389b7",
+      "outcome": null,
+      "resolutionHash": "5b7a3a1bcf8a89a8585457080d25519a870192d72327cde18d54a33f76e0dd9a",
+      "round": 3
+    },
+    {
+      "actions": [
+        {
+          "choice": "none",
+          "piece": "A:P:7",
+          "side": "A",
+          "to": [
+            7,
+            3
+          ],
+          "type": "move"
+        },
+        {
+          "choice": "none",
+          "piece": "B:P:3",
+          "side": "B",
+          "to": [
+            3,
+            7
+          ],
+          "type": "move"
+        }
+      ],
+      "afterHash": "72665e304588db9fe04b09e408da3356390a3410df394497bf95f864077c43ad",
+      "beforeHash": "a811130494de7d3be406ce279d23c0bc4c5fd994df2f78d82fc9eefc717c543c",
+      "chainHash": "80d56a4a6bd0842d98d745414f52f07ca8f30318e2fa783afc7220fb37cb12aa",
+      "outcome": null,
+      "resolutionHash": "3fe0797fead553c37fb793a973814ca607e982f27e0afb2fd30045ae1a4645ee",
+      "round": 4
+    }
+  ],
+  "rules": {
+    "profile": "official-v0.6",
+    "repetitionLimit": 4,
+    "roundLimit": 200,
+    "version": "0.6"
+  }
+}

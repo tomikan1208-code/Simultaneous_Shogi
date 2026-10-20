@@ -1,4 +1,6 @@
 import copy
+import contextlib
+import io
 import json
 from pathlib import Path
 import tempfile
@@ -13,7 +15,7 @@ from training.features import observation, actions, mirror_sample
 from training.model import Net
 from training.replay import ReplayBuffer
 from training.search import regret_match, Searcher
-from training.train import Trainer, StopRequested
+from training.train import Trainer, StopRequested, planned_evaluations, evaluation_alpha, champion_pairs
 from training.transfer import export_run, import_run
 
 
@@ -126,6 +128,52 @@ class LearningTests(unittest.TestCase):
             (run / 'STOP').write_text('stop')
             with self.assertRaises(StopRequested):
                 resumed.check_stop()
+
+    def test_unlimited_training_passes_twenty_generations_and_resumes(self):
+        config = dict(self.config, generations=0, round_limit=1, candidates=2, cheap_candidates=2,
+                      updates=1, batch_size=2, eval_every=1000, history_fraction=0)
+        self.assertEqual(load_config(overrides=config)['generations'], 0)
+        with tempfile.TemporaryDirectory(dir=ROOT / '.cache/tests') as folder:
+            run = Path(folder) / 'continuous'
+            trainer = Trainer(run, config)
+            self.assertIsNone(trainer.manifest['planned_gates'])
+            def stop_after(instance, target):
+                save_status = instance.status
+                def status(phase, **extra):
+                    save_status(phase, **extra)
+                    if phase == 'generation_complete' and instance.generation >= target:
+                        instance.stopping = True
+                instance.status = status
+            stop_after(trainer, 21)
+            with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(StopRequested):
+                trainer.train()
+            self.assertEqual(read_json(run / 'manifest.json')['generation'], 21)
+            self.assertTrue((run / 'checkpoints/g0021.pt').is_file())
+            resumed = Trainer(run, config, resume=True)
+            stop_after(resumed, 22)
+            with contextlib.redirect_stdout(io.StringIO()), self.assertRaises(StopRequested):
+                resumed.train()
+            self.assertEqual(read_json(run / 'manifest.json')['generation'], 22)
+            self.assertEqual(read_json(run / 'status.json')['target_generations'], 0)
+
+    def test_continuous_evaluation_preserves_total_error_budget(self):
+        for every in [1, 2, 5]:
+            config = dict(self.config, generations=0, eval_every=every)
+            generations = [1] + [g for g in range(2, 1001) if g % every == 0]
+            alphas = [evaluation_alpha(config, g) for g in generations]
+            self.assertLess(sum(alphas), .05)
+            self.assertAlmostEqual(sum(alphas), .05 * (1 - 1 / (len(alphas) + 1)))
+            self.assertTrue(all(a > b > 0 for a, b in zip(alphas, alphas[1:])))
+            for generation in [1, 20, 100000]:
+                pairs = champion_pairs(config, generation)
+                self.assertGreaterEqual(pairs, config['eval_pairs'])
+                self.assertGreater(interval([1.] * pairs, evaluation_alpha(config, generation))[0], .5)
+            for total in [1, 2, 20, 23]:
+                config['generations'] = total
+                expected = sum(g == 1 or g == total or g % every == 0 for g in range(1, total + 1))
+                self.assertEqual(planned_evaluations(config), expected)
+                self.assertAlmostEqual(evaluation_alpha(config, 1), .05 / expected)
+                self.assertEqual(champion_pairs(config, 1), config['eval_pairs'])
 
     def test_transfer_rejects_path_escape_and_executable_payloads(self):
         with tempfile.TemporaryDirectory(dir=ROOT / '.cache/tests') as folder:

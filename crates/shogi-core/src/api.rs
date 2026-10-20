@@ -3,7 +3,7 @@ use crate::{
     game::Match,
     policy::{choose, Policy, Rng},
     replay::{position_hash, Replay},
-    resolution::resolve_round,
+    resolution::resolve_round_with_rules,
     types::*,
 };
 use serde::Deserialize;
@@ -39,6 +39,7 @@ pub enum Request {
     Resolve {
         position: Position,
         actions: Vec<Action>,
+        rules: Option<RuleSet>,
     },
     Hash {
         position: Position,
@@ -60,7 +61,16 @@ impl Api {
                 self.game = Some(game);
                 view
             }
-            Request::Resolve { position, actions } => json!(resolve_round(&position, &actions)?),
+            Request::Resolve {
+                position,
+                actions,
+                rules,
+            } => json!(resolve_round_with_rules(
+                &position,
+                &actions,
+                &rules.unwrap_or_default(),
+                true
+            )?),
             Request::Hash { position } => {
                 position.validate()?;
                 json!(position_hash(&position))

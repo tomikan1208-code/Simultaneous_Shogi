@@ -1,0 +1,5 @@
+{
+  "RULES.md": "406b0084b23051b0d8715da628ca3495cdbc4d4c61f825fb70eea8b09b47e3b2",
+  "crates/shogi-core/src/types.rs": "d640789d6dda31123747460188f16fb802335b46f28a1d9032ce9772c9dd8ca4",
+  "crates/shogi-core/src/resolution.rs": "da9e300dfa5b3d27e61d4e6b9315e9128f9d375e9e6e3142e0c9b8c77aa077d4"
+}

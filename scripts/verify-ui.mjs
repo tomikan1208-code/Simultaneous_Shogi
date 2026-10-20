@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
+import './verify-action-labels.mjs';
 import { readFileSync } from 'node:fs';
 import { Worker as NodeWorker } from 'node:worker_threads';
 import { Window } from 'happy-dom';
 import { createFixtures } from './test-fixtures.mjs';
 import { describeClash } from '../web/dist/effects.js';
+import { modelFixture } from './ui-model-fixture.mjs';
+import { PLAY_RULES } from '../web/dist/rules.js';
 const window = new Window({url:'http://127.0.0.1:5173',settings:{enableFileSystemHttpRequests:false,disableCSSFileLoading:true,disableJavaScriptFileLoading:true}});
 const workers = [], intervals = [];
 for (const name of ['window','document','location','navigator','localStorage','sessionStorage']) globalThis[name] = name === 'window' ? window : window[name];
@@ -36,11 +39,15 @@ const changeFile = async replay => {
   $('replay-file').dispatchEvent(new window.Event('change'));
   await until(ready,'import complete');
 };
+const fixture = await modelFixture(), realFetch = globalThis.fetch;
+globalThis.fetch = async (path, init) => typeof path === 'string' && path.startsWith('/api/ai/')
+  ? new Response(JSON.stringify(fixture(path, init?.body ? JSON.parse(init.body) : null)), {headers:{'Content-Type':'application/json'}})
+  : realFetch(path,init);
 try {
   await import('../web/dist/main.js');
   assert.equal($('home-screen').hidden,false); assert.equal($('game-screen').hidden,true);
   assert.equal($('commit'),null,'No confirm-move button exists');
-  click($('mode-cpu'));assert.equal($('setup-screen').hidden,false);click($('start-game'));
+  click($('mode-cpu'));assert.equal($('setup-screen').hidden,false);await until(ready,'model list');click($('start-game'));
   await until(()=>$('game-screen').hidden===false&&ready(),'AI setup/start');
   assert.equal(window.document.querySelectorAll('#board .piece').length,40);
   click(cell(7,7));assert.ok(cell(7,6).classList.contains('available'));
@@ -126,8 +133,78 @@ try {
     const drop = describeClash(drops.events.find(event=>['drop_duel','equal_drop_failure'].includes(event.type)),drops);
     assert.equal(drop.winner,kind==='R'?'A':null);assert.equal(drop.retained,kind==='P','equal drops retain both pieces, rather than displaying mutual capture');
   }
-  console.log('DOM integration passed: home/setup, real Worker/WASM, immediate moves/drops, conditional targets, private handoff, historical stage replay, atomic imports, promotion/upgrade choices and glyph states, victory/defeat/draw, result review, AI rematch, and engine-driven collision descriptions.');
+  // The real model/native bridge is covered by verify-models. Here transport faults
+  // exercise the UI's state changes against its real Worker/WASM game instance.
+  const modelIds = ['a'.repeat(24),'b'.repeat(24)];
+  const learnedRun = {id:'run-one',name:'学習モデルの長い実行名 / CPU and GPU',source:'ローカル',compatible:true,reason:'',checkpoints:[
+    {id:modelIds[1],generation:1,latest:true,champion:false},{id:modelIds[0],generation:0,latest:false,champion:true},
+  ]};
+  const incompatibleRun = {id:'old-run',name:'旧ルール',source:'ローカル',compatible:false,reason:'ルールが異なります',checkpoints:[]};
+  let catalogue = {runs:[learnedRun,incompatibleRun]}, loadFailure = false, moveFailure = false, invalidMove = false;
+  const moves = [], loads = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (path,init) => {
+    if (typeof path !== 'string' || !path.startsWith('/api/ai/')) return originalFetch(path,init);
+    const input = init?.body ? JSON.parse(init.body) : null;
+    const reply = (value,status=200) => new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json'}});
+    if (path.endsWith('/models')) return reply(catalogue);
+    const generation = modelIds.indexOf(input.model);
+    if (path.endsWith('/load')) {
+      loads.push(input.model);
+      if (loadFailure) return reply({error:'モデル読み込みの試験エラー'},422);
+      return reply({model:input.model,generation,device:'cpu',rules:call({cmd:'new',rules:PLAY_RULES}).rules});
+    }
+    assert.equal(path,'/api/ai/move'); moves.push(input);
+    assert.deepEqual(Object.keys(input).sort(),['model','replay','seed','side']);
+    if (moveFailure) return reply({error:'推論通信の試験エラー'},503);
+    call({cmd:'import',replay:input.replay});
+    const current = call({cmd:'view'});
+    const actions = call({cmd:'actions',side:input.side});
+    const action = invalidMove ? {type:'move',side:input.side,piece:'missing',to:[1,1],choice:'none'} : actions[0].action;
+    return reply({model:input.model,generation,device:'cpu',round:current.round,action});
+  };
+  try {
+    click($('game-home'));await until(() => !$('home-screen').hidden && ready(),'learned setup home');
+    click($('mode-cpu'));
+    click($('refresh-models'));
+    await until(() => !$('model-run').disabled && ready(),'model catalogue');
+    assert.equal($('ai-source'),null);assert.equal($('policy'),null);assert.equal($('trained-options').hidden,false);
+    assert.equal($('model-checkpoint').value,modelIds[1],'latest generation is the initial selection');
+    assert.equal($('model-run').querySelector('[value="old-run"]').disabled,true);
+    $('model-checkpoint').value=modelIds[1];$('model-checkpoint').dispatchEvent(new window.Event('change'));
+    loadFailure=true;click($('start-game'));await until(ready,'failed load');
+    assert.equal($('setup-screen').hidden,false);assert.match($('error-text').textContent,/読み込みの試験エラー/);click($('error-close'));
+    loadFailure=false;click($('start-game'));await until(() => !$('game-screen').hidden && ready(),'model loaded');
+    assert.match($('game-mode').textContent,/第1世代/);assert.match($('player-top').textContent,/学習AI/);
+    moveFailure=true;click(cell(7,7));click(cell(7,6));await until(ready,'model network failure');
+    assert.equal(window.document.querySelectorAll('.history-row').length,0);assert.ok(cell(7,7).querySelector('.piece'));
+    assert.equal(cell(7,6).querySelector('.piece'),null);assert.match($('error-text').textContent,/推論通信の試験エラー/);click($('error-close'));
+    moveFailure=false;invalidMove=true;click(cell(7,7));click(cell(7,6));await until(ready,'model action rejected');
+    assert.equal(window.document.querySelectorAll('.history-row').length,0);assert.ok(cell(7,7).querySelector('.piece'),'Rejected AI moves roll back the human commitment');
+    click($('error-close'));invalidMove=false;
+    click(cell(7,7));click(cell(7,6));await round(2);
+    assert.equal(moves.at(-1).model,modelIds[1]);assert.equal(moves.at(-1).replay.rounds.length,0);
+    assert.equal($('error').hidden,true);
+    $('model-checkpoint').value=modelIds[0]; // Even a programmatic selector change cannot change a running game.
+    click(cell(7,6));click(cell(7,5));await round(3);
+    assert.equal(moves.at(-1).model,modelIds[1]);assert.match($('game-mode').textContent,/第1世代/);
+    click($('game-home'));click($('confirm-accept'));await until(() => !$('home-screen').hidden && ready(),'switch human side');
+    click($('mode-cpu'));window.document.querySelector('input[name="side"][value="B"]').checked=true;
+    click($('start-game'));await until(() => !$('game-screen').hidden && ready(),'human B model game');
+    click(cell(3,3));click(cell(3,4));await round(2);
+    assert.equal(moves.at(-1).side,'A');assert.equal(moves.at(-1).model,modelIds[0]);
+    click($('resign'));click($('confirm-accept'));await until(() => !$('result-overlay').hidden && ready(),'model resign');
+    click($('result-rematch'));await until(() => !$('game-screen').hidden && ready(),'model rematch');
+    assert.equal(loads.at(-1),modelIds[0]);assert.equal($('round-number').textContent,'01');
+    click($('game-home'));click($('confirm-accept'));await until(() => !$('home-screen').hidden && ready(),'empty catalogue home');
+    click($('mode-cpu'));catalogue={runs:[]};click($('refresh-models'));
+    await until(() => !$('refresh-models').disabled,'empty catalogue refreshed');
+    assert.equal($('start-game').disabled,true);assert.match($('model-status').textContent,/保存済みモデルがありません/);
+    assert.equal($('start-game').disabled,true,'An empty model list cannot fall back to a basic AI');
+  } finally { globalThis.fetch=originalFetch; }
+  console.log('DOM integration passed, including learned-model/generation selection, incompatible models, load/network failures, rollback/retry, pinned opponent, both human sides, rematch, and no basic-AI fallback.');
 } finally {
+  globalThis.fetch = realFetch;
   intervals.forEach(clearInterval);
   await Promise.all(workers.map(worker=>worker.terminate()));
   await window.happyDOM.close();

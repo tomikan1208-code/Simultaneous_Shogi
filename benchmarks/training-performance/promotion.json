@@ -1,0 +1,20 @@
+{
+  "promoted_at_utc": "2026-10-20T11:27:24.846586+00:00",
+  "source_fingerprint": "f23df1877cf6b20c70a9afaa0cfcbea09c3e65e5c7f708f2d093cb45cd7fc516",
+  "previous_source_fingerprint": "64bf599308979b05f2f8fd6570fb32ea96dc2decdd4ab3c44a3ce1bbe82e2a89",
+  "standard_sources": [
+    "training",
+    "crates"
+  ],
+  "isolated_archive": ".cache/training-promotion/isolated-fast",
+  "original_files": ".cache/training-promotion/original-files",
+  "verified": [
+    "python-unittest-23",
+    "npm-run-check",
+    "dashboard-start-stop-resume-export-probe",
+    "cuda-amp-two-generations-save-resume",
+    "learned-model-game-integration",
+    "standard-launcher-help",
+    "training-benchmark-command-help"
+  ]
+}

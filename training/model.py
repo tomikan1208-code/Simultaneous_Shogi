@@ -30,7 +30,7 @@ class Net(nn.Module):
 def device_for(config):
     choice = config["device"]
     if choice == "cuda" and not torch.cuda.is_available():
-        raise RuntimeError("CUDA is requested but unavailable. Select a GPU runtime in Colab.")
+        raise RuntimeError("CUDAを使用できません。ローカルでは dashboard/setup-gpu.bat を実行してください。ColabではGPUランタイムを選択してください。")
     return torch.device("cuda" if choice == "cuda" or choice == "auto" and torch.cuda.is_available() else "cpu")
 
 
@@ -41,10 +41,24 @@ def autocast(device, enabled):
 def pack(samples, device):
     boards = torch.as_tensor(np.stack([s["board"] for s in samples]), dtype=torch.float32, device=device)
     counts = [len(s["data"]) for s in samples]
-    owners = torch.repeat_interleave(torch.arange(len(samples), device=device), torch.tensor(counts, device=device))
+    owners = torch.repeat_interleave(torch.arange(len(samples), device=device), torch.tensor(counts, device=device), output_size=sum(counts))
     indices = torch.as_tensor(np.concatenate([s["indices"] for s in samples]), dtype=torch.long, device=device)
     data = torch.as_tensor(np.concatenate([s["data"] for s in samples]), dtype=torch.float32, device=device)
     return boards, owners, indices, data, counts
+
+
+def segmented_policy_loss(logits, targets, owners, sample_count):
+    """Mean per-position cross entropy over ragged complete action sets.
+
+    A single segmented log-sum-exp replaces one softmax/autograd graph per
+    position. Detaching the stabilizing maxima preserves the exact gradient.
+    """
+    logits = logits.float()
+    maxima = logits.new_full((sample_count,), -torch.inf)
+    maxima.scatter_reduce_(0, owners, logits.detach(), reduce="amax", include_self=True)
+    shifted = logits - maxima[owners]
+    sums = logits.new_zeros(sample_count).scatter_add_(0, owners, shifted.exp())
+    return -(targets * (shifted - sums.log()[owners])).sum() / sample_count
 
 
 @torch.inference_mode()

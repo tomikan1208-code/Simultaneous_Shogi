@@ -593,6 +593,28 @@ fieldset {
   color:var(--muted);
   margin:18px 0 24px
 }
+.model-field-heading {
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:22px
+}
+.model-field-heading .field-label {
+  margin:0 0 10px
+}
+.model-field-heading .text-button {
+  flex-shrink:0;
+  font-size:12px
+}
+.model-status {
+  margin:12px 0 0;
+  overflow-wrap:anywhere
+}
+#model-run,#model-checkpoint {
+  min-width:0;
+  text-overflow:ellipsis
+}
 .tab-bar {
   display:flex;
   gap:0;
@@ -1111,6 +1133,30 @@ fieldset {
 .piece.upgraded .rank-badge {
   color:var(--blue)
 }
+.piece.rank-boosted {
+  --aura-rgb:48 133 244;
+  filter:drop-shadow(0 0 2px rgb(var(--aura-rgb) / .65)) drop-shadow(0 0 7px rgb(var(--aura-rgb) / .35))
+}
+.piece.rank-reduced {
+  --aura-rgb:119 49 183;
+  filter:drop-shadow(0 0 3px rgb(var(--aura-rgb) / var(--aura-strength))) drop-shadow(0 0 8px rgb(var(--aura-rgb) / var(--aura-strength)))
+}
+.piece-aura {
+  position:absolute;
+  inset:-13%;
+  border-radius:45%;
+  background:radial-gradient(ellipse,rgb(var(--aura-rgb) / .75) 25%,rgb(var(--aura-rgb) / .24) 57%,transparent 75%);
+  opacity:var(--aura-strength);
+  filter:blur(3px);
+  z-index:-2;
+  pointer-events:none
+}
+.piece.rank-reduced:after {
+  background:rgb(var(--aura-rgb) / calc(var(--aura-strength) * .35))
+}
+.piece.rank-reduced .rank-badge { color:#6d239b;opacity:1 }
+.key-boosted { background:#3085f4 }
+.key-reduced { background:#7731b7 }
 .input-status {
   display:flex;
   align-items:center;
@@ -1211,6 +1257,8 @@ fieldset {
 }
 .piece-key {
   display:flex;
+  flex-wrap:wrap;
+  row-gap:6px;
   gap:13px;
   justify-content:center;
   font-size:9px;

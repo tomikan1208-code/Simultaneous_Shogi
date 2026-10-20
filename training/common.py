@@ -9,9 +9,11 @@ import platform
 import subprocess
 import sys
 import time
+from .storage import replace_file
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA = "simultaneous-shogi/net-v1-54x24"
+SCHEMA = "simultaneous-shogi/net-v2-62x24"
+LEGACY_SCHEMA = "simultaneous-shogi/net-v1-54x24"
 FORMAT = "simultaneous-shogi/training-v1"
 
 
@@ -20,7 +22,7 @@ def atomic_json(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_suffix(path.suffix + ".tmp")
     temp.write_text(json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8")
-    os.replace(temp, path)
+    replace_file(temp, path)
 
 
 def read_json(path, default=None):
@@ -48,7 +50,10 @@ def fingerprint():
 
 
 def rules_for(config):
-    return dict(official_rules(), roundLimit=config["round_limit"])
+    rules = dict(official_rules(), roundLimit=config["round_limit"])
+    if config.get("balance") is not None:
+        rules.update(profile="balance-v1", balance=config["balance"])
+    return rules
 
 
 def rules_hash(rules):
@@ -66,10 +71,11 @@ def load_config(path=None, overrides=None):
         if unknown:
             raise ValueError(f"Unknown settings: {sorted(unknown)}")
         config.update(values)
-    config.update({k: v for k, v in (overrides or {}).items() if v is not None})
-    limits = {"generations": (1, 100000), "games_per_generation": (2, 4096), "environments": (1, 256),
+    config.update({k: v for k, v in (overrides or {}).items() if v is not None or k == "balance"})
+    limits = {"generations": (0, 100000), "games_per_generation": (2, 4096), "environments": (1, 256),
               "workers": (1, 32), "candidates": (2, 32), "cheap_candidates": (2, 32),
               "regret_iterations": (8, 8192), "batch_size": (2, 4096), "updates": (1, 4096),
+              "value_batch_size": (1, 4096),
               "replay_capacity": (32, 100000), "eval_pairs": (1, 4096), "eval_every": (1, 100000), "history_size": (1, 32),
               "round_limit": (1, 200), "bootstrap_generations": (1, 100000), "channels": (8, 128),
               "seed": (0, 2**32-1), "eval_seed": (0, 2**32-1)}
@@ -85,11 +91,15 @@ def load_config(path=None, overrides=None):
         raise ValueError("Invalid device / amp")
     if not isinstance(config["learning_rate"], (int, float)) or not 0 < config["learning_rate"] <= .1:
         raise ValueError("Invalid learning_rate")
+    from .rules import validate_balance
+    validate_balance(config.get("balance"))
+    if type(config.get("balance_logging", False)) is not bool:
+        raise ValueError("balance_logging must be boolean")
     return config
 
 
 def native_binary():
-    return ROOT / "target/release" / ("shogi.exe" if os.name == "nt" else "shogi")
+    return ROOT / "target/balance/release" / ("shogi.exe" if os.name == "nt" else "shogi")
 
 
 def ensure_native():
@@ -99,7 +109,7 @@ def ensure_native():
         native_temp = ROOT / ".cache/native-temp"
         native_temp.mkdir(parents=True, exist_ok=True)
         env = dict(os.environ, TMP=str(native_temp), TEMP=str(native_temp))
-        subprocess.run(["cargo", "build", "-p", "shogi-cli", "--release", "--locked"], cwd=ROOT, env=env, check=True)
+        subprocess.run(["cargo", "build", "-p", "shogi-cli", "--release", "--locked", "--target-dir", str(ROOT / "target/balance")], cwd=ROOT, env=env, check=True)
     return binary
 
 

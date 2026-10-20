@@ -1,9 +1,12 @@
 import { EngineClient } from './client.js';
 import { Effects } from './effects.js';
 import { NetworkError, OnlineClient } from './online.js';
+import { savedModels } from './models.js';
+import type { SavedRun } from './models.js';
 import type { Connection } from './online.js';
-import { actionLabel, conditionText, escape, eventText, icon, offersChange, other, pieceMarkup, rank, reasons, same, sideIndex, square, symbol, symbols } from './presentation.js';
-import type { Action, ActionOption, Choice, HistoryEntry, Kind, MatchView, OnlineEntry, OnlineState, Outcome, Piece, Policy, Replay, Resolution, Side, Square } from './types.js';
+import { actionLabel, conditionText, escape, eventText, icon, offersChange, other, pieceMarkup, rankAppearance, reasons, same, sideIndex, square, symbol, symbols } from './presentation.js';
+import { PLAY_RULES, sameRules } from './rules.js';
+import type { Action, ActionOption, Choice, HistoryEntry, Kind, MatchView, OnlineEntry, OnlineState, Outcome, Piece, Position, Replay, Resolution, RuleSet, Side, Square } from './types.js';
 
 const $ = <T extends HTMLElement = HTMLElement>(id:string):T => {
   const element = document.getElementById(id); if (!element) throw new Error('Missing element: '+id); return element as T;
@@ -20,6 +23,9 @@ let selection:{piece:string}|{kind:Kind}|null = null;
 let pendingChoice:{piece:Piece;to:Square;options:ActionOption[]}|null = null;
 let busy = false, animating = false, handoff = false;
 let aiSeed = 1, gameSerial = 0;
+type Opponent = {type:'model';id:string;generation:number;label:string};
+let opponent:Opponent = {type:'model',id:'',generation:0,label:'学習済みAI'};
+let modelRuns:SavedRun[] = [], modelsLoading = false, modelsListed = false, modelMessage = '';
 let localOutcome:Outcome|null = null;
 let history:HistoryEntry[] = [];
 let replayResolution:Resolution|null = null, replayRound = 0, stageIndex:number|null = null;
@@ -27,6 +33,7 @@ let animationResolution:Resolution|null = null, animationStage = 0;
 let tab:'game'|'replay' = 'game';
 let playback:ReturnType<typeof setInterval>|undefined;
 const replayCache = new Map<number,Resolution>();
+const roundStarts = new Map<number,Position>();
 let onlineState:OnlineState|null = null, onlineToken = '', onlineCode = '';
 let connection:Connection = 'connecting', onlineQueue = Promise.resolve(), onlineOffset = 0;
 let joinMode = false, resultShown = '', confirmAction:(()=>void)|null = null;
@@ -76,7 +83,7 @@ function hideResult():void {
 function resetGameUI():void {
   gameSerial++; effects.skip(); stopPlayback(); hideResult(); clearSelection();
   handoff = false; animating = false; animationResolution = null; replayResolution = null;
-  stageIndex = null; replayRound = 0; tab = 'game'; history = []; replayCache.clear();
+  stageIndex = null; replayRound = 0; tab = 'game'; history = []; replayCache.clear(); roundStarts.clear();
   resultShown = ''; localOutcome = null;
 }
 async function run(work:()=>Promise<void>):Promise<void> {
@@ -99,14 +106,63 @@ function openSetup(next:'cpu'|'local'):void {
   $('setup-emblem').innerHTML = next === 'cpu' ? '金' : icon('people');
   $('ai-options').hidden = next !== 'cpu'; $('local-options').hidden = next !== 'local';
   setScreen('setup'); $('start-game').focus({preventScroll:true});
+  if (next === 'cpu' && !modelsListed) void refreshModels();
+}
+function usesModel():boolean { return setupMode === 'cpu'; }
+function selectedModel():{run:SavedRun;id:string;generation:number}|null {
+  const run = modelRuns.find(item => item.id === $<HTMLSelectElement>('model-run').value);
+  const model = run?.checkpoints.find(item => item.id === $<HTMLSelectElement>('model-checkpoint').value);
+  return run?.compatible && model ? {run,id:model.id,generation:model.generation} : null;
+}
+function fillModelCheckpoints(preferred = ''):void {
+  const run = modelRuns.find(item => item.id === $<HTMLSelectElement>('model-run').value);
+  const select = $<HTMLSelectElement>('model-checkpoint');
+  select.innerHTML = run?.compatible ? run.checkpoints.map(model => '<option value="'+model.id+'">第'+model.generation+'世代'+(model.latest ? ' · 最新' : '')+(model.champion ? ' · champion' : '')+'</option>').join('') : '<option value="">利用できる世代がありません</option>';
+  select.value = run?.checkpoints.find(item => item.id === preferred)?.id ?? run?.checkpoints.find(item => item.latest)?.id ?? run?.checkpoints.find(item => item.champion)?.id ?? run?.checkpoints[0]?.id ?? '';
+}
+function renderModelSetup():void {
+  const selected = selectedModel();
+  $<HTMLSelectElement>('model-run').disabled = busy || modelsLoading || !modelRuns.some(run => run.compatible);
+  $<HTMLSelectElement>('model-checkpoint').disabled = busy || modelsLoading || !selected;
+  $<HTMLButtonElement>('refresh-models').disabled = busy || modelsLoading;
+  $('model-status').textContent = modelMessage || (selected ? '第'+selected.generation+'世代を使用します。対局中にモデルは切り替わりません。' : '保存済みモデルがありません。学習パネルで学習するか、Colabの結果を取り込んでから一覧を更新してください。');
+  $('start-game').innerHTML = (usesModel() ? 'モデルを読み込んで対局' : '対局を始める')+icon('chevron');
+}
+async function refreshModels():Promise<void> {
+  if (modelsLoading) return;
+  const previousRun = $<HTMLSelectElement>('model-run').value, previousModel = $<HTMLSelectElement>('model-checkpoint').value;
+  modelsLoading = true; modelMessage = 'モデル一覧を読み込み中…'; render();
+  try {
+    modelRuns = (await savedModels.list()).runs; modelsListed = true;
+    const select = $<HTMLSelectElement>('model-run');
+    select.innerHTML = modelRuns.length ? modelRuns.map(run => '<option value="'+run.id+'"'+(run.compatible ? '' : ' disabled')+'>'+escape(run.name)+' · '+escape(run.source)+(run.compatible ? '' : '（'+escape(run.reason)+'）')+'</option>').join('') : '<option value="">保存済みモデルがありません</option>';
+    select.value = modelRuns.find(run => run.id === previousRun && run.compatible)?.id ?? modelRuns.find(run => run.compatible)?.id ?? '';
+    fillModelCheckpoints(previousModel); modelMessage = '';
+    if (modelRuns.length && !modelRuns.some(run => run.compatible)) modelMessage = '現在のゲームに対応するモデルがありません。ルールとラウンド制限が一致するモデルを用意してください。';
+  } catch (error) { modelMessage = error instanceof Error ? error.message : String(error); }
+  finally { modelsLoading = false; render(); }
+}
+async function prepareOpponent(rules:RuleSet = PLAY_RULES):Promise<Opponent> {
+  if (!modelsListed) await refreshModels();
+  const selected = selectedModel();
+  if (!selected) throw new Error('対局に使う学習モデルを選択してください。');
+  modelMessage = '第'+selected.generation+'世代のモデルを読み込み中…'; render();
+  try {
+    const loaded = await savedModels.load(selected.id);
+    if (loaded.model !== selected.id || loaded.generation !== selected.generation) throw new Error('選択したモデルと応答が一致しません。一覧を更新してください。');
+    if (!sameRules(rules,loaded.rules)) throw new Error('棋譜とモデルのルールが異なるため、この局面からは対局できません。');
+    return {type:'model',id:selected.id,generation:selected.generation,label:selected.run.name+' · 第'+selected.generation+'世代'};
+  } finally { modelMessage = ''; }
 }
 async function startGame():Promise<void> {
+  const chosen = setupMode === 'cpu' ? await prepareOpponent() : opponent;
   resetGameUI(); mode = setupMode;
   human = document.querySelector<HTMLInputElement>('input[name="side"]:checked')!.value as Side;
   active = mode === 'local' ? 'A' : human;
-  names = mode === 'cpu' ? { [human]:'あなた', [other(human)]:'対戦AI' } as Record<Side,string> : { A:$<HTMLInputElement>('local-name-a').value.trim() || 'プレイヤー1', B:$<HTMLInputElement>('local-name-b').value.trim() || 'プレイヤー2' };
+  opponent = chosen;
+  names = mode === 'cpu' ? { [human]:'あなた', [other(human)]:opponent.type === 'model' ? '学習AI · 第'+opponent.generation+'世代' : '対戦AI' } as Record<Side,string> : { A:$<HTMLInputElement>('local-name-a').value.trim() || 'プレイヤー1', B:$<HTMLInputElement>('local-name-b').value.trim() || 'プレイヤー2' };
   aiSeed = Math.floor(Math.random()*0x100000000);
-  view = await engine.request<MatchView>({cmd:'new'}); await loadOptions();
+  view = await engine.request<MatchView>({cmd:'new',rules:PLAY_RULES}); await loadOptions();
   setScreen('game'); effects.sound('start');
 }
 function openOnline(join = false):void {
@@ -133,6 +189,7 @@ function enqueueOnline(state:OnlineState):Promise<void> {
     const previous = onlineState, fresh = !previous || state.room.gameId !== previous.room.gameId;
     if (fresh) resetGameUI();
     const resolved = !fresh && state.view.round > (view?.round ?? 0);
+    if (resolved && view) roundStarts.set(state.view.round,view.position);
     onlineState = state; onlineOffset = state.serverTime-Date.now(); mode = 'online';
     human = state.you; active = human; names = {A:state.room.players[0]?.name ?? '退出した相手',B:state.room.players[1]?.name ?? '退出した相手'};
     view = state.view; options = state.options; history = state.history;
@@ -156,6 +213,10 @@ function renderBoard():void {
   const frame = index !== null && resolution ? resolution.frames[index] : undefined;
   const position = index !== null && resolution ? resolution : view.position;
   const pieces = frame?.pieces ?? position.pieces;
+  const round=animationResolution ? view.round : replayRound || view.round;
+  const start=frame ? roundStarts.get(round) : undefined;
+  const rankContext=(piece:Piece) => ({rules:view!.rules,activity:(start ?? position).activity?.[piece.id],
+    moving:!!frame && !!start?.pieces.find(p=>p.id===piece.id && !same(p.at,piece.at))});
   const flipped = perspective() === 'B';
   const files = Array.from({length:9},(_,i) => flipped ? i+1 : 9-i);
   const ranks = Array.from({length:9},(_,i) => flipped ? 9-i : i+1);
@@ -173,9 +234,11 @@ function renderBoard():void {
     if (selection && 'piece' in selection && p?.id === selection.piece && index === null) classes.push('selected');
     if (pendingChoice && same(pendingChoice.to,at)) classes.push('destination');
     if (index === null && !selection && actualEnds.some(q => same(q,at))) classes.push('last');
-    const label = square(at)+(p ? ' '+p.side+' '+symbol(p)+' 格'+rank(p) : ' 空きマス');
+    const status=p ? rankAppearance(p,rankContext(p)) : null;
+    const label = square(at)+(p ? ' '+p.side+' '+symbol(p)+' '+status!.description : ' 空きマス');
     const conditional = candidate ? conditionText(candidate.conditions) : '';
-    return '<button class="'+classes.join(' ')+'" data-x="'+x+'" data-y="'+y+'" aria-label="'+label+(conditional ? ' 条件：'+escape(conditional) : '')+'"'+(conditional ? ' title="'+escape(conditional)+'"' : '')+(canInput() ? '' : ' disabled')+'>'+ (p ? pieceMarkup(p,p.side !== perspective()) : '')+'</button>';
+    const title=[status?.description,conditional].filter(Boolean).join(' / ');
+    return '<button class="'+classes.join(' ')+'" data-x="'+x+'" data-y="'+y+'" aria-label="'+escape(label)+(conditional ? ' 条件：'+escape(conditional) : '')+'"'+(title ? ' title="'+escape(title)+'"' : '')+(canInput() ? '' : ' disabled')+'>'+ (p ? pieceMarkup(p,p.side !== perspective(),rankContext(p)) : '')+'</button>';
   })).join('');
   if (animating && !settings.reduced && $('board').clientWidth > 0) {
     const size = $('board').clientWidth/9;
@@ -226,7 +289,7 @@ function renderReplay():void {
   $<HTMLSelectElement>('replay-round').innerHTML = Array.from({length:view.round},(_,i) => '<option value="'+(i+1)+'">ラウンド '+(i+1)+'</option>').join('');
   $<HTMLSelectElement>('replay-round').value = String(replayRound || view.round);
   $<HTMLSelectElement>('replay-round').disabled = busy;
-  $('revealed-actions').textContent = resolution.actions.map(action => action.side+'：'+actionLabel(action,resolution.frames[0].pieces)).join(' / ');
+  $('revealed-actions').textContent = resolution.actions.map(action => action.side+'：'+actionLabel(action,resolution.frames[0].pieces,resolution)).join(' / ');
   const index = stageIndex ?? resolution.frames.length, frame = resolution.frames[index];
   $('stage-label').textContent = index === 0 ? '開始局面' : frame ? '段階 '+frame.stage : '確定局面';
   const slider = $<HTMLInputElement>('stage-slider'); slider.max = String(resolution.frames.length); slider.value = String(index);
@@ -273,13 +336,15 @@ function renderConnection():void {
 }
 function render():void {
   $('resume-online').hidden = !storage.get('shogi-room',true);
-  $<HTMLButtonElement>('start-game').disabled = busy;
+  renderModelSetup();
+  $<HTMLButtonElement>('start-game').disabled = busy || screen === 'setup' && usesModel() && (modelsLoading || !selectedModel());
   $<HTMLButtonElement>('online-submit').disabled = busy;
   for (const id of ['mode-cpu','mode-local','mode-online','setup-back','online-back','home-nav','game-home','menu-open']) $<HTMLButtonElement>(id).disabled = busy || animating;
   if (screen === 'room') renderRoom();
   if (screen !== 'game' || !view) return;
   $('context-label').textContent = mode === 'online' ? 'ルーム '+onlineCode : mode === 'cpu' ? 'AI対戦' : mode === 'local' ? 'ローカル対戦' : '棋譜の検討';
-  $('game-mode').textContent = mode === 'cpu' ? 'AI対戦 · '+$<HTMLSelectElement>('policy').selectedOptions[0].textContent!.split(' — ')[0] : mode === 'online' ? 'ルーム '+onlineCode : mode === 'local' ? 'ローカル対戦' : '棋譜の検討';
+  $('game-mode').textContent = mode === 'cpu' ? 'AI対戦 · '+opponent.label : mode === 'online' ? 'ルーム '+onlineCode : mode === 'local' ? 'ローカル対戦' : '棋譜の検討';
+  $('game-mode').title = $('game-mode').textContent ?? '';
   $('round-number').textContent = String(stageIndex !== null ? replayRound : outcome() ? view.round : view.round+1).padStart(2,'0');
   const reviewable = canReview();
   $('game-sidebar').hidden = !settings.history;
@@ -318,6 +383,7 @@ function render():void {
   renderPlayers(); renderBoard(); renderReplay(); renderConnection();
 }
 async function animateRound(resolution:Resolution):Promise<void> {
+  await ensureRoundStart(view!.round);
   const serial = gameSerial; animating = true; clearSelection(); stopPlayback(); tab = 'game';
   stageIndex = null; replayResolution = null; animationResolution = resolution; animationStage = 0;
   effects.begin(); render(); await effects.wait(settings.reduced ? 30 : 140);
@@ -328,7 +394,7 @@ async function animateRound(resolution:Resolution):Promise<void> {
       await effects.wait(settings.reduced ? 50 : 265);
       for (const event of resolution.events.filter(event => event.stage === resolution.frames[i].stage)) {
         if (serial !== gameSerial) return;
-        await effects.clash(event,resolution,names);
+        await effects.clash(event,resolution,names,view!.rules,roundStarts.get(view!.round));
       }
     }
     await effects.wait(settings.reduced ? 20 : 100);
@@ -341,18 +407,43 @@ async function animateRound(resolution:Resolution):Promise<void> {
 }
 function rememberRound(resolution:Resolution,round:number):void {
   replayCache.set(round,resolution);
-  const entry = {round,labels:(['A','B'] as Side[]).map(side => actionLabel(resolution.actions.find(action => action.side === side)!,resolution.frames[0].pieces))};
+  const entry = {round,labels:(['A','B'] as Side[]).map(side => actionLabel(resolution.actions.find(action => action.side === side)!,resolution.frames[0].pieces,resolution))};
   history = [...history.filter(item => item.round !== round),entry].sort((a,b) => a.round-b.round);
+}
+async function ensureRoundStart(round:number):Promise<void> {
+  if (roundStarts.has(round)) return;
+  const replay=mode==='online' ? await net.replay() as Replay : await engine.request<Replay>({cmd:'export'});
+  historyEngine ??= new EngineClient();
+  const before=await historyEngine.request<MatchView>({cmd:'import',replay:{...replay,rounds:replay.rounds.slice(0,round-1)}});
+  roundStarts.set(round,before.position);
 }
 async function submitAction(action:Action):Promise<void> {
   if (!view) return;
   const round = view.round, submittingSide = active; clearSelection(); stopPlayback(); stageIndex = null;
+  roundStarts.set(round+1,view.position);
   if (mode === 'online') {
     const state = await net.request<OnlineState>('move',{round,gameId:onlineState!.room.gameId,action});
     await enqueueOnline(state); return;
   }
-  view = await engine.request<MatchView>({cmd:'submit',side:submittingSide,action});
-  if (mode === 'cpu') view = await engine.request<MatchView>({cmd:'submit_ai',side:other(human),policy:$<HTMLSelectElement>('policy').value as Policy,seed:aiSeed++});
+  let modelAction:Action|undefined, publicReplay:Replay|undefined;
+  if (mode === 'cpu') {
+    const serial = gameSerial, stateHash = view.stateHash;
+    publicReplay = await engine.request<Replay>({cmd:'export'});
+    const result = await savedModels.choose(opponent.id,publicReplay,other(human),aiSeed);
+    if (serial !== gameSerial || view.stateHash !== stateHash || result.round !== round || result.model !== opponent.id || result.generation !== opponent.generation || result.action.side !== other(human)) throw new Error('局面またはモデルが変わりました。もう一度着手してください。');
+    modelAction = result.action;
+  }
+  try {
+    view = await engine.request<MatchView>({cmd:'submit',side:submittingSide,action});
+    if (mode === 'cpu') {
+      if (!modelAction) throw new Error('学習モデルの着手を取得できませんでした。');
+      view = await engine.request<MatchView>({cmd:'submit',side:other(human),action:modelAction});
+      aiSeed++;
+    }
+  } catch (error) {
+    if (publicReplay) { view = await engine.request<MatchView>({cmd:'import',replay:publicReplay}); await loadOptions(); }
+    throw error;
+  }
   if (view.round > round && view.lastResolution) {
     rememberRound(view.lastResolution,view.round); await animateRound(view.lastResolution);
   }
@@ -363,6 +454,7 @@ async function submitAction(action:Action):Promise<void> {
 }
 async function openReplay(round:number,atEnd = false):Promise<void> {
   if (!view || !canReview() || round < 1 || round > view.round) return;
+  await ensureRoundStart(round);
   settings.history = true; applySettings();
   stopPlayback(); clearSelection();
   let resolution = replayCache.get(round);
@@ -454,7 +546,7 @@ async function replayHistory(replay:Replay):Promise<HistoryEntry[]> {
     let state:MatchView|undefined;
     for (const action of record.actions) state = await historyEngine.request<MatchView>({cmd:'submit',side:action.side,action});
     const resolution = state!.lastResolution!;
-    result.push({round:record.round,labels:(['A','B'] as Side[]).map(side => actionLabel(resolution.actions.find(action => action.side === side)!,resolution.frames[0].pieces))});
+    result.push({round:record.round,labels:(['A','B'] as Side[]).map(side => actionLabel(resolution.actions.find(action => action.side === side)!,resolution.frames[0].pieces,resolution))});
   }
   return result;
 }
@@ -519,6 +611,9 @@ for (const element of document.querySelectorAll<HTMLElement>('[data-icon]')) ele
 $('mode-cpu').addEventListener('click',() => openSetup('cpu'));
 $('mode-local').addEventListener('click',() => openSetup('local'));
 $('mode-online').addEventListener('click',() => openOnline());
+$('refresh-models').addEventListener('click',() => void refreshModels());
+$('model-run').addEventListener('change',() => { fillModelCheckpoints(); modelMessage = ''; render(); });
+$('model-checkpoint').addEventListener('change',() => { modelMessage = ''; render(); });
 for (const id of ['setup-back','online-back']) $(id).addEventListener('click',() => setScreen('home'));
 for (const id of ['home-nav','game-home','menu-home','result-home','room-leave']) $(id).addEventListener('click',requestHome);
 $('setup-form').addEventListener('submit',event => { event.preventDefault(); void run(startGame); });
@@ -625,7 +720,8 @@ $('show-result').addEventListener('click',() => showResult(true));
 $('result-final').addEventListener('click',() => { hideResult(); returnLive(); $('show-result').focus({preventScroll:true}); });
 $('result-review').addEventListener('click',() => { hideResult(); void run(() => openReplay(1)); });
 $('continue-game').addEventListener('click',() => void run(async () => {
-  mode = 'cpu'; human = 'A'; active = human; names = {A:'あなた',B:'対戦AI'}; aiSeed = Math.floor(Math.random()*0x100000000);
+  opponent = await prepareOpponent(view?.rules);
+  mode = 'cpu'; human = 'A'; active = human; names = {A:'あなた',B:opponent.type === 'model' ? '学習AI · 第'+opponent.generation+'世代' : '対戦AI'}; aiSeed = Math.floor(Math.random()*0x100000000);
   returnLive(); await loadOptions();
 }));
 $('export').addEventListener('click',() => { $<HTMLDialogElement>('menu-dialog').close(); void run(saveReplay); });

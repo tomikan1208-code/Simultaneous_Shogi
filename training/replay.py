@@ -4,6 +4,7 @@ All persisted arrays are numeric; loading never enables NumPy object pickles.
 """
 import hashlib
 import os
+from .storage import replace_file
 from pathlib import Path
 import numpy as np
 from .features import PLANES, ACTION_FEATURES
@@ -63,7 +64,7 @@ class ReplayBuffer:
                                 lengths=np.array(lengths, np.int64), values=np.array([r["value"] for r in self.rows], np.float32),
                                 generations=np.array([r["generation"] for r in self.rows], np.int64),
                                 tactical=np.array([r["tactical"] for r in self.rows], bool), cursor=np.array(self.cursor))
-        os.replace(temp, path)
+        replace_file(temp, path)
 
     def load(self, path):
         with np.load(path, allow_pickle=False) as values:

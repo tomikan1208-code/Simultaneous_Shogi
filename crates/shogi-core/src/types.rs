@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 pub type Square = [u8; 2];
 pub type EngineResult<T> = Result<T, String>;
-pub const RULE_VERSION: &str = "0.6";
+pub const RULE_VERSION: &str = "0.7";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Side {
@@ -158,6 +158,16 @@ pub struct Position {
     pub move_bans: Vec<MoveBan>,
     #[serde(default)]
     pub next_piece_id: u64,
+    /// Experimental public state. Omitted for official v0.6 replay identity.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub activity: BTreeMap<String, PieceActivity>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PieceActivity {
+    pub streak: u8,
+    pub fatigue: u8,
 }
 pub fn inside(q: Square) -> bool {
     q.iter().all(|n| (1..=9).contains(n))
@@ -232,11 +242,19 @@ impl Position {
         if self.next_piece_id > u64::MAX - 2 {
             return Err("InvalidPosition: ID counter exhausted".into());
         }
+        if self
+            .activity
+            .iter()
+            .any(|(id, a)| self.piece(id).is_none() || a.streak > 32 || a.fatigue > 16)
+        {
+            return Err("InvalidPosition: activity".into());
+        }
         Ok(())
     }
     pub fn normalize(&mut self) {
         self.pieces.sort_by(|a, b| a.id.cmp(&b.id));
         self.hands.normalize();
+        self.activity.retain(|_, a| *a != PieceActivity::default());
         self.drop_bans.sort_by_key(|b| (b.side, b.kind, b.to));
         self.move_bans.sort_by(|a, b| {
             (&a.side, &a.piece, a.from, a.to).cmp(&(&b.side, &b.piece, b.from, b.to))
@@ -336,26 +354,150 @@ pub struct RuleSet {
     pub profile: String,
     pub repetition_limit: u32,
     pub round_limit: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub balance: Option<BalanceRules>,
 }
 impl Default for RuleSet {
     fn default() -> Self {
         Self {
             version: RULE_VERSION.into(),
-            profile: "official-v0.6".into(),
+            profile: "official-v0.7".into(),
             repetition_limit: 4,
             round_limit: 200,
+            balance: None,
         }
     }
 }
 impl RuleSet {
     pub fn validate(&self) -> EngineResult<()> {
-        if self.version != RULE_VERSION || self.profile != "official-v0.6" {
+        if !matches!(
+            (self.version.as_str(), self.profile.as_str(), &self.balance),
+            ("0.7", "official-v0.7", None)
+                | ("0.6", "official-v0.6", None)
+                | ("0.6" | "0.7", "balance-v1", Some(_))
+        ) {
             return Err("Unsupported rule version/profile; old games are not reinterpreted".into());
+        }
+        if let Some(balance) = &self.balance {
+            balance.validate()?;
         }
         if self.repetition_limit < 2 || self.round_limit == 0 || self.round_limit > 100_000 {
             return Err("Invalid match limits".into());
         }
         Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MovementRule {
+    #[default]
+    None,
+    UpgradeOnly,
+    AllPieces,
+    Progressive,
+}
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DefensePosition {
+    RoundStart,
+    StageFrom,
+    #[default]
+    Destination,
+}
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct BalanceRules {
+    pub movement: MovementRule,
+    pub consecutive_threshold: u8,
+    pub rank_offset: u8,
+    pub minimum_rank: u8,
+    pub rest_recovery: u8,
+    pub home_rows: u8,
+    pub defense_bonus: u8,
+    pub defense_position: DefensePosition,
+    /// None permits ranks above seven (eight on the shifted B+ scale).
+    pub defense_cap: Option<u8>,
+}
+impl Default for BalanceRules {
+    fn default() -> Self {
+        Self {
+            movement: MovementRule::None,
+            consecutive_threshold: 3,
+            rank_offset: 0,
+            minimum_rank: 0,
+            rest_recovery: 1,
+            home_rows: 3,
+            defense_bonus: 0,
+            defense_position: DefensePosition::Destination,
+            defense_cap: None,
+        }
+    }
+}
+impl BalanceRules {
+    pub fn validate(&self) -> EngineResult<()> {
+        if !(2..=32).contains(&self.consecutive_threshold)
+            || self.rank_offset != u8::from(self.movement == MovementRule::Progressive)
+            || self.minimum_rank != 0
+            || !(1..=16).contains(&self.rest_recovery)
+            || !(1..=9).contains(&self.home_rows)
+            || self.defense_bonus > 8
+            || self
+                .defense_cap
+                .is_some_and(|cap| cap < 7 + self.rank_offset || cap > 16)
+        {
+            return Err("Invalid balance rules".into());
+        }
+        Ok(())
+    }
+    pub fn home(&self, side: Side, at: Square) -> bool {
+        if side == Side::A {
+            at[1] > 9 - self.home_rows
+        } else {
+            at[1] <= self.home_rows
+        }
+    }
+    pub fn nominal_rank(&self, piece: &Piece) -> u8 {
+        piece.rank() + self.rank_offset
+    }
+    /// Prospective movement is applied before comparing two advancing pieces.
+    pub fn movement_rank(&self, piece: &Piece, activity: &PieceActivity, moving: bool) -> u8 {
+        let streak = activity.streak.saturating_add(u8::from(moving));
+        let loss = match self.movement {
+            MovementRule::UpgradeOnly => {
+                u8::from(piece.rank() == 7 && streak >= self.consecutive_threshold)
+            }
+            MovementRule::AllPieces => u8::from(streak >= self.consecutive_threshold),
+            MovementRule::Progressive => activity
+                .fatigue
+                .saturating_add(u8::from(moving && streak >= self.consecutive_threshold)),
+            MovementRule::None => 0,
+        };
+        self.nominal_rank(piece)
+            .saturating_sub(loss)
+            .max(self.minimum_rank)
+    }
+    pub fn collision_rank(
+        &self,
+        piece: &Piece,
+        activity: &PieceActivity,
+        round_start: Square,
+        from: Square,
+        destination: Square,
+    ) -> u8 {
+        let base = self.movement_rank(piece, activity, true);
+        let at = match self.defense_position {
+            DefensePosition::RoundStart => round_start,
+            DefensePosition::StageFrom => from,
+            DefensePosition::Destination => destination,
+        };
+        let boosted = base
+            + if self.home(piece.side, at) {
+                self.defense_bonus
+            } else {
+                0
+            };
+        self.defense_cap.map_or(boosted, |cap| boosted.min(cap))
     }
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

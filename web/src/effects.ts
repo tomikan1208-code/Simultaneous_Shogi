@@ -1,4 +1,4 @@
-import type { Event, Piece, Resolution, Side } from './types.js';
+import type { Event, Piece, Position, Resolution, RuleSet, Side } from './types.js';
 import { escape, findPiece, pieceMarkup, rank, symbols } from './presentation.js';
 
 export interface Clash { title:string; detail:string; pieces:Piece[]; ranks:number[]; winner:Side|null; retained:boolean }
@@ -76,9 +76,9 @@ export class Effects {
       const timeout = setTimeout(finish,ms); this.release = finish;
     });
   }
-  async clash(event:Event,resolution:Resolution,names:Record<Side,string>):Promise<void> {
+  async clash(event:Event,resolution:Resolution,names:Record<Side,string>,rules?:RuleSet,start?:Position):Promise<void> {
     const data = describeClash(event,resolution); if (!data || this.skipped) return;
-    const actor = (p:Piece,i:number):string => `<div class="clash-actor ${i ? 'right' : 'left'} ${data.retained ? '' : !data.winner || p.side !== data.winner ? 'loser' : 'winner'}"><div class="clash-name">${escape(names[p.side])} · ${p.side}</div>${pieceMarkup(p)}<div class="clash-rank">${symbols[p.kind]} · 格 ${data.ranks[i]}</div><div class="clash-verdict">${data.retained ? '持ち駒を保持' : data.winner === p.side ? '勝利' : data.winner ? '被捕獲' : '相討ち'}</div></div>`;
+    const actor = (p:Piece,i:number):string => `<div class="clash-actor ${i ? 'right' : 'left'} ${data.retained ? '' : !data.winner || p.side !== data.winner ? 'loser' : 'winner'}"><div class="clash-name">${escape(names[p.side])} · ${p.side}</div>${pieceMarkup(p,false,{rules:event.reason==='rank' ? rules : undefined,activity:start?.activity?.[p.id],moving:event.reason==='rank',effective:data.ranks[i]})}<div class="clash-rank">${symbols[p.kind]} · 格 ${data.ranks[i]}</div><div class="clash-verdict">${data.retained ? '持ち駒を保持' : data.winner === p.side ? '勝利' : data.winner ? '被捕獲' : '相討ち'}</div></div>`;
     const overlay = document.getElementById('clash-overlay')!;
     document.getElementById('clash-content')!.innerHTML = `${actor(data.pieces[0],0)}<div class="clash-center"><p class="overline">${data.retained ? 'DOUBLE DROP' : 'SIMULTANEOUS CLASH'}</p><h2${data.title.length > 3 ? ' class="long-title"' : ''}>${data.title}</h2><p>${data.detail}</p></div>${actor(data.pieces[1],1)}`;
     overlay.hidden = false; document.getElementById('skip-effects')?.focus({preventScroll:true}); this.sound('clash');

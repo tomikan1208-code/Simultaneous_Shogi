@@ -1,7 +1,7 @@
 use crate::{
     action::validate_action,
     replay::{hash_value, position_hash, Replay, RoundRecord, REPLAY_FORMAT},
-    resolution::{resolve_round_with_diagnostics, RoundResolution},
+    resolution::{resolve_round_with_rules, RoundResolution},
     types::*,
 };
 use serde::Serialize;
@@ -42,6 +42,7 @@ impl Match {
     ) -> EngineResult<Self> {
         rules.validate()?;
         position.validate()?;
+        crate::resolution::validate_activity(&position, &rules)?;
         position.normalize();
         for side in Side::ALL {
             if position
@@ -88,10 +89,10 @@ impl Match {
         if self.outcome.is_some() || self.pending.iter().any(Option::is_some) {
             return Err("Search requires an unfinished public round".into());
         }
-        let mut result = resolve_round_with_diagnostics(&self.position, actions, false)?;
+        let mut result = resolve_round_with_rules(&self.position, actions, &self.rules, false)?;
         let count = self
             .repetitions
-            .get(&position_hash(&result.position))
+            .get(&result.after_hash)
             .copied()
             .unwrap_or(0)
             + 1;
@@ -110,11 +111,10 @@ impl Match {
         Ok(result)
     }
     pub fn next_repetition_count(&self, position: &Position) -> u32 {
-        self.repetitions
-            .get(&position_hash(position))
-            .copied()
-            .unwrap_or(0)
-            + 1
+        self.next_repetition_count_from_hash(&position_hash(position))
+    }
+    pub fn next_repetition_count_from_hash(&self, hash: &str) -> u32 {
+        self.repetitions.get(hash).copied().unwrap_or(0) + 1
     }
     pub fn state_hash(&self) -> String {
         hash_value(&(
@@ -169,7 +169,8 @@ impl Match {
             return Err("Match is finished".into());
         }
         let before_hash = self.state_hash();
-        let result = resolve_round_with_diagnostics(&self.position, actions, self.diagnostics)?;
+        let result =
+            resolve_round_with_rules(&self.position, actions, &self.rules, self.diagnostics)?;
         self.position = result.position.clone();
         self.round += 1;
         self.outcome = result.outcome.clone();

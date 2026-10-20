@@ -34,7 +34,17 @@ pub fn position_hash(pos: &Position) -> String {
     moves.sort();
     let mut hands = pos.hands.clone();
     hands.normalize();
-    hash_value(&json!({"board":board,"hands":hands,"dropBans":drops,"moveBans":moves}))
+    let mut value = json!({"board":board,"hands":hands,"dropBans":drops,"moveBans":moves});
+    if !pos.activity.is_empty() {
+        let mut activity: Vec<_> = pos
+            .activity
+            .iter()
+            .filter_map(|(id, a)| pos.piece(id).map(|p| (p.at, p.side, p.kind, a)))
+            .collect();
+        activity.sort();
+        value["activity"] = json!(activity);
+    }
+    hash_value(&value)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

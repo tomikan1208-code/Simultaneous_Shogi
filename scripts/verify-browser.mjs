@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { createApplication } from '../server/app.mjs';
 import { createFixtures } from './test-fixtures.mjs';
+import { modelFixture } from './ui-model-fixture.mjs';
 
 const artifacts = resolve('artifacts');
 await mkdir(resolve(artifacts, 'screenshots'), { recursive: true });
@@ -12,6 +13,7 @@ const dataRoot = await mkdtemp(resolve(artifacts, 'browser-'));
 const apps = [], errors = [];
 let browser;
 const fixtures = await createFixtures();
+const modelTransport = await modelFixture();
 async function server(name, options = {}) {
   const app = await createApplication({ dataDir: resolve(dataRoot, name), ...options }); apps.push(app);
   await new Promise(resolveListen => app.server.listen(0, '127.0.0.1', resolveListen));
@@ -84,6 +86,10 @@ try {
     });
   }
   const standard = await server('standard');
+  for (const page of [a,b]) await page.route('**/api/ai/**', async route => {
+    const req=route.request(), input=req.method()==='POST' ? req.postDataJSON() : null;
+    await route.fulfill({json:modelTransport(new URL(req.url()).pathname,input)});
+  });
   await a.goto(standard); await expect(a.locator('#home-screen')).toBeVisible();
   await expect(a.locator('#game-screen')).toBeHidden(); await fit(a, 'desktop home'); await shot(a, 'home-desktop');
   for (const width of [320, 360, 720, 1024]) { await a.setViewportSize({width,height:800}); await fit(a, 'home '+width); }
