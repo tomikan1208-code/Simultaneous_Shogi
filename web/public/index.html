@@ -2,46 +2,125 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#153d33">
-  <title>同時着手将棋 — 二つの思考、ひとつの盤</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#191d1d">
+  <meta name="description" content="双方の一手が、同時に動く。同時着手将棋をAIや友だちと。">
+  <title>同時着手将棋</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./match.css">
+  <link rel="preload" href="./fonts/shogi-brush.ttf" as="font" type="font/ttf" crossorigin>
 </head>
 <body>
-  <header class="masthead">
-    <a class="brand" href="./"><span class="brand-mark">同</span><span>同時着手将棋<small>SIMULTANEOUS SHOGI</small></span></a>
-    <div class="header-right"><span class="live-dot"></span><span>ローカル対局</span><span class="version">RULES 0.5</span></div>
-  </header>
-  <main>
-    <div class="intro"><div><p class="eyebrow">読むのは、相手の一手先。</p><h1>二つの思考を、ひとつの盤へ。</h1></div><button id="rules-open" class="text-button">遊び方 <span>↗</span></button></div>
-    <div id="error" class="error" role="alert" hidden></div>
-    <div class="game-layout">
-      <aside class="left-panel">
-        <div class="round-card"><span class="eyebrow">ROUND</span><div class="round-number" id="round-number">01</div><span id="round-status" class="round-status" aria-live="polite">エンジンを準備中</span></div>
-        <section class="setup"><h2>対局設定</h2><div class="segmented"><button id="mode-cpu" class="active">AIと対局</button><button id="mode-local">ふたりで対局</button></div><label class="field-label" for="policy">相手の方針</label><select id="policy"><option value="hunter">王を狙う</option><option value="defense">王を守る</option><option value="interference">打ち込みで妨害</option><option value="upgrade">成り・昇格を狙う</option><option value="random">無作為</option></select></section>
-        <section class="players"><h2>着手の準備</h2><div class="player-row" id="player-a"><span class="side-badge">A</span><div><strong>あなた</strong><small>下側の陣営</small></div><span class="commit-state">選択中</span></div><div class="player-row" id="player-b"><span class="side-badge light">B</span><div><strong>対戦AI</strong><small>上側の陣営</small></div><span class="commit-state">待機</span></div></section>
-        <div class="principle"><span>◈</span><p>手は、揃うまで秘密。<br>揃った瞬間、盤が動く。</p></div>
-        <button id="new-game" class="secondary full">新しい対局</button>
-        <div class="file-actions"><button id="export" class="text-button">棋譜を保存 ↓</button><button id="import" class="text-button">読み込む ↑</button><input id="replay-file" type="file" accept=".json,application/json" hidden></div>
-      </aside>
-      <section class="board-panel" aria-label="対局盤">
-        <div class="board-heading"><div><span id="board-mode" class="eyebrow">対局盤</span><h2 id="board-title">A陣営の手を選択</h2></div><span class="board-tag" id="board-tag">秘密入力</span></div>
-        <div id="hand-b" class="hand-tray" aria-label="Bの持ち駒"></div>
-        <div class="board-surround"><div id="files" class="files" aria-hidden="true"></div><div class="board-and-ranks"><div id="board" class="board" role="group" aria-label="9×9の将棋盤"></div><div id="ranks" class="ranks" aria-hidden="true"></div></div></div>
-        <div id="hand-a" class="hand-tray bottom" aria-label="Aの持ち駒"></div>
-        <div class="board-legend"><span><i class="legend-dot destination"></i>指定できるマス</span><span><i class="legend-dot path"></i>予定経路</span><span><i class="legend-dot upgraded"></i>昇格 +1</span></div>
-        <div id="handoff" class="handoff" hidden><div class="handoff-icon">封</div><p class="eyebrow">着手を封じました</p><h2 id="handoff-title">B陣営へ交代してください</h2><p>前の着手は、双方が確定した後に公開されます。</p><button id="handoff-ready" class="primary">B陣営の入力を始める →</button></div>
-      </section>
-      <aside class="right-panel">
-        <div class="inspector-tabs"><button id="tab-input" class="active">着手</button><button id="tab-replay">段階リプレイ <span id="replay-dot" hidden>•</span></button></div>
-        <section id="input-panel"><div class="selection-kicker">YOUR NEXT MOVE</div><h2 id="selection-title">駒を選んでください</h2><p id="selection-description" class="muted">盤上の自分の駒、または持ち駒を選んで、目的地を指定します。</p><div id="intent-card" class="intent-card" hidden></div><label class="field-label" for="choice">着手後の変更</label><select id="choice"><option value="none">変更なし</option><option value="promote">資格があれば成り</option><option value="upgrade">資格があれば昇格 +1</option></select><div id="conditions" class="conditions"></div><button id="commit" class="primary full" disabled>着手を確定 <span>→</span></button><p class="privacy-note">確定後に選び直すことはできません。</p><div class="rule-note"><span class="eyebrow">この将棋のひと工夫</span><h3>強さと、タイミング。</h3><p>同じ段階でぶつかれば「格」で勝負。止まった駒に追いつけば、格にかかわらず捕獲できます。</p></div></section>
-        <section id="replay-panel" hidden><div class="selection-kicker">ROUND REPLAY</div><h2 id="replay-title">まだ着手はありません</h2><div id="replay-controls" hidden><label class="field-label" for="replay-round">再生するラウンド</label><select id="replay-round"></select><p id="revealed-actions" class="muted"></p><div class="replay-stage"><button id="stage-prev" class="icon-button" aria-label="前の段階">←</button><strong id="stage-label">開始局面</strong><button id="stage-next" class="icon-button" aria-label="次の段階">→</button></div><input type="range" id="stage" min="0" max="1" value="0" aria-label="再生する段階"><div class="replay-buttons"><button id="play" class="secondary">▶ 再生</button><button id="return-input" class="text-button">入力へ戻る ↗</button></div><div id="plan-details" class="plan-details"></div></div><div id="events" class="events"><p class="muted">双方の着手が揃うと、移動や捕獲の理由を段階ごとに確認できます。</p></div></section>
-      </aside>
+  <div class="ambient" aria-hidden="true"></div>
+  <header class="app-header">
+    <button id="game-home" class="icon-button match-only" aria-label="ホームへ" data-icon="back"></button>
+    <button id="home-nav" class="brand" aria-label="同時着手将棋 ホーム"><span class="brand-mark">同</span><span>同時着手将棋</span></button>
+    <span id="context-label" class="context-label"></span>
+    <span id="game-mode" class="context-label match-only">AI対戦</span>
+    <div class="header-actions">
+      <span class="round-chip match-only">ROUND <strong id="round-number">01</strong></span>
+      <button id="history-toggle" class="icon-button match-only" aria-label="棋譜を隠す" aria-pressed="true" aria-controls="game-sidebar"></button>
+      <button id="sound-toggle" class="icon-button" aria-label="効果音をオンにする" aria-pressed="false"></button>
+      <button id="rules-open" class="icon-button" aria-label="遊び方"></button>
+      <button id="settings-open" class="icon-button" aria-label="設定"></button>
+      <button id="menu-open" class="icon-button match-only" aria-label="対局メニュー" data-icon="menu"></button>
     </div>
-    <footer><span>同時に選ぶ。段階ごとに解く。</span><span id="engine-status">Rust / WebAssembly · 接続中</span></footer>
+  </header>
+  <div id="error" class="toast" role="alert" hidden><span id="error-text"></span><button id="error-close" class="icon-button" aria-label="通知を閉じる">×</button></div>
+  <main id="app">
+    <section id="home-screen" class="screen home-screen" aria-label="メインメニュー">
+      <div class="home-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="hero-piece hero-piece-back"><span>角</span><small>六</small></div><div class="hero-piece hero-piece-front"><span>飛</span><small>六</small></div><div class="art-slash"></div><span class="art-caption">一手が、交わる。</span></div>
+      <div class="home-menu">
+        <p class="home-overline">SIMULTANEOUS SHOGI</p>
+        <h1>同時着手<span>将棋<span class="title-seal">同</span></span></h1>
+        <div class="main-options">
+          <button id="mode-cpu" class="menu-option featured"><span class="option-icon" data-icon="cpu"></span><span>AI対戦<small>自分のペースで、一局。</small></span><span class="option-arrow" data-icon="chevron"></span></button>
+          <button id="mode-online" class="menu-option"><span class="option-icon" data-icon="globe"></span><span>インターネット対戦<small>部屋番号で、友だちと。</small></span><span class="option-arrow" data-icon="chevron"></span></button>
+        </div>
+        <div class="sub-options"><button id="mode-local" class="text-button"><span data-icon="people"></span>ひとつの端末で対戦</button><button id="import-home" class="text-button"><span data-icon="replay"></span>棋譜を開く</button></div>
+        <button id="resume-online" class="resume-button" hidden><span class="live-dot"></span>前のルームに戻る<span data-icon="chevron"></span></button>
+      </div>
+      <div class="home-footer"><span>双方が選ぶ。盤が動く。</span><span>RULES 0.6</span></div>
+    </section>
+    <section id="setup-screen" class="screen center-screen" aria-labelledby="setup-title" hidden>
+      <div class="setup-panel">
+        <button id="setup-back" class="back-button"><span data-icon="back"></span>戻る</button>
+        <div class="setup-heading"><span class="mode-emblem" id="setup-emblem">金</span><div><p class="overline" id="setup-kicker">PLAY WITH AI</p><h1 id="setup-title">AI対戦</h1></div></div>
+        <form id="setup-form">
+          <div id="ai-options">
+            <label class="field-label" for="policy">相手のスタイル</label>
+            <select id="policy"><option value="hunter">攻め重視 — 王を狙う</option><option value="defense">守り重視 — 王を守る</option><option value="interference">妨害重視 — 打ち込みを狙う</option><option value="upgrade">育成重視 — 成り・昇格を狙う</option><option value="random">気軽に練習 — ランダム</option></select>
+            <fieldset><legend>あなたの陣営</legend><div class="segmented"><label><input type="radio" name="side" value="A" checked><span>☗ A陣営</span></label><label><input type="radio" name="side" value="B"><span>☖ B陣営</span></label></div></fieldset>
+          </div>
+          <div id="local-options" hidden><label class="field-label" for="local-name-a">☗ A陣営</label><input id="local-name-a" maxlength="20" value="プレイヤー1" autocomplete="off"><label class="field-label" for="local-name-b">☖ B陣営</label><input id="local-name-b" maxlength="20" value="プレイヤー2" autocomplete="off"><p class="field-note">一手ごとに画面を隠して、端末を交代します。</p></div>
+          <div class="match-spec"><span>平手</span><span>同時着手</span><span>時間制限なし</span></div>
+          <button id="start-game" class="primary full" type="submit">対局開始<span data-icon="chevron"></span></button>
+        </form>
+      </div>
+    </section>
+    <section id="online-screen" class="screen center-screen" aria-labelledby="online-title" hidden>
+      <div class="setup-panel">
+        <button id="online-back" class="back-button"><span data-icon="back"></span>戻る</button>
+        <div class="setup-heading"><span class="mode-emblem" data-icon="globe"></span><div><p class="overline">PLAY WITH A FRIEND</p><h1 id="online-title">友だちと対戦</h1></div></div>
+        <div class="tab-bar" role="tablist" aria-label="ルームへの入り方"><button id="create-tab" class="active" role="tab" aria-selected="true">ルームを作る</button><button id="join-tab" role="tab" aria-selected="false">ルームに入る</button></div>
+        <form id="online-form">
+          <label class="field-label" for="player-name">プレイヤー名</label><input id="player-name" name="name" maxlength="20" placeholder="名前を入力" autocomplete="nickname" required>
+          <div id="join-fields" hidden><label class="field-label" for="room-code">部屋番号</label><input id="room-code" name="code" class="code-input" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" autocomplete="off"></div>
+          <p id="online-description" class="field-note">部屋番号を相手に伝えて、対戦できます。</p>
+          <button id="online-submit" class="primary full" type="submit">ルームを作る<span data-icon="chevron"></span></button>
+        </form>
+      </div>
+    </section>
+    <section id="room-screen" class="screen center-screen" aria-labelledby="room-title" hidden>
+      <div class="room-panel">
+        <div class="room-heading"><p class="overline">PRIVATE ROOM</p><h1 id="room-title">対局ルーム</h1><span id="room-connection" class="connection-chip"><i class="live-dot"></i>接続中</span></div>
+        <div class="room-code-block"><span>部屋番号</span><div><strong id="room-number">000000</strong><button id="copy-code" class="icon-button" aria-label="部屋番号をコピー" data-icon="copy"></button></div><button id="copy-link" class="text-button">招待リンクをコピー</button></div>
+        <div id="room-players" class="room-players"></div>
+        <div class="match-spec"><span>平手</span><span>同時着手</span><span>時間制限なし</span></div>
+        <p id="room-status" class="room-status" aria-live="polite">相手の参加を待っています</p>
+        <button id="room-ready" class="primary full">準備完了</button>
+        <button id="room-leave" class="text-button room-leave">退出してホームへ</button>
+      </div>
+    </section>
+    <section id="game-screen" class="screen game-screen" aria-label="対局" hidden>
+      <div id="connection-notice" class="connection-notice" role="status" hidden><span id="connection-message"></span><strong id="reconnect-countdown"></strong></div>
+      <div class="arena">
+        <section class="playfield" aria-label="将棋盤と持ち駒">
+          <div class="side-rail opponent-rail">
+            <section class="player-rack opponent-rack" aria-label="相手の駒台"><div id="player-top" class="player-strip"></div><div id="hand-top" class="hand-tray" aria-label="相手の持ち駒"></div></section>
+          </div>
+          <div class="board-surround"><div id="files" class="files" aria-hidden="true"></div><div class="board-and-ranks"><div class="board-wrap"><div id="board" class="board" role="group" aria-label="9×9の将棋盤"></div><div id="choice-popover" class="choice-popover" role="dialog" aria-label="成り・昇格を選択" hidden></div></div><div id="ranks" class="ranks" aria-hidden="true"></div></div></div>
+          <div class="side-rail self-rail">
+        <aside id="game-sidebar" class="game-sidebar" aria-label="棋譜と対局後の検討">
+          <div class="tab-bar"><button id="tab-game" class="active" aria-pressed="true">棋譜</button><button id="tab-replay" aria-pressed="false">段階リプレイ</button></div>
+          <div id="history-panel"><div class="history-heading"><span>ラウンド</span><span>☗ A</span><span>☖ B</span></div><div id="history" class="history-list"><p class="empty-history">双方の一手が揃うと<br>ここに棋譜が残ります。</p></div><div id="last-event" class="last-event" hidden></div></div>
+          <div id="replay-panel" hidden>
+            <label class="sr-only" for="replay-round">再生するラウンド</label><select id="replay-round"></select>
+            <p id="revealed-actions" class="revealed-actions"></p>
+            <div class="stage-controls"><button id="stage-prev" class="icon-button" aria-label="前の段階">‹</button><strong id="stage-label">開始局面</strong><button id="stage-next" class="icon-button" aria-label="次の段階">›</button></div>
+            <input id="stage-slider" type="range" min="0" max="1" value="0" aria-label="再生する段階">
+            <div class="replay-buttons"><button id="play" class="secondary">▶ 再生</button><button id="return-live" class="text-button">現在の盤面</button></div>
+            <div id="plan-details" class="plan-details"></div>
+            <details class="event-details" open><summary>この段階までの記録</summary><div id="events" class="events"></div></details>
+          </div>
+        </aside>
+            <div class="match-controls"><div class="input-status"><span id="input-hint" class="sr-only" aria-live="polite"></span><button id="clear-selection" class="text-button" hidden>取消</button></div><div class="sidebar-bottom"><div class="piece-key"><span><i class="key-normal"></i>通常</span><span><i class="key-promoted"></i>成り</span><span><i class="key-upgraded"></i>昇格</span></div><button id="continue-game" class="secondary full" hidden>この局面からAIと対戦</button><button id="show-result" class="secondary full" hidden>対局結果を見る</button><button id="rematch" class="primary full" hidden>もう一度対戦</button><button id="back-room" class="primary full" hidden>ルームに戻る</button><button id="resign" class="text-button resign-button"><span data-icon="flag"></span>投了</button></div></div>
+            <section class="player-rack self-rack" aria-label="自分の駒台"><div id="player-bottom" class="player-strip"></div><div id="hand-bottom" class="hand-tray bottom" aria-label="自分の持ち駒"></div></section>
+          </div>
+          <div id="handoff" class="handoff" role="dialog" aria-modal="true" aria-labelledby="handoff-title" hidden><span class="sealed-mark">封</span><p class="overline">YOUR MOVE IS SEALED</p><h2 id="handoff-title">端末を交代してください</h2><p>双方の手が揃うまで、着手は秘密です。</p><button id="handoff-ready" class="primary">入力を始める<span data-icon="chevron"></span></button></div>
+        </section>
+      </div>
+    </section>
   </main>
-  <dialog id="rules-dialog"><button id="rules-close" class="dialog-close icon-button" aria-label="閉じる">×</button><p class="eyebrow">HOW TO PLAY</p><h2>相手の手を読んで、同時に指す。</h2><ol><li><strong>自分の手を選ぶ。</strong>移動か持ち駒の打ち込みを1つ指定し、成り・昇格も先に選びます。</li><li><strong>双方の手を同時に解く。</strong>長距離駒は1マスずつ、桂は着地までを1段階として進みます。</li><li><strong>動く駒同士は「格」で勝負。</strong>王0・歩1・香2・桂3・銀4・金5・飛角6。同格は相討ち、勝者も停止します。</li><li><strong>止まった駒は格によらず捕獲。</strong>味方が塞げば待機し、取られれば次の段階から進めます。打ち駒は盤上駒との競合に負けます。</li><li><strong>王を捕獲して勝利。</strong>その捕獲者が同じラウンドで取り返されると敗北。双方の王が取られれば捕獲時の格で比較します。</li></ol><p class="muted">王手放置・打ち歩詰めの禁止、独立したパスはありません。4回の同一局面、または200ラウンドで引き分けです。ふたりで遊ぶ場合は、確定するたびに画面を交代してください。</p></dialog>
+  <div id="clash-overlay" class="clash-overlay" role="status" aria-live="polite" hidden><div class="clash-scrim"></div><div id="clash-content" class="clash-band"></div><button id="skip-effects" class="effect-skip">演出をスキップ ›</button></div>
+  <div id="result-overlay" class="result-overlay" role="dialog" aria-modal="true" aria-labelledby="result-title" tabindex="-1" hidden><div id="result-card" class="result-card"><div class="result-rays" aria-hidden="true"></div><span id="result-sigil" class="result-sigil">勝</span><p id="result-kicker" class="overline">VICTORY</p><h1 id="result-title">勝利</h1><p id="result-detail" class="result-detail"></p><div id="result-players" class="result-players"></div><p id="result-rounds" class="result-rounds"></p><button id="result-rematch" class="primary full">もう一度対戦</button><div class="result-review-actions"><button id="result-final" class="secondary">最終盤面</button><button id="result-review" class="secondary">振り返る</button></div><button id="result-home" class="text-button">ホームへ戻る</button></div></div>
+  <dialog id="rules-dialog" class="dialog rules-dialog"><button class="dialog-close icon-button" data-close="rules-dialog" aria-label="閉じる">×</button><p class="overline">HOW TO PLAY</p><h2>同時に指す、将棋。</h2><ol class="rule-list"><li><b>駒 → 移動先で、一手。</b><p>双方が選ぶまで着手は秘密。揃うと、長距離駒は1マスずつ同時に動きます。桂は跳んで1段階です。</p></li><li><b>動く駒同士は「格」で衝突。</b><p>格の高い方が勝ち、同格なら相討ち。勝った駒も停止します。止まっている駒は、格によらず捕獲できます。</p><div class="rank-key">王 0　歩 1　香 2　桂 3　銀 4　金 5　飛・角 6</div></li><li><b>成りと昇格は、別の選択。</b><p><span class="text-promoted">成り：動きが変わる。格は元のまま。</span><br><span class="text-upgraded">昇格：動きはそのまま。格が永続で +1。</span><br>敵陣から動くか、実際に敵陣へ到達すると適用。昇格後は任意では成らず、行き所がなくなる場合の強制成りでのみ成り駒へ変わります。</p></li><li><b>王を取って、勝利。</b><p>王を取った駒が同じラウンドで取り返されると敗北。双方が王を取った場合は捕獲時の格で比較します。4回の反復・200ラウンドで引き分けです。</p></li></ol><details class="advanced-rules"><summary>条件付きの指定と同時打ち</summary><p>味方のいるマスや障害の先も指定できます。味方が取られると進めます。敵が残れば捕獲して停止します。二歩や敵の占有先への打ちは、条件が解消されれば成立します。</p><p>同じマスへの同時打ちは格で比較し、同格なら双方とも持ち駒を保持。次ラウンドは同じ駒種・同じマスへの再打ちを禁止します。盤上の駒と打ち駒が競合すると盤上駒を優先します。</p><p>王手放置・打ち歩詰めの禁止と、独立したパスはありません。</p></details></dialog>
+  <dialog id="settings-dialog" class="dialog settings-dialog"><button class="dialog-close icon-button" data-close="settings-dialog" aria-label="閉じる">×</button><p class="overline">PREFERENCES</p><h2>設定</h2><label class="setting-row"><span>効果音<small>着手・衝突・対局結果</small></span><input id="sound-setting" type="checkbox" role="switch"></label><label class="setting-row"><span>駒の格を表示<small>衝突時の強さを駒の右下に表示</small></span><input id="rank-setting" type="checkbox" role="switch" checked></label><label class="setting-row"><span>演出を控えめに<small>移動を短くし、点滅・揺れを抑える</small></span><input id="motion-setting" type="checkbox" role="switch"></label></dialog>
+  <dialog id="menu-dialog" class="dialog menu-dialog"><button class="dialog-close icon-button" data-close="menu-dialog" aria-label="閉じる">×</button><h2>対局メニュー</h2><button id="menu-rules" class="menu-line"><span data-icon="help"></span>遊び方</button><button id="menu-settings" class="menu-line"><span data-icon="settings"></span>設定・効果音</button><button id="export" class="menu-line"><span data-icon="download"></span>棋譜を保存</button><button id="import" class="menu-line"><span data-icon="upload"></span>棋譜を開く</button><button id="menu-resign" class="menu-line danger"><span data-icon="flag"></span>投了する</button><button id="menu-home" class="menu-line"><span data-icon="home"></span>ホームへ戻る</button></dialog>
+  <dialog id="confirm-dialog" class="dialog confirm-dialog"><h2 id="confirm-title"></h2><p id="confirm-description"></p><div class="confirm-actions"><button id="confirm-cancel" class="secondary">キャンセル</button><button id="confirm-accept" class="primary">退出する</button></div></dialog>
+  <input id="replay-file" type="file" accept=".json,application/json" hidden>
+  <noscript>このゲームを遊ぶにはJavaScriptを有効にしてください。</noscript>
   <script type="module" src="./main.js"></script>
 </body>
 </html>
-

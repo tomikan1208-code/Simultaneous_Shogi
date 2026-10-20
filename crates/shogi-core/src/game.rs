@@ -76,6 +76,46 @@ impl Match {
     pub fn standard() -> Self {
         Self::new(Position::initial(), RuleSet::default()).expect("standard match")
     }
+    pub fn repetition_count(&self) -> u32 {
+        self.repetitions
+            .get(&position_hash(&self.position))
+            .copied()
+            .unwrap_or(0)
+    }
+    /// Search has exactly the same terminal rules as a played round, including
+    /// this match's repetition history. No pending opponent action is exposed.
+    pub fn preview_round(&self, actions: &[Action]) -> EngineResult<RoundResolution> {
+        if self.outcome.is_some() || self.pending.iter().any(Option::is_some) {
+            return Err("Search requires an unfinished public round".into());
+        }
+        let mut result = resolve_round_with_diagnostics(&self.position, actions, false)?;
+        let count = self
+            .repetitions
+            .get(&position_hash(&result.position))
+            .copied()
+            .unwrap_or(0)
+            + 1;
+        if result.outcome.is_none() && count >= self.rules.repetition_limit {
+            result.outcome = Some(Outcome {
+                winner: Winner::Draw,
+                reason: "repetition".into(),
+            });
+        }
+        if result.outcome.is_none() && self.round + 1 >= self.rules.round_limit {
+            result.outcome = Some(Outcome {
+                winner: Winner::Draw,
+                reason: "round_limit".into(),
+            });
+        }
+        Ok(result)
+    }
+    pub fn next_repetition_count(&self, position: &Position) -> u32 {
+        self.repetitions
+            .get(&position_hash(position))
+            .copied()
+            .unwrap_or(0)
+            + 1
+    }
     pub fn state_hash(&self) -> String {
         hash_value(&(
             &self.position,

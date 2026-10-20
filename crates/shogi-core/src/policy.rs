@@ -79,7 +79,7 @@ pub fn choose(pos: &Position, side: Side, policy: Policy, rng: &mut Rng) -> Engi
                 if *choice != Change::None
                     && p.kind.changeable()
                     && !p.promoted
-                    && (*choice != Change::Upgrade || !p.upgraded)
+                    && !p.upgraded
                     && (in_zone(side, p.at) || in_zone(side, effective))
                 {
                     score += if matches!(policy, Policy::Upgrade) {

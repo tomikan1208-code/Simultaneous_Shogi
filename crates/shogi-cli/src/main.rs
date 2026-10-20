@@ -1,4 +1,5 @@
 use serde_json::{json, Value};
+mod training;
 use shogi_core::{
     api::Api,
     policy::{choose, Policy, Rng},
@@ -157,6 +158,8 @@ fn arena(args: &[String]) -> Result<Value, String> {
 fn run() -> Result<(), String> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     match args.first().map(String::as_str).unwrap_or("help") {
+        "training" => training::run()?,
+        "bench-actions" => println!("{}", training::benchmark(args.get(1).map(|v| v.parse::<usize>()).transpose().map_err(|e|e.to_string())?.unwrap_or(1000))?),
         "resolve" | "api" => stream(&args[0])?,
         "initial" => println!("{}",json!(Match::standard().view())),
         "actions" => {
@@ -168,7 +171,7 @@ fn run() -> Result<(), String> {
             println!("{}",json!({"verified":true,"rounds":game.round,"hash":game.state_hash(),"outcome":game.outcome}));
         }
         "arena" => println!("{}",arena(&args[1..])?),
-        _ => println!("Simultaneous Shogi v0.5\n  shogi initial\n  shogi resolve    JSONL round fixtures on stdin\n  shogi api        JSONL session requests on stdin\n  shogi actions A  Position JSON on stdin\n  shogi verify     Replay JSON on stdin\n  shogi arena [pairs=10] [seed=1] [hunter] [random] [diagnostics=off]\nPolicies: random, hunter, defense, interference, upgrade"),
+        _ => println!("Simultaneous Shogi v0.6\n  shogi initial\n  shogi resolve    JSONL round fixtures on stdin\n  shogi api        JSONL session requests on stdin\n  shogi actions A  Position JSON on stdin\n  shogi verify     Replay JSON on stdin\n  shogi arena [pairs=10] [seed=1] [hunter] [random] [diagnostics=off]\nPolicies: random, hunter, defense, interference, upgrade"),
     }
     Ok(())
 }

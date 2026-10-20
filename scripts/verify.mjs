@@ -131,3 +131,4 @@ assert.deepEqual(arenaOff.results,arenaOn.results,'Arena diagnostics cannot chan
 assert.deepEqual(arenaOff.events,arenaOn.events,'Metrics must also be available without traces');
 console.log(`${comparisons} resolved fixtures/generated positions matched JS, native Rust, and WASM; 2 invalid fixtures rejected. Order, rotation, conservation, secrets, and cross-runtime replay verified.`);
 run(process.execPath,['scripts/verify-ui.mjs']);
+run(process.execPath,['scripts/verify-online.mjs']);

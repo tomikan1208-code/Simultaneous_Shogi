@@ -1,0 +1,15 @@
+{
+  "generations": 3,
+  "games_per_generation": 8,
+  "environments": 4,
+  "workers": 2,
+  "candidates": 4,
+  "cheap_candidates": 3,
+  "regret_iterations": 64,
+  "batch_size": 32,
+  "updates": 8,
+  "channels": 16,
+  "eval_pairs": 4,
+  "eval_every": 3,
+  "device": "cpu"
+}

@@ -538,7 +538,7 @@ pub fn resolve_round_with_diagnostics(
             p.promoted = true;
             p.upgraded = false;
             Some("forced_promotion")
-        } else if in_zone(p.side, a.from) || in_zone(p.side, p.at) {
+        } else if !p.upgraded && (in_zone(p.side, a.from) || in_zone(p.side, p.at)) {
             match a.choice {
                 Change::Promote => {
                     p.promoted = true;

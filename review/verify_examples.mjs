@@ -1,4 +1,4 @@
-// Current v0.5 executable-spec checks. v0.4 cumulative expectations are historical only.
+// Current v0.6 executable-spec checks. v0.4 cumulative expectations are historical only.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolveStageRound } from './stage_reference.mjs';

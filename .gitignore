@@ -4,4 +4,13 @@
 /web/public/engine.wasm
 /artifacts/
 *.log
+/data/
+/test-results/
+/playwright-report/
+/.venv/
+/.cache/
+/dashboard/runs/
+/dashboard/local.json
+__pycache__/
+*.pyc
 

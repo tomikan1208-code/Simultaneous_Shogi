@@ -3,7 +3,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 pub type Square = [u8; 2];
 pub type EngineResult<T> = Result<T, String>;
-pub const RULE_VERSION: &str = "0.5";
+pub const RULE_VERSION: &str = "0.6";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum Side {
@@ -341,7 +341,7 @@ impl Default for RuleSet {
     fn default() -> Self {
         Self {
             version: RULE_VERSION.into(),
-            profile: "official-v0.5".into(),
+            profile: "official-v0.6".into(),
             repetition_limit: 4,
             round_limit: 200,
         }
@@ -349,7 +349,7 @@ impl Default for RuleSet {
 }
 impl RuleSet {
     pub fn validate(&self) -> EngineResult<()> {
-        if self.version != RULE_VERSION || self.profile != "official-v0.5" {
+        if self.version != RULE_VERSION || self.profile != "official-v0.6" {
             return Err("Unsupported rule version/profile; old games are not reinterpreted".into());
         }
         if self.repetition_limit < 2 || self.round_limit == 0 || self.round_limit > 100_000 {

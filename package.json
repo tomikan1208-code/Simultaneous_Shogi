@@ -4,15 +4,25 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dashboard": "node dashboard/server.mjs",
+    "ai:build": "cargo build -p shogi-cli --release --locked",
+    "ai:colab": "node scripts/build-colab.mjs",
+    "ai:benchmark": "node scripts/benchmark-actions.mjs",
+    "test:dashboard": "node scripts/verify-dashboard.mjs",
     "build:wasm": "node scripts/build-wasm.mjs",
     "build:web": "node scripts/build-web.mjs",
     "build": "npm run build:wasm && npm run build:web",
     "dev": "node scripts/serve.mjs",
+    "start": "node scripts/serve.mjs",
     "test": "node scripts/verify.mjs",
+    "test:ui": "node scripts/verify-ui.mjs",
+    "test:online": "node scripts/verify-online.mjs",
+    "test:browser": "node scripts/verify-browser.mjs",
     "check": "node scripts/check.mjs"
   },
   "devDependencies": {
-    "happy-dom": "20.0.11",
+    "@playwright/test": "1.64.1",
+    "happy-dom": "20.14.6",
     "typescript": "5.9.3"
   },
   "engines": {

@@ -1,0 +1,10 @@
+.git
+node_modules
+target
+artifacts
+data
+test-results
+playwright-report
+web/dist
+web/public/engine.wasm
+*.log

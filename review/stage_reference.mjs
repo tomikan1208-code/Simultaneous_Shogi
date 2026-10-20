@@ -1,4 +1,4 @@
-// v0.5 executable specification for one round; no UI, search, repetition or match runner.
+// v0.6 executable specification for one round; no UI, search, repetition or match runner.
 // Every stage plans from one snapshot. There is no cumulative-path collision test.
 const baseRank = { K: 0, P: 1, L: 2, N: 3, S: 4, G: 5, R: 6, B: 6 };
 const eq = (a, b) => a[0] === b[0] && a[1] === b[1];
@@ -207,7 +207,7 @@ export function resolveStageRound(input) {
     if (!p || !a.moved || ['K', 'G'].includes(p.kind) || p.promoted) continue;
     const zone = at => p.side === 'A' ? at[1] <= 3 : at[1] >= 7;
     if (deadEnd(p.side, p.kind, p.at)) { p.promoted = true; p.upgraded = false; emit('forced_promotion', { actor: p.id }); }
-    else if (zone(a.from) || zone(p.at)) {
+    else if (!p.upgraded && (zone(a.from) || zone(p.at))) {
       if (a.choice === 'promote') { p.promoted = true; p.upgraded = false; emit('promotion', { actor: p.id }); }
       else if (a.choice === 'upgrade' && !p.upgraded) { p.upgraded = true; emit('upgrade', { actor: p.id }); }
     }
@@ -217,5 +217,5 @@ export function resolveStageRound(input) {
   }).sort((a, b) => a.id.localeCompare(b.id));
   for (const side of ['A', 'B']) hands[side] = Object.fromEntries(Object.entries(hands[side]).filter(([, n]) => n > 0).sort());
   if (new Set(finalPieces.map(p => cellKey(p.at))).size !== finalPieces.length) throw new Error('Invariant: final overlap');
-  return { version: '0.5', pieces: finalPieces, hands, captures, outcome, dropBans: newDropBans, moveBans: [], frames, events };
+  return { version: '0.6', pieces: finalPieces, hands, captures, outcome, dropBans: newDropBans, moveBans: [], frames, events };
 }

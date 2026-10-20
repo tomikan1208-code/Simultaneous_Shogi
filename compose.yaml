@@ -1,0 +1,15 @@
+services:
+  shogi:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - shogi-data:/app/data
+    environment:
+      PORT: "8080"
+      HOST: "0.0.0.0"
+      DATA_DIR: /app/data/rooms
+    stop_grace_period: 30s
+volumes:
+  shogi-data:
