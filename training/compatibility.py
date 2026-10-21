@@ -3,7 +3,6 @@ import hashlib
 import json
 from pathlib import Path
 import zipfile
-import torch
 from .common import ROOT, read_json, LEGACY_SCHEMA, SCHEMA, FORMAT
 
 
@@ -46,6 +45,7 @@ def legacy_official_hash_valid(checkpoint_path, checkpoint, rules):
 
 
 def expanded_weights(weights, model):
+    import torch
     result = dict(weights)
     old = result["input.0.weight"]
     shape = model.state_dict()["input.0.weight"].shape
@@ -61,6 +61,7 @@ def load_initial_weights(path, device):
 
     Evaluation and exact resumption must still use load_model's current-rule checks.
     """
+    import torch
     from .model import Net
     path = Path(path).resolve()
     checkpoint = torch.load(path, map_location='cpu', weights_only=True)

@@ -19,7 +19,7 @@ ENV NODE_ENV=production HOST=0.0.0.0 PORT=8080 DATA_DIR=/app/data/rooms
 WORKDIR /app
 COPY --from=web /build/web/dist ./web/dist
 COPY server ./server
-COPY scripts/serve.mjs ./scripts/serve.mjs
+COPY scripts/serve.mjs scripts/server-addresses.mjs ./scripts/
 RUN mkdir -p /app/data/rooms && chown -R node:node /app
 USER node
 EXPOSE 8080

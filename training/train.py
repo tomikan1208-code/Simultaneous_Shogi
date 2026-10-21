@@ -1,5 +1,6 @@
 from __future__ import annotations
 import argparse
+from collections import Counter
 import json
 from itertools import count
 import math
@@ -22,6 +23,8 @@ from .candidates import canonical_order, SEARCH_PROTOCOL
 from .storage import replace_file
 from .balance_metrics import EvidenceWriter, GameTracker
 from .session import prepare_resume, process_alive, validate_continuation
+from .external import external_opponent, outcome_rates, count_decision
+from .teacher import TeacherWriter
 
 
 class StopRequested(Exception):
@@ -191,6 +194,9 @@ class Trainer:
         self.manifest['config_history'] = configuration_history(self.manifest, config, self.generation)
         self.manifest['search_protocol'] = SEARCH_PROTOCOL
         self.manifest['config'] = dict(config)
+        self.manifest['evaluation_protocol'] = 'mixed-external-v1' if config.get('external_ai_enabled') else 'learned-only-v1'
+        self.manifest['evaluation_note'] = ('Current self, recent learned checkpoints, and a fixed-budget external USI opponent'
+                                            if config.get('external_ai_enabled') else 'Self-play and recent learned checkpoints only')
         planned_gates = planned_evaluations(config)
         self.manifest.update(planned_gates=planned_gates, gate_alpha=.05 / planned_gates if planned_gates else None,
                              gate_schedule='fixed-plan' if planned_gates else 'summable-alpha')
@@ -255,7 +261,20 @@ class Trainer:
             replace_file(temp, dest)
 
     def self_play(self, pool, generation):
+        with external_opponent(self.config) as external:
+            return self._recorded_self_play(pool, generation, external)
+
+    def _recorded_self_play(self, pool, generation, external):
         evidence = None
+        teacher = None
+        if external:
+            self.manifest['external_ai'] = external.identity
+            if self.config.get('external_ai_save_teacher', True):
+                teacher = TeacherWriter(self.run / 'evidence' / f'g{generation:04d}-external-training-teacher.jsonl.gz', dict(
+                    phase='training', generation=generation, model_generation=generation-1,
+                    source_fingerprint=self.source, rules=rules_for(self.config), rules_hash=self.manifest['rules_hash'],
+                    engine=external.identity, config=self.config, seed=self.config['seed'],
+                    teacher_is_optimal_for_variant=False, value_target='actual completed simultaneous-game outcome'))
         if self.config.get("balance_logging"):
             from .compatibility import file_hash
             evidence = EvidenceWriter(self.run / "evidence" / f"g{generation:04d}", dict(
@@ -264,15 +283,23 @@ class Trainer:
                 source_fingerprint=self.source, rules_hash=self.manifest["rules_hash"], rules=rules_for(self.config),
                 seed=self.config["seed"], config=self.config, parent=self.manifest.get("parent")))
         try:
-            stats = self._self_play(pool, generation, evidence)
+            stats = self._self_play(pool, generation, evidence, external, teacher)
             if evidence:
                 stats["balance"] = evidence.finish()
+            if teacher:
+                summary = teacher.finish()
+                stats['external_ai']['teacher'] = dict(file=teacher.path.relative_to(self.run).as_posix(),
+                                                      games=summary['games'], decisions=summary['decisions'])
+            if stats.get('external_ai'):
+                atomic_json(self.run / 'comparisons' / f'g{generation:04d}-external-training.json', stats['external_ai'])
             return stats
         finally:
             if evidence:
                 evidence.close()
+            if teacher:
+                teacher.close()
 
-    def _self_play(self, pool, generation, evidence=None):
+    def _self_play(self, pool, generation, evidence=None, external=None, teacher=None):
         config = self.config
         searcher = Searcher(pool, self.model, config, self.device, generation)
         self.model.eval()
@@ -285,6 +312,13 @@ class Trainer:
             old, _ = self.load_checkpoint(history_checkpoint)
         completed, total_rounds, all_events, all_captures, outcomes = 0, 0, {}, {}, []
         start, new_samples, history_games, probes_saved = time.perf_counter(), 0, 0, 0
+        fraction = config.get('external_ai_fraction', .25) if external else 0
+        count = max(1, round(config['games_per_generation'] * fraction)) if fraction > 0 else 0
+        external_ids = sorted(self.rng.choice(config['games_per_generation'], count, replace=False).tolist()) if count else []
+        first_side = int(self.rng.integers(2)) if count else 0
+        external_sides = {game_id: (i + first_side) % 2 for i, game_id in enumerate(external_ids)}
+        external_results = []
+        external_rngs, external_counts = {}, {}
         for first in range(0, config["games_per_generation"], config["environments"]):
             pool.reset(min(config["environments"], config["games_per_generation"] - first), rules_for(config))
             rows = pool.call("observe")
@@ -294,10 +328,14 @@ class Trainer:
                 trajectories[identity] = []
                 game_ids[identity] = game_id
                 rngs[identity] = [np.random.default_rng(np.random.SeedSequence([config["seed"], generation, game_id, s])) for s in range(2)]
-                roles[identity] = int(self.rng.integers(2)) if old and self.rng.random() < config["history_fraction"] else None
+                roles[identity] = int(self.rng.integers(2)) if game_id not in external_sides and old and self.rng.random() < config["history_fraction"] else None
                 history_games += roles[identity] is not None
+                if game_id in external_sides:
+                    external_rngs[identity] = np.random.default_rng(np.random.SeedSequence([config['seed'], generation, game_id, 91]))
+                    external_counts[identity] = Counter()
                 if evidence:
-                    trackers[identity] = GameTracker(game_id, dict(generation=generation, history_side=roles[identity], round_limit=config["round_limit"]))
+                    trackers[identity] = GameTracker(game_id, dict(generation=generation, history_side=roles[identity],
+                                                                 external_side=external_sides.get(game_id), round_limit=config["round_limit"]))
             while rows:
                 self.check_stop()
                 chosen = searcher.search(rows, rngs, training=True)
@@ -319,8 +357,24 @@ class Trainer:
                                                        actual_probability=float(prior[actual_index]), legal_action_count=len(prior),
                                                        note="Historical side samples its full prior; the root search strategy for that side is not used")
                 selected_map = {key(r): r for r in chosen}
-                items = [{"_engine": c["_engine"], "env": c["env"], "actions": c["actions"], "replay": bool(evidence) or game_ids[key(c)] < 2} for c in chosen]
                 roots = {key(row): row for row in rows}
+                for choice in chosen:
+                    identity = key(choice)
+                    game_id = game_ids[identity]
+                    if game_id in external_sides:
+                        self.check_stop()
+                        side = external_sides[game_id]
+                        decision = external.choose(pool, roots[identity], 'AB'[side], external_rngs[identity])
+                        choice['actions'][side] = decision['action']
+                        choice['sampling_strategies'][side] = None
+                        choice['external_policy'] = dict(side=side, opponent_id=external.identity['id'],
+                                                        source=decision['source'], reason=decision.get('reason'),
+                                                        mapped_move=decision.get('mapped_move'))
+                        count_decision(external_counts[identity], decision)
+                        if teacher:
+                            teacher.decision(game_id, roots[identity], 'AB'[side], decision)
+                items = [{"_engine": c["_engine"], "env": c["env"], "actions": c["actions"],
+                          "replay": bool(evidence) or game_ids[key(c)] < 2 or game_ids[key(c)] in external_ids[:2]} for c in chosen]
                 for result in pool.call("step", items):
                     identity = key(result)
                     if evidence:
@@ -336,11 +390,12 @@ class Trainer:
                             "candidates": [[root["actions"][s][j] for j in choice["selected"][s]] for s in range(2)],
                             "matrix": choice["matrix"].tolist(), "strategies": choice["strategies"], "restricted_gap": choice["gap"],
                             "actual_actions": choice["actions"], "captures": result["captures"], "events": result["metrics"],
+                            "external_policy": choice.get('external_policy'),
                             "source_fingerprint": self.source, "rules_hash": self.manifest["rules_hash"],
                             "note": "Finite candidate matrix with approximate leaves; not full-game exploitability"})
                         probes_saved += 1
                     for s, sample in enumerate(selected_map[identity]["samples"]):
-                        if roles[identity] != s:
+                        if roles[identity] != s and external_sides.get(game_ids[identity]) != s:
                             trajectories[identity].append((sample, s, tactical))
                     for name, count in result["metrics"].items():
                         all_events[name] = all_events.get(name, 0) + count
@@ -351,6 +406,15 @@ class Trainer:
                         if evidence:
                             evidence.games.append(trackers[identity].finish())
                         winner = result["outcome"]["winner"]
+                        game_id = game_ids[identity]
+                        external_side = external_sides.get(game_id)
+                        if external_side is not None:
+                            model_side = 1 - external_side
+                            external_results.append(dict(game=game_id, model_side='AB'[model_side],
+                                score=.5 if winner == 'draw' else float(winner == 'AB'[model_side]),
+                                rounds=result['round'], outcome=result['outcome'], adapter_counts=dict(external_counts[identity])))
+                            if teacher:
+                                teacher.result(game_id, result['outcome'])
                         trajectory = trajectories[identity]
                         # Limit repetitive long games; always retain tactical samples.
                         quiet = [i for i, (_, _, flag) in enumerate(trajectory) if not flag]
@@ -366,13 +430,24 @@ class Trainer:
                             atomic_json(self.run / "games" / f"g{generation:04d}-{game_ids[identity]:03d}.json",
                                         {"label": f"generation {generation} / game {game_ids[identity]}", "replay": result["replay"],
                                          "history_side": roles[identity]})
+                            if external_side is not None:
+                                # The replay records the actual external commitment, not the unused root proposal.
+                                atomic_json(self.run / 'games' / f'g{generation:04d}-{game_id:03d}.json',
+                                    dict(label=f'generation {generation} / game {game_id} / external AI', replay=result['replay'],
+                                         external_side='AB'[external_side], external_opponent=external.identity,
+                                         history_side=None))
                         del trajectories[identity]
                 if time.perf_counter() - self.last_progress > 2:
                     self.status("self_play", generation=generation, completed_games=completed, target_games=config["games_per_generation"],
                                 rounds=total_rounds, rounds_per_second=total_rounds / max(.001, time.perf_counter() - start))
                     self.last_progress = time.perf_counter()
                 rows = pool.call("observe")
+        external_stats = dict(outcome_rates(external_results), opponent='external_usi', engine=external.identity,
+                              phase='training', requested_fraction=fraction, actual_fraction=len(external_results)/completed,
+                              adapter=external.stats(), results=external_results,
+                              by_side={side: outcome_rates([g for g in external_results if g['model_side'] == side]) for side in 'AB'}) if external else None
         return {"games": completed, "rounds": total_rounds, "seconds": time.perf_counter() - start, "new_samples": new_samples,
+                "external_ai": external_stats,
                 "history_games": history_games, "history_checkpoint": history_checkpoint.name if history_checkpoint else None,
                 "events": all_events, "captures": all_captures, "outcomes": outcomes, "search": searcher.timing,
                 "search_protocol": SEARCH_PROTOCOL}
@@ -448,6 +523,12 @@ class Trainer:
                         result['reference_generation']=saved['generation']
                         atomic_json(self.run/'evaluations'/f'g{generation:04d}/recent_checkpoint.json',result)
                         evaluations.append(result)
+                    if self.config.get('external_ai_enabled'):
+                        with external_opponent(self.config) as external:
+                            evaluations.append(paired_match(pool, self.model, external, self.config, self.device,
+                                generation, 'external_usi', self.config['external_ai_eval_pairs'],
+                                self.config['eval_seed'] + 2_000_003 + generation * 10007,
+                                self.run / 'evaluations' / f'g{generation:04d}', progress=progress))
                 if promoted:
                     self.manifest.update(champion_checkpoint=f"checkpoints/g{generation:04d}.pt", champion_generation=generation)
                 record = {"generation": generation, "timestamp": time.time(), "seconds": time.perf_counter() - started,

@@ -37,8 +37,9 @@
         <div class="main-options">
           <button id="mode-cpu" class="menu-option featured"><span class="option-icon" data-icon="cpu"></span><span>AI対戦<small>自分のペースで、一局。</small></span><span class="option-arrow" data-icon="chevron"></span></button>
           <button id="mode-online" class="menu-option"><span class="option-icon" data-icon="globe"></span><span>インターネット対戦<small>部屋番号で、友だちと。</small></span><span class="option-arrow" data-icon="chevron"></span></button>
+          <button id="mode-local" class="menu-option"><span class="option-icon" data-icon="people"></span><span>1端末モード<small>ひとつの盤で、両陣営を操作。</small></span><span class="option-arrow" data-icon="chevron"></span></button>
         </div>
-        <div class="sub-options"><button id="mode-local" class="text-button"><span data-icon="people"></span>ひとつの端末で対戦</button><button id="import-home" class="text-button"><span data-icon="replay"></span>棋譜を開く</button></div>
+        <div class="sub-options"><button id="import-home" class="text-button"><span data-icon="replay"></span>棋譜を開く</button></div>
         <button id="resume-online" class="resume-button" hidden><span class="live-dot"></span>前のルームに戻る<span data-icon="chevron"></span></button>
       </div>
       <div class="home-footer"><span>双方が選ぶ。盤が動く。</span><span>RULES 0.7</span></div>
@@ -49,7 +50,8 @@
         <div class="setup-heading"><span class="mode-emblem" id="setup-emblem">金</span><div><p class="overline" id="setup-kicker">PLAY WITH AI</p><h1 id="setup-title">AI対戦</h1></div></div>
         <form id="setup-form">
           <div id="ai-options">
-            <p class="field-note">学習済みAIの実行と世代を選んで対局します。</p>
+            <label class="field-label" for="ai-type">対戦するAI</label>
+            <select id="ai-type"><option value="model">学習済みAI</option><option value="external">既存AI（やねうら王 / USI）</option></select>
             <div id="trained-options">
               <div class="model-field-heading"><label class="field-label" for="model-run">学習実行</label><button id="refresh-models" class="text-button" type="button">一覧を更新</button></div>
               <select id="model-run" aria-describedby="model-status" disabled><option value="">モデルを読み込んでください</option></select>
@@ -57,9 +59,15 @@
               <select id="model-checkpoint" aria-describedby="model-status" disabled><option value="">世代を選択</option></select>
               <p id="model-status" class="field-note model-status" role="status" aria-live="polite"></p>
             </div>
+            <div id="external-options" hidden>
+              <div class="model-field-heading"><span class="field-label">接続するAI</span><button id="refresh-external" class="text-button" type="button">接続を確認</button></div>
+              <p id="external-name" class="external-name">やねうら王（Háo）</p>
+              <p id="external-status" class="field-note model-status" role="status" aria-live="polite"></p>
+              <p class="field-note">通常将棋のAIを同時着手ルールに接続します。対応できない局面では補助AIが着手します。</p>
+            </div>
             <fieldset><legend>あなたの陣営</legend><div class="segmented"><label><input type="radio" name="side" value="A" checked><span>☗ A陣営</span></label><label><input type="radio" name="side" value="B"><span>☖ B陣営</span></label></div></fieldset>
           </div>
-          <div id="local-options" hidden><label class="field-label" for="local-name-a">☗ A陣営</label><input id="local-name-a" maxlength="20" value="プレイヤー1" autocomplete="off"><label class="field-label" for="local-name-b">☖ B陣営</label><input id="local-name-b" maxlength="20" value="プレイヤー2" autocomplete="off"><p class="field-note">一手ごとに画面を隠して、端末を交代します。</p></div>
+          <div id="local-options" hidden><label class="field-label" for="local-name-a">☗ A陣営</label><input id="local-name-a" maxlength="20" value="プレイヤー1" autocomplete="off"><label class="field-label" for="local-name-b">☖ B陣営</label><input id="local-name-b" maxlength="20" value="プレイヤー2" autocomplete="off"><p class="field-note">両陣営の手を順に入力します。双方が揃うと、同時に動きます。</p></div>
           <div class="match-spec"><span>平手</span><span>同時着手</span><span>時間制限なし</span></div>
           <button id="start-game" class="primary full" type="submit">対局開始<span data-icon="chevron"></span></button>
         </form>
@@ -91,6 +99,7 @@
     </section>
     <section id="game-screen" class="screen game-screen" aria-label="対局" hidden>
       <div id="connection-notice" class="connection-notice" role="status" hidden><span id="connection-message"></span><strong id="reconnect-countdown"></strong></div>
+      <div id="local-controls" class="local-controls" hidden><span class="local-controls-label">操作する陣営</span><div class="local-sides" role="group" aria-label="操作する陣営"><button id="local-side-a" type="button" aria-pressed="true">☗ A陣営</button><button id="local-side-b" type="button" aria-pressed="false">☖ B陣営</button></div><p id="local-status" role="status" aria-live="polite"></p></div>
       <div class="arena">
         <section class="playfield" aria-label="将棋盤と持ち駒">
           <div class="side-rail opponent-rail">
@@ -114,7 +123,6 @@
             <div class="match-controls"><div class="input-status"><span id="input-hint" class="sr-only" aria-live="polite"></span><button id="clear-selection" class="text-button" hidden>取消</button></div><div class="sidebar-bottom"><div class="piece-key"><span><i class="key-normal"></i>通常</span><span><i class="key-promoted"></i>成り</span><span><i class="key-upgraded"></i>昇格</span><span><i class="key-boosted"></i>強化</span><span><i class="key-reduced"></i>格低下</span></div><button id="continue-game" class="secondary full" hidden>この局面からAIと対戦</button><button id="show-result" class="secondary full" hidden>対局結果を見る</button><button id="rematch" class="primary full" hidden>もう一度対戦</button><button id="back-room" class="primary full" hidden>ルームに戻る</button><button id="resign" class="text-button resign-button"><span data-icon="flag"></span>投了</button></div></div>
             <section class="player-rack self-rack" aria-label="自分の駒台"><div id="player-bottom" class="player-strip"></div><div id="hand-bottom" class="hand-tray bottom" aria-label="自分の持ち駒"></div></section>
           </div>
-          <div id="handoff" class="handoff" role="dialog" aria-modal="true" aria-labelledby="handoff-title" hidden><span class="sealed-mark">封</span><p class="overline">YOUR MOVE IS SEALED</p><h2 id="handoff-title">端末を交代してください</h2><p>双方の手が揃うまで、着手は秘密です。</p><button id="handoff-ready" class="primary">入力を始める<span data-icon="chevron"></span></button></div>
         </section>
       </div>
     </section>

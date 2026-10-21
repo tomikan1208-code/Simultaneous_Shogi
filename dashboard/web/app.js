@@ -1,4 +1,4 @@
-import { generationStats, learningSnapshot, artifactGeneration } from './metrics.js';
+import { generationStats, learningSnapshot, artifactGeneration, externalRecords, externalSummary, externalSeries } from './metrics.js';
 
 const $ = id => document.getElementById(id);
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -14,7 +14,7 @@ const eventNames = { capture: '捕獲', contact: '同段階の接触', move: '�
 const reasonNames = { static: '非選択の停止駒への通常捕獲', chain: '連戦（除去後の反撃）', stopped: '移動後に停止した駒への通常捕獲', unmoved: '移動していない駒への通常捕獲', king_captured: '王の捕獲', king_capture_retained: '王捕獲後に取り返されても勝利', king_captor_lost: '王捕獲者が後続に取られた', both_kings: '双方の王捕獲・捕獲時の格で比較', mutual: '同格の相討ち', stationary: '停止駒への通常捕獲', rank: '格比較', counter: '連戦', drop: '打ち駒との競合', repetition: '同一局面の反復', round_limit: 'ラウンド上限', king_capture: '王捕獲', king_captor_recaptured: '王捕獲者の後続被捕獲' };
 const pieces = { K: '王', P: '歩', L: '香', N: '桂', S: '銀', G: '金', R: '飛', B: '角' };
 const promoted = { P: 'と', L: '杏', N: '圭', S: '全', R: '龍', B: '馬' };
-const opponentName = name => ({ champion: '基準モデル（旧評価）', adapted_self:'現在モデル同士', recent_checkpoint:'最近の学習済みモデル', hunter: 'hunter', defense: 'defense', upgrade: 'upgrade', random: 'random' }[name] || name);
+const opponentName = name => ({ champion: '基準モデル（旧評価）', adapted_self:'現在モデル同士', recent_checkpoint:'最近の学習済みモデル', external_usi:'既存AI', hunter: 'hunter', defense: 'defense', upgrade: 'upgrade', random: 'random' }[name] || name);
 let state = null, selectedRun = new URLSearchParams(location.search).get('run') || '', selectedGeneration = Number(new URLSearchParams(location.search).get('generation')) || null;
 let replay = null, renderedRun = null, currentView = 'overview', polling = null, requests = 0, toastTimer;
 let runtime = null, settingsLoaded = false, settingsFocus = null, submitting = false, followNewRun = false;
@@ -85,7 +85,7 @@ export function plot(container, series, score = false) {
     const points = s.points.filter(p => Number.isFinite(p.y));
     const spacing=points.length>1?Math.min(...points.slice(1).map((p,i)=>x(p.x)-x(points[i].x))):20;
     const hitRadius=Math.max(.4,Math.min(8,spacing*.45));
-    content += `<polyline class="chart-line" pointer-events="none" stroke="${s.color}" points="${points.map(p => `${x(p.x)},${y(p.y)}`).join(' ')}"/>`;
+    content += `<polyline class="chart-line" pointer-events="none" stroke="${s.color}" ${s.dashed ? 'stroke-dasharray="6 4"' : ''} points="${points.map(p => `${x(p.x)},${y(p.y)}`).join(' ')}"/>`;
     content += points.map(p => `<g data-gen="${p.x}" role="button" tabindex="0" aria-label="世代${p.x}を選択"><rect x="${x(p.x)-hitRadius}" y="${y(p.y)-8}" width="${hitRadius*2}" height="16" fill="transparent"/><circle pointer-events="none" cx="${x(p.x)}" cy="${y(p.y)}" r="${p.x===selected?5:Math.min(3,spacing*.35)}" fill="${s.color}" stroke="#fff" stroke-width="${Math.min(1.5,spacing*.15)}"/><title>${escapeHTML(s.name)} G${p.x}${p.note?` ${escapeHTML(p.note)}`:''}: ${score ? percent(p.y) : number(p.y, 3)}</title></g>`).join('');
   }
   container.innerHTML = `<svg viewBox="0 0 ${w} ${h}" role="img" aria-label="${escapeHTML(series.map(s=>s.name).join('・'))}の推移">${content}</svg><div class="chart-legend">${series.map(s => {const point=s.points.find(p=>p.x===selected);return `<span><i style="background:${s.color}"></i>${escapeHTML(s.name)}${selected?` G${selected}: ${score?percent(point?.y):number(point?.y,3)}`:''}</span>`;}).join('')}</div>`;
@@ -133,7 +133,17 @@ function renderOverview() {
     const stats=generationStats(r);
     return `<tr data-gen="${r.generation}" class="${r.generation === record?.generation ? 'selected' : ''}"><td><button class="generation-link" data-gen="${r.generation}" aria-current="${r.generation===record?.generation?'true':'false'}">G${r.generation.toString().padStart(3, '0')}</button></td><td>${number(stats.games)} 局</td><td>${number(stats.meanRounds,2)}</td><td>${percent(stats.drawRate)}</td><td>${number(stats.policyLoss,3)}</td><td>${number(stats.valueLoss,4)}</td><td class="score-cell">${percent(g?.score)}${g?.reference_generation?`<small> 対G${g.reference_generation}</small>`:''}</td><td>${tag(smoke ? '動作テスト' : r.promoted ? '昇格' : r.evaluation.length ? '継続評価' : '学習更新', smoke || !r.promoted && r.evaluation.length ? 'amber' : '')}</td></tr>`;
   }).join('') : '<tr><td colspan="8">確定した世代はまだありません。</td></tr>';
-  renderLearningSummary(); renderGenerationDetail();
+  renderExternal(history, record); renderLearningSummary(); renderGenerationDetail();
+}
+
+function renderExternal(history, record) {
+  const visible = history.filter(row => row.generation <= (record?.generation ?? Infinity));
+  const records = externalRecords(visible);
+  const latest = ['evaluation', 'training'].map(phase => records.filter(row => row.phase === phase).at(-1)).filter(Boolean);
+  $('externalSummary').innerHTML = latest.length ? `<div class="generation-metrics">${latest.map(row => `<div class="gen-metric"><div class="gen-metric-label">G${row.generation} ${row.phase === 'evaluation' ? '定期評価' : '学習中の対戦'} · ${number(row.engine?.nodes)}ノード</div><div class="gen-metric-value">勝率 ${percent(row.win_rate ?? row.wins / row.games)}</div><p class="hint">${row.wins}勝 ${row.draws}分 ${row.losses}敗 / ${row.games}局<br>得点率 ${percent(row.score)} · 既存AIの手 ${percent(row.adapter?.usi_coverage)}</p></div>`).join('')}</div>` : empty('既存AIとの対局が完了すると、勝率・得点率・対局数を表示します。設定から通常の自己対戦と定期評価に混ぜられます。');
+  plot($('externalChart'), externalSeries(history), true);
+  const groups = externalSummary(visible);
+  $('externalOpponentTable').innerHTML = groups.length ? `<div class="table-wrap"><div class="table-scroll"><table><thead><tr><th>区分・相手</th><th>探索量</th><th>勝 / 分 / 負</th><th>勝率</th><th>得点率</th><th>対局数</th><th>既存AIの手</th></tr></thead><tbody>${groups.map(row => `<tr><td>${row.phase === 'evaluation' ? '定期評価' : '学習中'}<small title="${escapeHTML(row.opponentId)}"> · ${escapeHTML(row.engine?.name || '既存AI')}</small></td><td>${number(row.engine?.nodes)}ノード</td><td>${row.wins} / ${row.draws} / ${row.losses}</td><td>${percent(row.winRate)}</td><td>${percent(row.score)}</td><td>${row.games}局</td><td>${percent(row.coverage)}</td></tr>`).join('')}</tbody></table></div></div><p class="hint">学習中の対戦は成長中のモデルの観測成績です。定期評価はその世代の重みを固定して対戦します。既存AIが扱えない局面で補助AIを使った割合も残します。</p>` : empty('同じ相手・探索量ごとの記録はまだありません。');
 }
 
 function renderLearningSummary() {
@@ -181,7 +191,8 @@ function renderGenerationDetail() {
     `<p class="hint">終了理由：${Object.entries(outcomes).map(([reason,n])=>`${escapeHTML(reasonNames[reason]||reason)} ${n}局`).join('、')||'記録なし'}。生存は終局時の打ち切りを含む観測値、保有側勝率は因果効果ではありません。— は記録なし／該当なしです。</p>`,
     '<h3 class="detail-subtitle">この世代の対戦評価</h3>',
     evaluations?`<div class="table-wrap"><div class="table-scroll"><table><thead><tr><th>対戦相手</th><th>勝／分／負</th><th>得点率</th><th>区間（保存値）</th></tr></thead><tbody>${evaluations}</tbody></table></div></div>`:empty('この世代では定期評価を実施していません。'),
-    `<h3 class="detail-subtitle">この世代の学習条件</h3><p class="detail-config">${number(config.games_per_generation)}局／世代・同時${number(config.environments)}対局・バッチ${number(config.batch_size)}・更新${number(config.updates)}回・候補${number(config.cheap_candidates)}〜${number(config.candidates)}・評価${number(config.eval_pairs)}ペア／${number(config.eval_every)}世代ごと</p>`,
+    record.self_play.external_ai ? `<h3 class="detail-subtitle">学習中の既存AIとの対戦</h3><p>${record.self_play.external_ai.wins}勝 ${record.self_play.external_ai.draws}分 ${record.self_play.external_ai.losses}敗 / ${record.self_play.external_ai.games}局 · 勝率${percent(record.self_play.external_ai.win_rate)} · 得点率${percent(record.self_play.external_ai.score)} · ${number(record.self_play.external_ai.engine?.nodes)}ノード</p><p class="hint">既存AIが選んだ手 ${percent(record.self_play.external_ai.adapter?.usi_coverage)}。教師データ ${number(record.self_play.external_ai.teacher?.decisions)}手。</p>` : '',
+    `<h3 class="detail-subtitle">この世代の学習条件</h3><p class="detail-config">${number(config.games_per_generation)}局／世代・同時${number(config.environments)}対局・バッチ${number(config.batch_size)}・更新${number(config.updates)}回・候補${number(config.cheap_candidates)}〜${number(config.candidates)}・評価${number(config.eval_pairs)}ペア／${number(config.eval_every)}世代ごと${config.external_ai_enabled ? `・既存AI ${number(config.external_ai_nodes)}ノード／混在${percent(config.external_ai_fraction)}` : ''}</p>`,
     `<h3 class="detail-subtitle">この世代の保存棋譜</h3><label class="field">対局<select class="select" id="generationReplay"><option value="">棋譜を選択（${files.length}件）</option>${files.map(file=>`<option value="${escapeHTML(file)}">${escapeHTML(file.replace(/^.*ancestor-[^/]+\//,'').replace('.json',''))}</option>`).join('')}</select></label>`,
     `<button class="btn btn-ghost" id="viewGenerationReplay" ${files.length?'':'disabled'}>選んだ棋譜を対局ビューアで開く</button>`
   ].join('');
@@ -192,11 +203,29 @@ function renderEvaluation() {
   $('evalGeneration').textContent = record ? `G${record.generation} / ${manifest.rules.profile} / 上限${manifest.rules.roundLimit}ラウンド` : '評価結果がまだありません';
   $('evaluationTable').innerHTML = record?.evaluation.length ? record.evaluation.map(e => {
     const [label, kind] = decisions[e.decision] || decisions.inconclusive;
-    return `<tr><td>${escapeHTML(opponentName(e.opponent))}</td><td>${e.wins} / ${e.draws} / ${e.losses}</td><td class="score-cell">${percent(e.score)}</td><td>${percent(e.interval[0])}–${percent(e.interval[1])}<span class="confidence">${number(e.confidence * 100, 1)}%</span></td><td>${e.games} 局</td><td>${tag(manifest.rules.roundLimit !== 200 ? '動作テスト' : label, kind)}</td></tr>`;
-  }).join('') : '<tr><td colspan="6">この世代の対戦評価はありません。評価した世代を概要の表から選択できます。</td></tr>';
+    return `<tr><td>${escapeHTML(opponentName(e.opponent))}${e.engine ? `<small> · ${number(e.engine.nodes)}ノード</small>` : ''}</td><td>${e.wins} / ${e.draws} / ${e.losses}</td><td>${percent(e.win_rate ?? e.wins / e.games)}</td><td class="score-cell">${percent(e.score)}</td><td>${percent(e.interval[0])}–${percent(e.interval[1])}<span class="confidence">${number(e.confidence * 100, 1)}%</span></td><td>${e.games} 局</td><td>${tag(manifest.rules.roundLimit !== 200 ? '動作テスト' : label, kind)}</td></tr>`;
+  }).join('') : '<tr><td colspan="7">この世代の対戦評価はありません。評価した世代を概要の表から選択できます。</td></tr>';
   $('championInfo').innerHTML = manifest?.evaluation_protocol==='learned-only-v1' ? `<p>現在モデル同士と、最近の学習済みチェックポイントを同じ探索量で評価します。固定AI・開始時モデルへの定期対戦は行いません。比較相手は25世代区切りで選ぶため、相手世代も確認してください。最新はG${manifest.generation}です。</p>` : manifest ? `<div class="meta-grid"><span>基準モデル（旧評価）</span><b>G${manifest.champion_generation}</b><span>最終モデル</span><b>G${manifest.generation}</b><span>探索予算</span><b>最大 ${manifest.config.candidates} × ${manifest.config.candidates} 候補 / ${manifest.config.regret_iterations} 反復</b><span>判定条件</span><b>対・基準モデルの補正済み区間の下限 &gt; 50%</b></div>` : empty('モデルを読み込むと条件を表示します。');
+  if (manifest?.evaluation_protocol === 'mixed-external-v1') $('championInfo').innerHTML = `<p>現在モデル同士、最近の学習済みモデル、既存AIを${number(manifest.config.eval_every)}世代ごとに評価します。既存AIは${number(manifest.config.external_ai_nodes)}ノード・${number(manifest.config.external_ai_eval_pairs)}ペアで固定し、相手と予算の識別子を記録します。重み・探索方式が異なるため、同じ計算時間の比較ではありません。</p>`;
   const evaluations = run?.local_evaluations?.filter(Boolean) || [];
   $('localEvaluations').innerHTML = evaluations.length ? evaluations.map(e => `<div class="evaluation-entry"><span>対・${escapeHTML(opponentName(e.opponent))}</span><b>${percent(e.score)}</b><span>${e.games}局 / ${percent(e.interval[0])}–${percent(e.interval[1])}</span>${tag((decisions[e.decision] || decisions.inconclusive)[0], (decisions[e.decision] || decisions.inconclusive)[1])}</div>`).join('') : empty('上のフォームから、読み込んだモデルを追加評価できます。');
+  renderDistillation();
+}
+
+function renderDistillation() {
+  const select = $('distillSource');
+  const changedRun = select.dataset.displayRun !== selectedRun;
+  options(select, [{ value: '', label: 'モデルを選択' }, ...state.runs.map(run => ({ value: run.id, label: `${run.name} · G${run.generation}` }))], changedRun ? selectedRun : select.value);
+  select.dataset.displayRun = selectedRun;
+  const source = state.runs.find(run => run.id === select.value);
+  const datasets = (state.teacher_datasets || []).filter(data => data.rules_hash === source?.rules_hash);
+  options($('distillDataset'), [{ value: '', label: datasets.length ? '教師データを選択' : '同じルールの完了済み教師データはまだありません' }, ...datasets.map(data => ({ value: data.id, label: `${data.name} · ${data.games}局 / ${data.decisions}手${data.nodes ? ` / ${number(data.nodes)}ノード` : ''}` }))]);
+  const dataset = datasets.find(row => row.id === $('distillDataset').value);
+  $('distillCheckpoint').max = source?.generation ?? 0;
+  $('distillCheckpoint').placeholder = source ? `最新の確定済み世代 G${source.generation}` : '最新の確定済み世代';
+  if (source && Number($('distillCheckpoint').value) > source.generation) $('distillCheckpoint').value = '';
+  $('distillButton').disabled = !!state.job || submitting || !source || !dataset;
+  $('distillPreview').textContent = state.job ? '学習・評価を停止してから蒸留を実行できます。' : dataset ? `${dataset.games}局・${dataset.decisions}手の教師データを使い、元モデルを保持して別モデルを作ります。完成後は通常の評価や自己対戦に使えます。` : '自己対戦・定期評価・追加評価で教師データを保存できます。既存AIが実際に選んだ手と、完了した対局の勝敗を使います。';
 }
 function renderAnalysis() {
   const run = state.selected;
@@ -260,20 +289,20 @@ function render() {
   const nextConfig = run?.resume_config, currentConfig = run?.manifest.config;
   const pendingSettings = nextConfig && Object.keys(nextConfig).some(key => JSON.stringify(nextConfig[key]) !== JSON.stringify(currentConfig[key]));
   $('resumeSettingsNotice').hidden = !pendingSettings;
-  const settingNames = { generations:'終了世代', games_per_generation:'対局数', environments:'同時対局数', workers:'CPUワーカー数', candidates:'最大候補数', cheap_candidates:'通常候補数', batch_size:'バッチサイズ', value_batch_size:'推論バッチサイズ', updates:'更新回数', eval_pairs:'評価ペア数', eval_every:'評価間隔', device:'実行先', amp:'混合精度' };
-  const settingValue = (key, value) => key === 'generations' && value === 0 ? '無制限' : typeof value === 'boolean' ? value ? '有効' : '無効' : value ?? '未設定';
+  const settingNames = { generations:'終了世代', games_per_generation:'対局数', environments:'同時対局数', workers:'CPUワーカー数', candidates:'最大候補数', cheap_candidates:'通常候補数', batch_size:'バッチサイズ', value_batch_size:'推論バッチサイズ', updates:'更新回数', eval_pairs:'評価ペア数', eval_every:'評価間隔', device:'実行先', amp:'混合精度', external_ai_enabled:'既存AI', external_ai_nodes:'既存AIノード数', external_ai_fraction:'既存AI混在割合', external_ai_eval_pairs:'既存AI評価ペア数', external_ai_save_teacher:'教師データ保存' };
+  const settingValue = (key, value) => key === 'generations' && value === 0 ? '無制限' : key === 'external_ai_fraction' ? percent(value) : typeof value === 'boolean' ? value ? '有効' : '無効' : value ?? '未設定';
   const changes = pendingSettings ? Object.entries(settingNames).filter(([key]) => nextConfig[key] !== currentConfig[key]).map(([key, label]) => `${label} ${settingValue(key,currentConfig[key])}→${settingValue(key,nextConfig[key])}`).join('、') : '';
   $('resumeSettingsNotice').textContent = pendingSettings ? `次回の再開は ${number(nextConfig.games_per_generation)}局／世代・同時${number(nextConfig.environments)}対局。変更：${changes}。` : '';
   if (!settingsLoaded) { fillSettings(state.settings.training); settingsLoaded = true; }
   updateRuntime();
   $('stopJob').disabled = !busy; $('benchmarkButton').disabled = busy; $('smokeStart').disabled = busy;
-  $('statusText').textContent = busy ? ({ training: '学習中', evaluation: '評価中', probe: '分析中', benchmark: '計測中' }[state.job.kind] || '処理中') : '待機中';
+  $('statusText').textContent = busy ? ({ training: '学習中', evaluation: '評価中', distillation:'蒸留中', probe: '分析中', benchmark: '計測中' }[state.job.kind] || '処理中') : '待機中';
   $('statusDot').classList.toggle('running', busy);
   $('statusGen').textContent = run ? `G${run.manifest.generation}` : '';
   $('evaluateButton').disabled = busy || !run?.compatible;
   $('probeButton').disabled = busy || !run?.compatible || !replay;
   if (document.activeElement !== $('sourceDir')) $('sourceDir').value = state.settings.source_dir;
-  $('jobLabel').textContent = state.job ? ({ training: 'ローカル学習中', evaluation: 'ローカル評価中', probe: '局面を再分析中', benchmark: '計測中' }[state.job.kind] || state.job.kind) : state.last_job ? (state.last_job.code === 0 ? '処理完了' : 'エラー') : '待機中';
+  $('jobLabel').textContent = state.job ? ({ training: 'ローカル学習中', evaluation: 'ローカル評価中', distillation:'教師データから蒸留中', probe: '局面を再分析中', benchmark: '計測中' }[state.job.kind] || state.job.kind) : state.last_job ? (state.last_job.code === 0 ? '処理完了' : 'エラー') : '待機中';
   $('jobLogs').textContent = state.logs.join('\n') || 'ローカル処理のログがここに表示されます。';
   $('exportRun').hidden = !run;
   $('exportRun').href = `/api/export?run=${encodeURIComponent(selectedRun)}`;
@@ -298,15 +327,17 @@ async function action(endpoint, data, message) {
   submitting = true; updateRuntime();
   try {
     await request(endpoint, data);
-    if (['/api/start', '/api/resume'].includes(endpoint)) { selectedRun = ''; selectedGeneration = null; followNewRun = true; }
+    if (['/api/start', '/api/resume', '/api/distill'].includes(endpoint)) { selectedRun = ''; selectedGeneration = null; followNewRun = true; }
     toast(message); await refresh();
   } catch (error) { toast(error.message, true); }
   finally { submitting = false; updateRuntime(); }
 }
 function fillSettings(config) {
   if (!config) return;
-  for (const input of document.querySelectorAll('[data-setting]')) input.value = config[input.dataset.setting];
+  for (const input of document.querySelectorAll('[data-setting]')) input.value = input.dataset.setting === 'external_ai_fraction' ? (config.external_ai_fraction ?? .25) * 100 : config[input.dataset.setting];
   $('deviceInput').value = config.device; $('ampInput').checked = config.amp;
+  $('externalAIEnabled').checked = !!config.external_ai_enabled;
+  $('teacherSaveInput').checked = config.external_ai_save_teacher !== false;
 }
 function updateRuntime() {
   const device = state?.job?.device || (['evaluation', 'benchmark'].includes(state?.job?.kind) ? 'cpu' : state?.settings.training.device || 'cuda');
@@ -325,6 +356,15 @@ function updateRuntime() {
     }
   }
   $('deviceHelp').textContent = runtime?.cuda_available ? `${runtime.gpu} · ${runtime.memory_gb} GB` : runtime ? 'GPU未検出。setup-gpu.batで導入、またはCPUを選択。' : 'GPUを確認しています…';
+  if (state) {
+    $('externalAIHelp').textContent = state.external_ai?.available ? '既存AIは準備済みです。通常の評価間隔で対戦し、教師データも保存できます。既定は2,000ノードです。' : '先に「既存AIを準備」を実行してください。公開エンジンと評価関数を取得します。';
+    $('setupExternalAI').hidden = !!state.external_ai?.available;
+    $('setupExternalAI').disabled = !!state.job || submitting;
+    const budget = String(state.settings.training.external_ai_nodes ?? 2000);
+    if ($('evalNodes').dataset.saved !== budget) { $('evalNodes').value = budget; $('evalNodes').dataset.saved = budget; }
+    $('evalNodes').disabled = $('evalOpponent').value !== 'external_usi';
+    $('distillButton').disabled = !!state.job || submitting || !$('distillSource').value || !$('distillDataset').value;
+  }
 }
 async function loadRuntime(force = false) {
   try {
@@ -453,15 +493,27 @@ export async function mount({ pollMilliseconds = 3000 } = {}) {
   $('runtimeRefresh').addEventListener('click', () => loadRuntime(true));
   $('trainingForm').addEventListener('submit', async event => {
     event.preventDefault();
-    const training = { device: $('deviceInput').value, amp: $('ampInput').checked };
-    for (const input of document.querySelectorAll('[data-setting]')) training[input.dataset.setting] = Number(input.value);
+    const training = { device: $('deviceInput').value, amp: $('ampInput').checked,
+      external_ai_enabled: $('externalAIEnabled').checked, external_ai_save_teacher: $('teacherSaveInput').checked };
+    for (const input of document.querySelectorAll('[data-setting]')) training[input.dataset.setting] = Number(input.value) / (input.dataset.setting === 'external_ai_fraction' ? 100 : 1);
     $('saveSettings').disabled = true; $('settingsError').textContent = '';
     try { await request('/api/settings', { training }); await refresh(); setSettings(false); toast('設定を保存しました。次回の開始・再開から反映します。'); }
     catch (error) { $('settingsError').textContent = error.message; }
     finally { $('saveSettings').disabled = false; }
   });
   $('benchmarkButton').addEventListener('click', () => action('/api/benchmark', {}, '同じ局面群で、既存方式と高速版を計測します。'));
-  $('evaluateForm').addEventListener('submit', event => { event.preventDefault(); action('/api/evaluate', { run: selectedRun, opponent: $('evalOpponent').value, pairs: Number($('evalPairs').value) }, 'ローカルでの対戦評価を開始しました。'); });
+  $('evalOpponent').addEventListener('change', updateRuntime);
+  $('evaluateForm').addEventListener('submit', event => { event.preventDefault(); action('/api/evaluate', { run: selectedRun, opponent: $('evalOpponent').value, pairs: Number($('evalPairs').value), nodes: Number($('evalNodes').value) }, 'ローカルでの対戦評価を開始しました。'); });
+  $('refreshTeachers').addEventListener('click', refresh);
+  $('setupExternalAI').addEventListener('click', () => action('/api/external/setup', {}, '公開エンジンと評価関数の準備を開始しました。'));
+  $('distillSource').addEventListener('change', renderDistillation);
+  $('distillDataset').addEventListener('change', renderDistillation);
+  $('distillForm').addEventListener('submit', event => {
+    event.preventDefault();
+    action('/api/distill', { run: $('distillSource').value, dataset: $('distillDataset').value,
+      checkpoint: $('distillCheckpoint').value === '' ? 'latest' : Number($('distillCheckpoint').value),
+      updates: Number($('distillUpdates').value), device: $('distillDevice').value }, '教師データから別モデルへの蒸留を開始しました。');
+  });
   $('sourceForm').addEventListener('submit', async event => { event.preventDefault(); await action('/api/settings', { source_dir: $('sourceDir').value }, '同期フォルダーを保存しました。'); });
   $('importZip').addEventListener('change', async () => {
     const file = $('importZip').files[0];

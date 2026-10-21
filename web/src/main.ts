@@ -1,8 +1,8 @@
 import { EngineClient } from './client.js';
 import { Effects } from './effects.js';
 import { NetworkError, OnlineClient } from './online.js';
-import { savedModels } from './models.js';
-import type { SavedRun } from './models.js';
+import { externalAI, savedModels } from './models.js';
+import type { ExternalStatus, SavedRun } from './models.js';
 import type { Connection } from './online.js';
 import { actionLabel, conditionText, escape, eventText, icon, offersChange, other, pieceMarkup, rankAppearance, reasons, same, sideIndex, square, symbol, symbols } from './presentation.js';
 import { PLAY_RULES, sameRules } from './rules.js';
@@ -21,11 +21,12 @@ let active:Side = 'A', human:Side = 'A';
 let names:Record<Side,string> = {A:'あなた',B:'対戦AI'};
 let selection:{piece:string}|{kind:Kind}|null = null;
 let pendingChoice:{piece:Piece;to:Square;options:ActionOption[]}|null = null;
-let busy = false, animating = false, handoff = false;
+let busy = false, animating = false;
 let aiSeed = 1, gameSerial = 0;
-type Opponent = {type:'model';id:string;generation:number;label:string};
+type Opponent = {type:'model';id:string;generation:number;label:string}|{type:'external';id:string;nodes:number;label:string};
 let opponent:Opponent = {type:'model',id:'',generation:0,label:'学習済みAI'};
 let modelRuns:SavedRun[] = [], modelsLoading = false, modelsListed = false, modelMessage = '';
+let externalStatus:ExternalStatus|null = null, externalLoading = false, externalMessage = '';
 let localOutcome:Outcome|null = null;
 let history:HistoryEntry[] = [];
 let replayResolution:Resolution|null = null, replayRound = 0, stageIndex:number|null = null;
@@ -52,7 +53,7 @@ const net = new OnlineClient(state => { void enqueueOnline(state); },state => {
   render();
 });
 const outcome = ():Outcome|null => mode === 'online' ? onlineState?.room.result ?? view?.outcome ?? null : localOutcome ?? view?.outcome ?? null;
-const perspective = ():Side => mode === 'local' ? active : human;
+const perspective = ():Side => human;
 const currentResolution = ():Resolution|null => replayResolution ?? view?.lastResolution ?? null;
 const canReview = ():boolean => !!view && (mode === 'replay' || !!outcome());
 function showError(error:unknown):void { $('error-text').textContent = error instanceof Error ? error.message : String(error); $('error').hidden = false; }
@@ -61,7 +62,7 @@ function setScreen(next:Screen):void {
   screen = next;
   document.body.classList.toggle('is-playing',next === 'game');
   for (const name of ['home','setup','online','room','game'] as Screen[]) $(name+'-screen').hidden = name !== next;
-  $('context-label').textContent = next === 'room' ? 'インターネット対戦' : next === 'game' ? mode === 'online' ? 'ルーム '+onlineCode : mode === 'cpu' ? 'AI対戦' : mode === 'local' ? 'ローカル対戦' : '棋譜の検討' : '';
+  $('context-label').textContent = next === 'room' ? 'インターネット対戦' : next === 'game' ? mode === 'online' ? 'ルーム '+onlineCode : mode === 'cpu' ? 'AI対戦' : mode === 'local' ? '1端末モード' : '棋譜の検討' : '';
   document.title = next === 'game' ? '対局 · 同時着手将棋' : '同時着手将棋';
   window.scrollTo({top:0,behavior:'instant'});
   render();
@@ -70,7 +71,7 @@ function selectedOptions():ActionOption[] {
   return options.filter(option => selection && ('piece' in selection ? option.action.type === 'move' && option.action.piece === selection.piece : option.action.type === 'drop' && option.action.kind === selection.kind));
 }
 function canAct():boolean {
-  return !!view && screen === 'game' && mode !== 'replay' && !outcome() && !busy && !animating && !handoff && stageIndex === null && !view.committed[sideIndex(active)] && (mode !== 'online' || connection === 'connected' && onlineState?.room.phase === 'playing' && onlineState.room.players.every(player => player?.connected));
+  return !!view && screen === 'game' && mode !== 'replay' && !outcome() && !busy && !animating && stageIndex === null && !view.committed[sideIndex(active)] && (mode !== 'online' || connection === 'connected' && onlineState?.room.phase === 'playing' && onlineState.room.players.every(player => player?.connected));
 }
 function canInput():boolean { return canAct() && !pendingChoice; }
 function clearSelection():void { selection = null; pendingChoice = null; }
@@ -82,7 +83,7 @@ function hideResult():void {
 }
 function resetGameUI():void {
   gameSerial++; effects.skip(); stopPlayback(); hideResult(); clearSelection();
-  handoff = false; animating = false; animationResolution = null; replayResolution = null;
+  animating = false; animationResolution = null; replayResolution = null;
   stageIndex = null; replayRound = 0; tab = 'game'; history = []; replayCache.clear(); roundStarts.clear();
   resultShown = ''; localOutcome = null;
 }
@@ -101,14 +102,18 @@ async function loadOptions():Promise<void> {
 function openSetup(next:'cpu'|'local'):void {
   detachHomeConnection();
   setupMode = next; hideError();
-  $('setup-title').textContent = next === 'cpu' ? 'AI対戦' : 'ひとつの端末で対戦';
-  $('setup-kicker').textContent = next === 'cpu' ? 'PLAY WITH AI' : 'LOCAL TWO PLAYERS';
+  $('setup-title').textContent = next === 'cpu' ? 'AI対戦' : '1端末モード';
+  $('setup-kicker').textContent = next === 'cpu' ? 'PLAY WITH AI' : 'PLAY ON ONE DEVICE';
   $('setup-emblem').innerHTML = next === 'cpu' ? '金' : icon('people');
   $('ai-options').hidden = next !== 'cpu'; $('local-options').hidden = next !== 'local';
   setScreen('setup'); $('start-game').focus({preventScroll:true});
-  if (next === 'cpu' && !modelsListed) void refreshModels();
+  if (next === 'cpu') {
+    if (usesExternal()) void refreshExternal();
+    else if (!modelsListed) void refreshModels();
+  }
 }
-function usesModel():boolean { return setupMode === 'cpu'; }
+function usesExternal():boolean { return $<HTMLSelectElement>('ai-type').value === 'external'; }
+function usesModel():boolean { return setupMode === 'cpu' && !usesExternal(); }
 function selectedModel():{run:SavedRun;id:string;generation:number}|null {
   const run = modelRuns.find(item => item.id === $<HTMLSelectElement>('model-run').value);
   const model = run?.checkpoints.find(item => item.id === $<HTMLSelectElement>('model-checkpoint').value);
@@ -122,11 +127,16 @@ function fillModelCheckpoints(preferred = ''):void {
 }
 function renderModelSetup():void {
   const selected = selectedModel();
+  $<HTMLSelectElement>('ai-type').disabled = busy;
+  $('trained-options').hidden = usesExternal(); $('external-options').hidden = !usesExternal();
   $<HTMLSelectElement>('model-run').disabled = busy || modelsLoading || !modelRuns.some(run => run.compatible);
   $<HTMLSelectElement>('model-checkpoint').disabled = busy || modelsLoading || !selected;
   $<HTMLButtonElement>('refresh-models').disabled = busy || modelsLoading;
   $('model-status').textContent = modelMessage || (selected ? '第'+selected.generation+'世代を使用します。対局中にモデルは切り替わりません。' : '保存済みモデルがありません。学習パネルで学習するか、Colabの結果を取り込んでから一覧を更新してください。');
-  $('start-game').innerHTML = (usesModel() ? 'モデルを読み込んで対局' : '対局を始める')+icon('chevron');
+  $<HTMLButtonElement>('refresh-external').disabled = busy || externalLoading;
+  $('external-name').textContent = externalStatus?.label ?? 'やねうら王 / USI';
+  $('external-status').textContent = externalMessage || (externalStatus?.available ? externalStatus.nodes.toLocaleString('ja-JP')+'ノードで思考します。対局中はこの設定を使用します。' : externalStatus?.reason || '「接続を確認」で既存AIの準備状況を確認してください。');
+  $('start-game').innerHTML = (usesModel() ? 'モデルを読み込んで対局' : setupMode === 'cpu' ? '既存AIに接続して対局' : '対局を始める')+icon('chevron');
 }
 async function refreshModels():Promise<void> {
   if (modelsLoading) return;
@@ -142,7 +152,24 @@ async function refreshModels():Promise<void> {
   } catch (error) { modelMessage = error instanceof Error ? error.message : String(error); }
   finally { modelsLoading = false; render(); }
 }
+async function refreshExternal():Promise<void> {
+  if (externalLoading) return;
+  externalLoading = true; externalMessage = '既存AIの準備状況を確認中…'; render();
+  try { externalStatus = await externalAI.status(); externalMessage = ''; }
+  catch (error) { externalStatus = null; externalMessage = error instanceof Error ? error.message : String(error); }
+  finally { externalLoading = false; render(); }
+}
 async function prepareOpponent(rules:RuleSet = PLAY_RULES):Promise<Opponent> {
+  if (usesExternal()) {
+    if (!externalStatus) await refreshExternal();
+    if (!externalStatus?.available) throw new Error(externalStatus?.reason || externalMessage || '既存AIの準備状況を確認してください。');
+    externalMessage = '既存AIに接続中…'; render();
+    try {
+      const loaded = await externalAI.load();
+      if (!sameRules(rules,loaded.rules)) throw new Error('棋譜と既存AIの対局ルールが異なるため、この局面からは対局できません。');
+      return {type:'external',id:loaded.engine,nodes:loaded.nodes,label:loaded.label+' · '+loaded.nodes.toLocaleString('ja-JP')+'ノード'};
+    } finally { externalMessage = ''; }
+  }
   if (!modelsListed) await refreshModels();
   const selected = selectedModel();
   if (!selected) throw new Error('対局に使う学習モデルを選択してください。');
@@ -154,13 +181,24 @@ async function prepareOpponent(rules:RuleSet = PLAY_RULES):Promise<Opponent> {
     return {type:'model',id:selected.id,generation:selected.generation,label:selected.run.name+' · 第'+selected.generation+'世代'};
   } finally { modelMessage = ''; }
 }
+function opponentName():string { return opponent.type === 'model' ? '学習AI · 第'+opponent.generation+'世代' : opponent.label; }
+async function chooseOpponent(replay:Replay,side:Side,seed:number):Promise<{action:Action;round:number}> {
+  if (opponent.type === 'external') {
+    const result = await externalAI.choose(opponent.id,replay,side,seed);
+    if (result.engine !== opponent.id || result.nodes !== opponent.nodes) throw new Error('対戦する既存AIが変わりました。もう一度着手してください。');
+    return result;
+  }
+  const result = await savedModels.choose(opponent.id,replay,side,seed);
+  if (result.model !== opponent.id || result.generation !== opponent.generation) throw new Error('対戦するモデルが変わりました。もう一度着手してください。');
+  return result;
+}
 async function startGame():Promise<void> {
   const chosen = setupMode === 'cpu' ? await prepareOpponent() : opponent;
   resetGameUI(); mode = setupMode;
-  human = document.querySelector<HTMLInputElement>('input[name="side"]:checked')!.value as Side;
-  active = mode === 'local' ? 'A' : human;
+  human = mode === 'local' ? 'A' : document.querySelector<HTMLInputElement>('input[name="side"]:checked')!.value as Side;
+  active = human;
   opponent = chosen;
-  names = mode === 'cpu' ? { [human]:'あなた', [other(human)]:opponent.type === 'model' ? '学習AI · 第'+opponent.generation+'世代' : '対戦AI' } as Record<Side,string> : { A:$<HTMLInputElement>('local-name-a').value.trim() || 'プレイヤー1', B:$<HTMLInputElement>('local-name-b').value.trim() || 'プレイヤー2' };
+  names = mode === 'cpu' ? { [human]:'あなた', [other(human)]:opponentName() } as Record<Side,string> : { A:$<HTMLInputElement>('local-name-a').value.trim() || 'プレイヤー1', B:$<HTMLInputElement>('local-name-b').value.trim() || 'プレイヤー2' };
   aiSeed = Math.floor(Math.random()*0x100000000);
   view = await engine.request<MatchView>({cmd:'new',rules:PLAY_RULES}); await loadOptions();
   setScreen('game'); effects.sound('start');
@@ -279,10 +317,24 @@ function renderPlayers():void {
   for (const side of ['A','B'] as Side[]) {
     const top = side !== perspective(), element = $(top ? 'player-top' : 'player-bottom');
     const committed = view.committed[sideIndex(side)], player = onlineState?.room.players[sideIndex(side)];
-    const status = outcome() ? '終局' : stageIndex !== null ? '公開済み' : animating ? '同時着手' : mode === 'online' && !player?.connected ? '接続待ち' : committed ? '着手済み' : mode === 'cpu' && side !== human ? '思考中' : '手を選択中';
-    element.classList.toggle('is-you',!top);
+    const status = outcome() ? '終局' : stageIndex !== null ? '公開済み' : animating ? '同時着手' : mode === 'online' && !player?.connected ? '接続待ち' : committed ? '着手済み' : mode === 'cpu' && side !== human ? '思考中' : mode === 'local' && side !== active ? '入力待ち' : '手を選択中';
+    element.classList.toggle('is-you',mode === 'local' ? side === active : !top);
     element.innerHTML = '<span class="player-avatar">'+(side === 'A' ? '王' : '玉')+'</span><strong class="player-name">'+escape(names[side])+'<span class="player-side">'+side+'陣営</span></strong><span class="player-status'+(committed ? ' ready' : '')+'"><i class="live-dot"></i>'+status+'</span>';
   }
+}
+function renderLocalControls():void {
+  $('local-controls').hidden = mode !== 'local';
+  $('game-screen').classList.toggle('is-local',mode === 'local');
+  if (mode !== 'local' || !view) return;
+  const finished = !!outcome();
+  for (const side of ['A','B'] as Side[]) {
+    const button = $<HTMLButtonElement>('local-side-'+side.toLowerCase());
+    const committed = view.committed[sideIndex(side)];
+    button.disabled = busy || animating || finished || stageIndex !== null || committed;
+    button.setAttribute('aria-pressed',String(side === active));
+    button.innerHTML = '<span>'+(side === 'A' ? '☗' : '☖')+' '+side+'陣営</span><small>'+(finished ? '終局' : animating ? '同時着手' : committed ? '着手済み' : side === active ? '入力中' : '未入力')+'</small>';
+  }
+  $('local-status').textContent = finished ? '対局が終了しました' : animating ? '双方の駒が同時に動きます' : view.committed.some(Boolean) ? active+'陣営の一手で、双方が同時に動きます' : '両陣営の一手が揃うと、同時に動きます';
 }
 function renderReplay():void {
   const resolution = currentResolution(); if (!view || !resolution || tab !== 'replay') return;
@@ -337,13 +389,13 @@ function renderConnection():void {
 function render():void {
   $('resume-online').hidden = !storage.get('shogi-room',true);
   renderModelSetup();
-  $<HTMLButtonElement>('start-game').disabled = busy || screen === 'setup' && usesModel() && (modelsLoading || !selectedModel());
+  $<HTMLButtonElement>('start-game').disabled = busy || screen === 'setup' && setupMode === 'cpu' && (usesModel() ? modelsLoading || !selectedModel() : externalLoading || !externalStatus?.available);
   $<HTMLButtonElement>('online-submit').disabled = busy;
   for (const id of ['mode-cpu','mode-local','mode-online','setup-back','online-back','home-nav','game-home','menu-open']) $<HTMLButtonElement>(id).disabled = busy || animating;
   if (screen === 'room') renderRoom();
   if (screen !== 'game' || !view) return;
-  $('context-label').textContent = mode === 'online' ? 'ルーム '+onlineCode : mode === 'cpu' ? 'AI対戦' : mode === 'local' ? 'ローカル対戦' : '棋譜の検討';
-  $('game-mode').textContent = mode === 'cpu' ? 'AI対戦 · '+opponent.label : mode === 'online' ? 'ルーム '+onlineCode : mode === 'local' ? 'ローカル対戦' : '棋譜の検討';
+  $('context-label').textContent = mode === 'online' ? 'ルーム '+onlineCode : mode === 'cpu' ? 'AI対戦' : mode === 'local' ? '1端末モード' : '棋譜の検討';
+  $('game-mode').textContent = mode === 'cpu' ? 'AI対戦 · '+opponent.label : mode === 'online' ? 'ルーム '+onlineCode : mode === 'local' ? '1端末モード' : '棋譜の検討';
   $('game-mode').title = $('game-mode').textContent ?? '';
   $('round-number').textContent = String(stageIndex !== null ? replayRound : outcome() ? view.round : view.round+1).padStart(2,'0');
   const reviewable = canReview();
@@ -354,10 +406,10 @@ function render():void {
   $('tab-replay').hidden = !reviewable;
   $('tab-game').classList.toggle('active',tab === 'game'); $('tab-replay').classList.toggle('active',tab === 'replay');
   $('tab-game').setAttribute('aria-pressed',String(tab === 'game')); $('tab-replay').setAttribute('aria-pressed',String(tab === 'replay'));
-  $<HTMLButtonElement>('tab-replay').disabled = !reviewable || busy || animating || !view.round || handoff;
-  $<HTMLButtonElement>('tab-game').disabled = busy || animating || handoff;
+  $<HTMLButtonElement>('tab-replay').disabled = !reviewable || busy || animating || !view.round;
+  $<HTMLButtonElement>('tab-game').disabled = busy || animating;
   $('history-panel').hidden = tab !== 'game'; $('replay-panel').hidden = tab !== 'replay';
-  $('history').innerHTML = history.length ? history.map(entry => '<button class="history-row'+(entry.round === replayRound && stageIndex !== null ? ' active' : '')+'" data-round="'+entry.round+'" aria-label="ラウンド '+entry.round+(reviewable ? ' を振り返る' : '')+'"'+(!reviewable || busy || animating || handoff ? ' disabled' : '')+'><span>'+String(entry.round).padStart(2,'0')+'</span>'+entry.labels.map(label => '<span>'+escape(label)+'</span>').join('')+'</button>').join('') : '<p class="empty-history">双方の一手が揃うと<br>ここに棋譜が残ります。</p>';
+  $('history').innerHTML = history.length ? history.map(entry => '<button class="history-row'+(entry.round === replayRound && stageIndex !== null ? ' active' : '')+'" data-round="'+entry.round+'" aria-label="ラウンド '+entry.round+(reviewable ? ' を振り返る' : '')+'"'+(!reviewable || busy || animating ? ' disabled' : '')+'><span>'+String(entry.round).padStart(2,'0')+'</span>'+entry.labels.map(label => '<span>'+escape(label)+'</span>').join('')+'</button>').join('') : '<p class="empty-history">双方の一手が揃うと<br>ここに棋譜が残ります。</p>';
   const meaningful = view.lastResolution?.events.filter(event => !['move','blocked','drop_wait'].includes(event.type)) ?? [];
   $('last-event').hidden = !meaningful.length;
   if (meaningful.length && view.lastResolution) $('last-event').textContent = eventText(meaningful.find(event => event.type === 'contact') ?? meaningful[meaningful.length-1],view.lastResolution);
@@ -368,19 +420,16 @@ function render():void {
   $('back-room').hidden = !finished || mode !== 'online';
   $('resign').hidden = finished || mode === 'replay';
   $('menu-resign').hidden = finished || mode === 'replay';
-  $<HTMLButtonElement>('resign').disabled = busy || animating || handoff;
+  $<HTMLButtonElement>('resign').disabled = busy || animating;
   $<HTMLButtonElement>('export').disabled = busy || animating;
   $<HTMLButtonElement>('import').disabled = busy || mode === 'online' || animating;
-  $('handoff').hidden = !handoff;
-  $('handoff-title').textContent = names[active]+'さんに交代';
-  $('handoff-ready').innerHTML = active+'陣営の入力を始める'+icon('chevron');
   const committed = view.committed[sideIndex(active)];
   const selectedId = selection && 'piece' in selection ? selection.piece : null;
   const selectedPiece = view.position.pieces.find(p => p.id === selectedId);
-  $('input-hint').textContent = finished ? '終局 · '+(outcome()!.winner === 'draw' ? '引き分け' : names[outcome()!.winner as Side]+'の勝利') : handoff ? '端末を交代してください' : stageIndex !== null ? '段階リプレイ · 公開済みの局面' : animating ? '双方の駒が同時に動きます' : committed ? '着手を封じました。相手の一手を待っています' : busy ? '処理中…' : pendingChoice ? '成り・昇格を選択' : selection ? (selectedPiece ? symbol(selectedPiece) : symbols[(selection as {kind:Kind}).kind])+'の移動先を選択' : '';
+  $('input-hint').textContent = finished ? '終局 · '+(outcome()!.winner === 'draw' ? '引き分け' : names[outcome()!.winner as Side]+'の勝利') : stageIndex !== null ? '段階リプレイ · 公開済みの局面' : animating ? '双方の駒が同時に動きます' : committed ? '着手を封じました。相手の一手を待っています' : busy ? '処理中…' : pendingChoice ? '成り・昇格を選択' : selection ? (selectedPiece ? symbol(selectedPiece) : symbols[(selection as {kind:Kind}).kind])+'の移動先を選択' : '';
   $('input-hint').parentElement!.classList.toggle('waiting',committed && !finished);
   $('clear-selection').hidden = !selection || busy || animating;
-  renderPlayers(); renderBoard(); renderReplay(); renderConnection();
+  renderLocalControls(); renderPlayers(); renderBoard(); renderReplay(); renderConnection();
 }
 async function animateRound(resolution:Resolution):Promise<void> {
   await ensureRoundStart(view!.round);
@@ -425,32 +474,31 @@ async function submitAction(action:Action):Promise<void> {
     const state = await net.request<OnlineState>('move',{round,gameId:onlineState!.room.gameId,action});
     await enqueueOnline(state); return;
   }
-  let modelAction:Action|undefined, publicReplay:Replay|undefined;
+  let aiAction:Action|undefined, publicReplay:Replay|undefined;
   if (mode === 'cpu') {
     const serial = gameSerial, stateHash = view.stateHash;
     publicReplay = await engine.request<Replay>({cmd:'export'});
-    const result = await savedModels.choose(opponent.id,publicReplay,other(human),aiSeed);
-    if (serial !== gameSerial || view.stateHash !== stateHash || result.round !== round || result.model !== opponent.id || result.generation !== opponent.generation || result.action.side !== other(human)) throw new Error('局面またはモデルが変わりました。もう一度着手してください。');
-    modelAction = result.action;
+    const result = await chooseOpponent(publicReplay,other(human),aiSeed);
+    if (serial !== gameSerial || view.stateHash !== stateHash || result.round !== round || result.action.side !== other(human)) throw new Error('局面または対戦AIが変わりました。もう一度着手してください。');
+    aiAction = result.action;
   }
   try {
     view = await engine.request<MatchView>({cmd:'submit',side:submittingSide,action});
     if (mode === 'cpu') {
-      if (!modelAction) throw new Error('学習モデルの着手を取得できませんでした。');
-      view = await engine.request<MatchView>({cmd:'submit',side:other(human),action:modelAction});
+      if (!aiAction) throw new Error('AIの着手を取得できませんでした。');
+      view = await engine.request<MatchView>({cmd:'submit',side:other(human),action:aiAction});
       aiSeed++;
     }
   } catch (error) {
     if (publicReplay) { view = await engine.request<MatchView>({cmd:'import',replay:publicReplay}); await loadOptions(); }
     throw error;
   }
+  if (mode === 'local') active = view.round > round ? 'A' : other(submittingSide);
   if (view.round > round && view.lastResolution) {
     rememberRound(view.lastResolution,view.round); await animateRound(view.lastResolution);
   }
-  if (mode === 'local') { active = other(submittingSide); handoff = !outcome(); }
   await loadOptions();
-  if (outcome()) { handoff = false; showResult(); }
-  else if (handoff) { render(); $('handoff-ready').focus({preventScroll:true}); }
+  if (outcome()) showResult();
 }
 async function openReplay(round:number,atEnd = false):Promise<void> {
   if (!view || !canReview() || round < 1 || round > view.round) return;
@@ -516,7 +564,7 @@ function requestHome():void {
   } else void run(goHome);
 }
 function requestResign():void {
-  if (busy || animating || handoff || outcome() || !view) return;
+  if (busy || animating || outcome() || !view) return;
   $<HTMLDialogElement>('menu-dialog').close();
   confirm('投了しますか？',names[active]+'さんの投了として、対局を終了します。','投了する',() => void run(async () => {
     if (mode === 'online') await enqueueOnline(await net.request<OnlineState>('resign',{gameId:onlineState!.room.gameId}));
@@ -612,6 +660,12 @@ $('mode-cpu').addEventListener('click',() => openSetup('cpu'));
 $('mode-local').addEventListener('click',() => openSetup('local'));
 $('mode-online').addEventListener('click',() => openOnline());
 $('refresh-models').addEventListener('click',() => void refreshModels());
+$('refresh-external').addEventListener('click',() => void refreshExternal());
+$('ai-type').addEventListener('change',() => {
+  hideError(); render();
+  if (usesExternal()) void refreshExternal();
+  else if (!modelsListed) void refreshModels();
+});
 $('model-run').addEventListener('change',() => { fillModelCheckpoints(); modelMessage = ''; render(); });
 $('model-checkpoint').addEventListener('change',() => { modelMessage = ''; render(); });
 for (const id of ['setup-back','online-back']) $(id).addEventListener('click',() => setScreen('home'));
@@ -687,10 +741,9 @@ $('board').addEventListener('pointerleave',() => {
     $('input-hint').textContent = (p ? symbol(p) : '持ち駒')+'の移動先を選択';
   }
 });
-$('handoff-ready').addEventListener('click',() => {
-  handoff = false; render();
-  const p = view?.position.pieces.find(piece => piece.side === active);
-  if (p) $('board').querySelector<HTMLButtonElement>('[data-x="'+p.at[0]+'"][data-y="'+p.at[1]+'"]')?.focus({preventScroll:true});
+for (const side of ['A','B'] as Side[]) $('local-side-'+side.toLowerCase()).addEventListener('click',() => {
+  if (mode !== 'local' || !canAct() || view!.committed[sideIndex(side)]) return;
+  void run(async () => { active = side; clearSelection(); await loadOptions(); });
 });
 $('skip-effects').addEventListener('click',() => effects.skip());
 $('tab-game').addEventListener('click',returnLive);
@@ -698,7 +751,7 @@ $('tab-replay').addEventListener('click',() => void run(() => openReplay(view?.r
 $('return-live').addEventListener('click',returnLive);
 $('history').addEventListener('click',event => {
   const row = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-round]');
-  if (row && canReview() && !animating && !handoff) void run(() => openReplay(Number(row.dataset.round)));
+  if (row && canReview() && !animating) void run(() => openReplay(Number(row.dataset.round)));
 });
 $('replay-round').addEventListener('change',() => {
   const round = Number($<HTMLSelectElement>('replay-round').value);
@@ -721,7 +774,7 @@ $('result-final').addEventListener('click',() => { hideResult(); returnLive(); $
 $('result-review').addEventListener('click',() => { hideResult(); void run(() => openReplay(1)); });
 $('continue-game').addEventListener('click',() => void run(async () => {
   opponent = await prepareOpponent(view?.rules);
-  mode = 'cpu'; human = 'A'; active = human; names = {A:'あなた',B:opponent.type === 'model' ? '学習AI · 第'+opponent.generation+'世代' : '対戦AI'}; aiSeed = Math.floor(Math.random()*0x100000000);
+  mode = 'cpu'; human = 'A'; active = human; names = {A:'あなた',B:opponentName()}; aiSeed = Math.floor(Math.random()*0x100000000);
   returnLive(); await loadOptions();
 }));
 $('export').addEventListener('click',() => { $<HTMLDialogElement>('menu-dialog').close(); void run(saveReplay); });
@@ -750,7 +803,7 @@ for (const key of ['sound','rank','motion'] as const) $(key+'-setting').addEvent
 });
 document.addEventListener('keydown',event => {
   if (document.querySelector('dialog[open]')) return;
-  const modal = !$('result-overlay').hidden ? $('result-overlay') : !$('clash-overlay').hidden ? $('clash-overlay') : handoff ? $('handoff') : pendingChoice ? $('choice-popover') : null;
+  const modal = !$('result-overlay').hidden ? $('result-overlay') : !$('clash-overlay').hidden ? $('clash-overlay') : pendingChoice ? $('choice-popover') : null;
   if (event.key === 'Tab' && modal) {
     const buttons = [...modal.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')]; if (!buttons.length) return;
     const index = buttons.indexOf(document.activeElement as HTMLButtonElement);

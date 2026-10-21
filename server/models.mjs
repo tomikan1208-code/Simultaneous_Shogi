@@ -22,15 +22,15 @@ function pythonPath() {
     .find(file => file && existsSync(file)) || (process.platform === 'win32' ? 'python' : 'python3');
 }
 
-class InferenceWorker {
-  constructor({ python = pythonPath(), timeoutMs = 120_000 } = {}) {
-    this.python = python; this.timeoutMs = timeoutMs;
+export class InferenceWorker {
+  constructor({ python = pythonPath(), timeoutMs = 120_000, module = 'server.model_worker', label = '学習モデル', dependencies = 'PyTorchとNumPy' } = {}) {
+    this.python = python; this.timeoutMs = timeoutMs; this.module = module; this.label = label; this.dependencies = dependencies;
     this.queue = Promise.resolve(); this.queued = 0; this.next = 0; this.closed = false;
   }
 
   start() {
     if (this.child) return this.child;
-    const child = spawn(this.python, ['-u', '-m', 'server.model_worker'], {
+    const child = spawn(this.python, ['-u', '-m', this.module], {
       cwd: root, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
     });
     this.child = child;
@@ -47,17 +47,17 @@ class InferenceWorker {
         if (response.ok) task.resolve(response.value);
         else task.reject(new HttpError(422, response.error));
       } catch {
-        this.fail(child, new HttpError(503, '学習モデルからの応答を読めませんでした。もう一度お試しください。'));
+        this.fail(child, new HttpError(503, `${this.label}からの応答を読めませんでした。もう一度お試しください。`));
         child.kill();
       }
     });
     child.stdin.on('error', () => {});
-    child.once('error', () => this.fail(child, new HttpError(503, '学習モデル用のPythonを起動できません。dashboard/setup-gpu.bat で環境を準備してください。')));
+    child.once('error', () => this.fail(child, new HttpError(503, `${this.label}用のPythonを起動できません。dashboard/setup-gpu.bat で環境を準備してください。`)));
     child.once('close', () => {
       lines.close();
       this.fail(child, new HttpError(503, /ModuleNotFoundError|No module named/.test(stderr)
-        ? '学習モデルにはPyTorchとNumPyが必要です。dashboard/setup-gpu.bat で環境を準備してください。'
-        : '学習モデルの推論が停止しました。モデルとPython環境を確認して、もう一度お試しください。'));
+        ? `${this.label}には${this.dependencies}が必要です。dashboard/setup-gpu.bat で環境を準備してください。`
+        : `${this.label}の処理が停止しました。AIとPython環境を確認して、もう一度お試しください。`));
     });
     return child;
   }
@@ -71,19 +71,19 @@ class InferenceWorker {
 
   request(input) {
     if (this.closed) return Promise.reject(new HttpError(503, 'サーバーを終了しています。'));
-    if (this.queued >= 4) return Promise.reject(new HttpError(429, '学習モデルが使用中です。少し待ってから再試行してください。'));
+    if (this.queued >= 4) return Promise.reject(new HttpError(429, `${this.label}が使用中です。少し待ってから再試行してください。`));
     this.queued++;
     const result = this.queue.then(() => {
       if (this.closed) throw new HttpError(503, 'サーバーを終了しています。');
       const child = this.start(), id = ++this.next;
       return new Promise((resolveResult, reject) => {
         const timer = setTimeout(() => {
-          this.fail(child, new HttpError(504, '学習モデルの処理がタイムアウトしました。もう一度お試しください。'));
+          this.fail(child, new HttpError(504, `${this.label}の処理がタイムアウトしました。もう一度お試しください。`));
           child.kill();
         }, this.timeoutMs);
         this.pending = { id, resolve: resolveResult, reject, timer };
         child.stdin.write(JSON.stringify({ ...input, id }) + '\n', error => {
-          if (error) this.fail(child, new HttpError(503, '学習モデルとの接続が切れました。もう一度お試しください。'));
+          if (error) this.fail(child, new HttpError(503, `${this.label}との接続が切れました。もう一度お試しください。`));
         });
       });
     });

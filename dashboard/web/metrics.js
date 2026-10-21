@@ -50,7 +50,8 @@ export function learningSnapshot(history, window = 10) {
   const latest = history.at(-1);
   if (!latest) return null;
   const signature = row => JSON.stringify(['games_per_generation', 'environments', 'candidates', 'cheap_candidates',
-    'batch_size', 'updates', 'learning_rate', 'bootstrap_weight', 'history_fraction', 'replay_capacity']
+    'batch_size', 'updates', 'learning_rate', 'bootstrap_weight', 'history_fraction', 'replay_capacity',
+    'external_ai_enabled', 'external_ai_fraction', 'external_ai_nodes']
     .map(key => row.config?.[key] ?? null));
   let first = history.length - 1;
   while (first > 0 && signature(history[first - 1]) === signature(latest)) first--;
@@ -72,3 +73,43 @@ export const artifactGeneration = name => {
   const match = /(?:^|\/)g(\d+)(?:[-./]|$)/.exec(name);
   return match ? Number(match[1]) : null;
 };
+
+export function externalRecords(history) {
+  return history.flatMap(row => [
+    ...(row.self_play?.external_ai?.games > 0 ? [{ ...row.self_play.external_ai, generation: row.generation, phase: 'training' }] : []),
+    ...(row.evaluation || []).filter(e => e.opponent === 'external_usi').map(e => ({ ...e, generation: row.generation, phase: 'evaluation' }))
+  ]);
+}
+
+export function externalSummary(history) {
+  const groups = new Map();
+  for (const record of externalRecords(history)) {
+    const opponentId = record.opponent_id || record.engine?.id || `legacy:${record.engine?.nodes ?? 'unknown'}`;
+    const key = `${record.phase}:${opponentId}`;
+    if (!groups.has(key)) groups.set(key, { phase: record.phase, opponentId, engine: record.engine,
+      games: 0, wins: 0, draws: 0, losses: 0, decisions: 0, usiActions: 0 });
+    const group = groups.get(key);
+    for (const field of ['games', 'wins', 'draws', 'losses']) group[field] += record[field] || 0;
+    group.decisions += record.adapter?.decisions || 0;
+    group.usiActions += record.adapter?.usi_actions || 0;
+    group.latestGeneration = record.generation;
+  }
+  return [...groups.values()].map(group => ({ ...group, winRate: ratio(group.wins, group.games),
+    score: ratio(group.wins + .5 * group.draws, group.games), coverage: ratio(group.usiActions, group.decisions) }));
+}
+
+export function externalSeries(history) {
+  const evaluations = externalRecords(history).filter(row => row.phase === 'evaluation');
+  const groups = new Map();
+  for (const row of evaluations) {
+    const id = row.opponent_id || row.engine?.id || `legacy:${row.engine?.nodes ?? 'unknown'}`;
+    if (!groups.has(id)) groups.set(id, { id, nodes: row.engine?.nodes, rows: [] });
+    groups.get(id).rows.push(row);
+  }
+  const colors = ['#111111', '#2563eb', '#0f766e', '#9a3412', '#7c3aed'];
+  return [...groups.values()].flatMap((group, i) => ['win_rate', 'score'].map(metric => ({
+    name: `${Number.isFinite(group.nodes) ? `${group.nodes.toLocaleString('ja-JP')}ノード` : '既存AI'} ${metric === 'win_rate' ? '勝率' : '得点率'}${groups.size > 1 ? ` (${group.id.slice(0, 6)})` : ''}`,
+    color: colors[i % colors.length], dashed: metric === 'score',
+    points: group.rows.map(row => ({ x: row.generation, y: metric === 'score' ? row.score : row.win_rate ?? ratio(row.wins, row.games) }))
+  })));
+}

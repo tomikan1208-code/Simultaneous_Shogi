@@ -611,6 +611,12 @@ fieldset {
   margin:12px 0 0;
   overflow-wrap:anywhere
 }
+.external-name {
+  margin:0;
+  color:var(--gold-light);
+  font-size:15px;
+  overflow-wrap:anywhere
+}
 #model-run,#model-checkpoint {
   min-width:0;
   text-overflow:ellipsis
@@ -1453,49 +1459,6 @@ input[type=range] {
   line-height:1.7;
   color:#91a18c;
   margin:9px 3px 0
-}
-.handoff {
-  position:absolute;
-  inset:-3px -8px 0;
-  z-index:9;
-  background:#1c2221f7;
-  backdrop-filter:blur(14px);
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
-  padding:25px;
-  border-radius:7px;
-  box-shadow:0 8px 35px #0004
-}
-.sealed-mark {
-  display:grid;
-  place-items:center;
-  width:73px;
-  height:84px;
-  font-size:46px;
-  font-family:var(--serif);
-  color:var(--gold);
-  border:1px solid #d9bb8244;
-  border-radius:10px;
-  margin-bottom:30px
-}
-.handoff .overline {
-  font-size:9px;
-  margin-bottom:16px
-}
-.handoff h2 {
-  font-size:22px;
-  line-height:1.5
-}
-.handoff>p:not(.overline) {
-  font-size:11px;
-  color:var(--muted);
-  margin:15px 0 28px
-}
-.handoff .primary {
-  font-size:12px
 }
 .dialog {
   color:var(--text);

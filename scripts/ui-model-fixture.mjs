@@ -11,10 +11,14 @@ export async function modelFixture() {
     return response.value;
   };
   const id = 'f'.repeat(24), rules = call({cmd:'new',rules:PLAY_RULES}).rules;
+  const external = 'e'.repeat(24);
   return (path, input) => {
+    if (path.endsWith('/external')) return {available:true,label:'やねうら王（Háo）',nodes:2000,reason:''};
+    if (path.endsWith('/external/load')) return {engine:external,name:'USI fixture',label:'やねうら王（Háo）',nodes:2000,rules};
     if (path.endsWith('/models')) return {runs:[{id:'fixture',name:'画面検証用モデル',source:'テスト',compatible:true,reason:'',checkpoints:[{id,generation:145,latest:true,champion:true}]}]};
     if (path.endsWith('/load')) return {model:id,generation:145,device:'cpu',rules};
     call({cmd:'import',replay:input.replay});
-    return {model:id,generation:145,device:'cpu',round:input.replay.rounds.length,action:call({cmd:'actions',side:input.side})[0].action};
+    const move = {round:input.replay.rounds.length,action:call({cmd:'actions',side:input.side})[0].action};
+    return path.endsWith('/external/move') ? {...move,engine:external,nodes:2000,source:'usi',reason:null} : {...move,model:id,generation:145,device:'cpu'};
   };
 }

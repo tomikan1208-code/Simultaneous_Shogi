@@ -139,6 +139,7 @@ class GameTracker:
             decision = dict(candidates=[[before["actions"][side][i] for i in search["selected"][side]] for side in range(2)],
                             strategies=search["strategies"], restricted_gap=search["gap"],
                             opponent_restricted_gap=search.get("opponent_gap"), historical_policy=search.get("history_policy"),
+                            external_policy=search.get('external_policy'),
                             coverage=search.get('coverage'), search_protocol=search.get('search_protocol','legacy-restricted-v1'),
                             sampling_strategies=search.get('sampling_strategies'), exploration_epsilon=search.get('exploration_epsilon',0.),
                             legal_action_counts=[len(a) for a in before["actions"]])

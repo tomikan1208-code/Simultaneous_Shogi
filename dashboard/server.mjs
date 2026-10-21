@@ -97,7 +97,8 @@ export async function createDashboard(options = {}) {
     return runtimePending || runtimeCache;
   }
   const editable = { generations: [0, 100000], games_per_generation: [2, 4096], environments: [1, 256], workers: [1, 32],
-    candidates: [2, 32], cheap_candidates: [2, 32], batch_size: [2, 4096], value_batch_size: [1, 4096], updates: [1, 4096], eval_pairs: [1, 512], eval_every: [1, 100000] };
+    candidates: [2, 32], cheap_candidates: [2, 32], batch_size: [2, 4096], value_batch_size: [1, 4096], updates: [1, 4096], eval_pairs: [1, 512], eval_every: [1, 100000],
+    external_ai_nodes: [1, 100000000], external_ai_eval_pairs: [1, 512] };
   function trainingConfig(input, base = settings.training) {
     if (!input || typeof input !== 'object' || Array.isArray(input)) throw new HttpError(400, '学習設定を確認してください。');
     const config = { ...defaults, ...base };
@@ -106,7 +107,8 @@ export async function createDashboard(options = {}) {
         const [lo, hi] = editable[key];
         if (!Number.isInteger(value) || value < lo || value > hi) throw new HttpError(400, `${key}: ${lo}〜${hi}の整数を指定してください。`);
       } else if (key === 'device') { if (!['cpu', 'cuda', 'auto'].includes(value)) throw new HttpError(400, '実行デバイスを確認してください。'); }
-      else if (key === 'amp') { if (typeof value !== 'boolean') throw new HttpError(400, '混合精度の設定を確認してください。'); }
+      else if (['amp', 'external_ai_enabled', 'external_ai_save_teacher'].includes(key)) { if (typeof value !== 'boolean') throw new HttpError(400, '有効・無効の設定を確認してください。'); }
+      else if (key === 'external_ai_fraction') { if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) throw new HttpError(400, '既存AIの対局割合は0〜100%で指定してください。'); }
       else throw new HttpError(400, `変更できない設定です: ${key}`);
       config[key] = value;
     }
@@ -116,13 +118,63 @@ export async function createDashboard(options = {}) {
   function continuationConfig(run, device = settings.training.device) {
     // Apply only the controls exposed by the settings panel. Rules, network shape,
     // replay policy and the removed bootstrap opponents belong to the saved run.
-    const values = Object.fromEntries([...Object.keys(editable), 'amp'].map(key => [key, settings.training[key]]));
+    const values = Object.fromEntries([...Object.keys(editable), 'amp', 'external_ai_enabled', 'external_ai_fraction', 'external_ai_save_teacher'].map(key => [key, settings.training[key]]));
     return trainingConfig({ ...values, device }, run.manifest.config);
   }
   async function checkDevice(device) {
     const info = await runtime();
     if (!info.ready) throw new HttpError(409, '学習環境を確認してください。dashboard/setup-gpu.bat でセットアップできます。');
     if (device === 'cuda' && !info.cuda_available) throw new HttpError(409, 'GPUを使用できません。dashboard/setup-gpu.bat を実行するか、設定でCPUを選択してください。');
+  }
+  function externalAvailability(config = settings.training) {
+    const command = config.external_ai_command || [];
+    const executable = command[0] || join(root, '.cache/external-shogi/yaneuraou/NNUE_halfkp_256x2_32_32/YaneuraOu_NNUE_halfkp_256x2_32_32-V900Git_AVX2.exe');
+    const weights = config.external_ai_weights || (!command.length ? join(root, '.cache/external-shogi/tanuki/eval/nn.bin') : null);
+    return { available: existsSync(executable) && (!weights || existsSync(weights)), nodes: config.external_ai_nodes ?? 2000 };
+  }
+  function checkExternal(config) {
+    if (config.external_ai_enabled && !externalAvailability(config).available) throw new HttpError(409, '既存AIの準備が必要です。scripts/setup-external-shogi.ps1 を実行するか、設定で既存AIとの対戦を無効にしてください。');
+  }
+  let datasetCache = [], datasetMap = new Map(), datasetSignature = '', datasetAt = 0;
+  async function teacherDatasets(force = false) {
+    const signature = [...knownRuns.values()].map(run => `${run.id}:${run.manifest.generation}`).join('|');
+    if (!force && signature === datasetSignature && Date.now() - datasetAt < 10000) return datasetCache;
+    const found = new Map();
+    async function add(path, metadata, label, run = null) {
+      if (!(metadata.decisions > 0) || !metadata.rules_hash) return;
+      const canonical = await realpath(path).catch(() => null);
+      if (!canonical || !(run ? within(run.dir, canonical) : within(join(root, '.cache/external-shogi/experiments'), canonical))) return;
+      const info = await stat(canonical);
+      const id = createHash('sha256').update(canonical).digest('hex').slice(0, 24);
+      found.set(id, { id, path: canonical, metadata, name: label, run: run?.id,
+        generation: metadata.generation ?? metadata.model?.generation ?? null, phase: metadata.phase || 'experiment',
+        rules_hash: metadata.rules_hash, games: metadata.games, decisions: metadata.decisions,
+        nodes: metadata.engine?.nodes ?? metadata.nodes_per_query ?? null, updated: info.mtimeMs / 1000 });
+    }
+    for (const run of knownRuns.values()) {
+      for (const path of (await filesUnder(run.dir, 4)).filter(p => p.endsWith('-teacher.json'))) {
+        const relativeName = relative(run.dir, path).split(sep).join('/');
+        if (!committed(relativeName, run.manifest.generation)) continue;
+        const summary = await readJSON(path);
+        if (summary?.format !== 'simultaneous-shogi/usi-dataset-v1' || !summary.complete ||
+            !/^[\w.-]+\.jsonl\.gz$/.test(summary.file || '') || summary.file.includes('..')) continue;
+        await add(join(dirname(path), summary.file), summary,
+          `${run.manifest.name} · G${summary.generation} ${summary.phase === 'training' ? '自己対戦' : '定期評価'}`, run);
+      }
+    }
+    const experimentsRoot = join(root, '.cache/external-shogi/experiments');
+    for (const entry of await readdir(experimentsRoot, { withFileTypes: true }).catch(() => [])) {
+      if (!entry.isDirectory() || entry.isSymbolicLink()) continue;
+      const directory = join(experimentsRoot, entry.name), environment = await readJSON(join(directory, 'environment.json'));
+      const result = await readJSON(join(directory, 'result.json'));
+      if (!environment || !result) continue;
+      await add(join(directory, 'teacher.jsonl'), { ...environment, games: result.games, decisions: result.adapter?.usi_actions },
+        `保存済み外部AI対局 · ${entry.name}`);
+    }
+    datasetMap = found;
+    datasetCache = [...found.values()].sort((a, b) => b.updated - a.updated).map(({ path, metadata, ...item }) => item);
+    datasetSignature = signature; datasetAt = Date.now();
+    return datasetCache;
   }
   let fingerprintCache = null, fingerprintAt = 0;
   const currentFingerprint = async () => {
@@ -218,7 +270,7 @@ export async function createDashboard(options = {}) {
       warm_start: run.manifest.parent?.kind === 'weights_only' ? {generation:run.manifest.parent.generation,
         run:[...knownRuns.values()].find(parent=>parent.dir===run.manifest.parent.run)?.id,
         different_rules:run.manifest.parent.rules_hash!==run.manifest.rules_hash} : null,
-      resume_config: continuationConfig(run), artifacts: [...index.keys()].sort().reverse(), source_snapshot: existsSync(join(run.dir, 'source.zip')), local_evaluations: await Promise.all([...index.keys()].filter(n => /^local-evaluations\/[^/]+\/[^/]+\.json$/.test(n) && !n.includes('replay') && !n.endsWith('environment.json')).slice(0, 20).map(n => readJSON(index.get(n).path))) };
+      resume_config: continuationConfig(run), artifacts: [...index.keys()].sort().reverse(), source_snapshot: existsSync(join(run.dir, 'source.zip')), local_evaluations: await Promise.all([...index.keys()].filter(n => /^local-evaluations\/[^/]+\/[^/]+\.json$/.test(n) && !n.includes('replay') && !n.includes('teacher') && !n.endsWith('environment.json')).slice(0, 20).map(n => readJSON(index.get(n).path))) };
   }
   function startJob(kind, command, args, run = null, onSuccess = null) {
     if (job) throw new HttpError(409, '別の処理を実行中です。完了か停止を待ってください。');
@@ -263,6 +315,7 @@ export async function createDashboard(options = {}) {
           const selected = runs.find(r => r.id === url.searchParams.get('run')) || runs[0];
           json(res, 200, { runs: runs.map(r => ({ id: r.id, name: r.manifest.name, source: r.source, generation: r.manifest.generation, rules_hash: r.manifest.rules_hash, compatible: r.compatible, phase: r.status.phase, round_limit: r.manifest.rules.roundLimit })),
             selected: selected ? await details(selected) : null, settings, warnings, experiments: await experiments(),
+            teacher_datasets: await teacherDatasets(), external_ai: externalAvailability(),
             source_fingerprint: await currentFingerprint(), job: job ? { kind: job.kind, started: job.started, run: job.run?.id, device: job.device } : null,
             last_job: lastJob, logs, rules_version: (await readFile(join(root, 'crates/shogi-core/src/types.rs'), 'utf8')).match(/pub const RULE_VERSION: &str = "([^"]+)"/)?.[1], benchmark: await readJSON(join(runRoot, 'action-benchmark.json')) }); return;
         }
@@ -389,6 +442,7 @@ export async function createDashboard(options = {}) {
         if (input.mode !== 'local') throw new HttpError(400, '学習モードを確認してください。');
         const config = trainingConfig(input.training ?? {});
         await checkDevice(config.device);
+        checkExternal(config);
         if (job || closing) throw new HttpError(409, '別の処理を実行中、または終了処理中です。');
         const dir = join(runRoot, `local-${config.device}-${Date.now()}`), path = join(cache, `train-${randomUUID()}.json`);
         await writeFile(path, JSON.stringify(config));
@@ -409,7 +463,7 @@ export async function createDashboard(options = {}) {
       }
       if (path === '/api/stop') {
         if (!job) throw new HttpError(409, 'ローカル処理は実行されていません。');
-        if (['training', 'experiment'].includes(job.kind)) { await mkdir(job.run.dir, { recursive: true }); await writeFile(join(job.run.dir, 'STOP'), 'requested from local dashboard'); }
+        if (['training', 'experiment', 'distillation'].includes(job.kind)) { await mkdir(job.run.dir, { recursive: true }); await writeFile(join(job.run.dir, 'STOP'), 'requested from local dashboard'); }
         else job.child.kill();
         json(res, 200, { stopping: true }); return;
       }
@@ -421,13 +475,46 @@ export async function createDashboard(options = {}) {
           await writeFile(join(runRoot, 'action-benchmark.json'), JSON.stringify(value, null, 2));
         })); return;
       }
+      if (path === '/api/external/setup') {
+        if (job) throw new HttpError(409, '学習・評価を停止してから既存AIを準備してください。');
+        if (process.platform !== 'win32') throw new HttpError(400, '自動準備はWindows向けです。実行環境に対応したUSIエンジンを設定してください。');
+        json(res, 202, startJob('external_setup', 'powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass',
+          '-File', join(root, 'scripts/setup-external-shogi.ps1')])); return;
+      }
+      if (path === '/api/distill') {
+        if (job) throw new HttpError(409, '学習・評価を停止してから蒸留を実行してください。');
+        const source = await select(input.run);
+        await teacherDatasets(true);
+        const dataset = datasetMap.get(input.dataset);
+        if (!dataset) throw new HttpError(400, '完了した対局の教師データを選択してください。');
+        if (dataset.rules_hash !== source.manifest.rules_hash) throw new HttpError(409, '教師データと引き継ぐモデルのルールが異なります。');
+        const updates = input.updates ?? 32, device = input.device ?? 'cpu';
+        const checkpoint = input.checkpoint ?? 'latest';
+        if (!Number.isInteger(updates) || updates < 1 || updates > 4096 || !['cpu', 'cuda'].includes(device) ||
+            checkpoint !== 'latest' && (!Number.isInteger(checkpoint) || checkpoint < 0 || checkpoint > source.manifest.generation)) throw new HttpError(400, '更新回数・実行先・世代を確認してください。');
+        await checkDevice(device);
+        if (job || closing) throw new HttpError(409, '別の処理を実行中です。');
+        const directory = join(runRoot, `distilled-${Date.now()}`), configPath = join(cache, `distill-${randomUUID()}.json`);
+        await writeFile(configPath, JSON.stringify(continuationConfig(source, device)));
+        json(res, 202, startJob('distillation', python(), ['-m', 'training.distill', '--data', dataset.path,
+          '--init-from', source.dir, '--checkpoint', String(checkpoint), '--updates', String(updates),
+          '--device', device, '--config', configPath, '--output', directory], { dir: directory }));
+        job.device = device; return;
+      }
       if (['/api/evaluate', '/api/probe', '/api/resume'].includes(path)) {
         if (job) throw new HttpError(409, '別のローカル処理を実行中です。');
         const run = await select(input.run);
         if (path !== '/api/resume' && !run.compatible) throw new HttpError(409, '学習時とソースが異なります。同じソース一式を使用してください。');
         if (path === '/api/evaluate') {
-          if (!['adapted_self','recent_checkpoint','hunter', 'defense', 'upgrade', 'random', 'champion'].includes(input.opponent) || !Number.isInteger(input.pairs) || input.pairs < 1 || input.pairs > 512) throw new HttpError(400, '対戦相手・評価ペア数を確認してください。');
-          json(res, 202, startJob('evaluation', python(), ['-m', 'training.evaluate', '--run-dir', run.dir, '--opponent', input.opponent, '--pairs', String(input.pairs), '--device', 'cpu'], run)); return;
+          if (!['adapted_self','recent_checkpoint','external_usi','hunter', 'defense', 'upgrade', 'random', 'champion'].includes(input.opponent) || !Number.isInteger(input.pairs) || input.pairs < 1 || input.pairs > 512) throw new HttpError(400, '対戦相手・評価ペア数を確認してください。');
+          const args = ['-m', 'training.evaluate', '--run-dir', run.dir, '--opponent', input.opponent, '--pairs', String(input.pairs), '--device', 'cpu'];
+          if (input.opponent === 'external_usi') {
+            const nodes = input.nodes ?? settings.training.external_ai_nodes;
+            if (!Number.isInteger(nodes) || nodes < 1 || nodes > 100000000) throw new HttpError(400, '既存AIのノード数を確認してください。');
+            checkExternal({ ...run.manifest.config, external_ai_enabled: true });
+            args.push('--nodes', String(nodes));
+          }
+          json(res, 202, startJob('evaluation', python(), args, run)); return;
         }
         if (path === '/api/probe') {
           const file = await artifact(run, String(input.file || ''));
@@ -442,12 +529,14 @@ export async function createDashboard(options = {}) {
         const target=input.until_generation ?? 0;
         if (!Number.isInteger(target) || target<0 || target>100000 || target>0 && target<=run.manifest.generation) throw new HttpError(400,'停止する世代は現在の世代より大きい値か0を指定してください。');
         const nextConfig = continuationConfig(run, device);
+        checkExternal(nextConfig);
         if (nextConfig.generations && nextConfig.generations <= run.manifest.generation) throw new HttpError(400, '設定の世代数を現在の世代より大きい値か0（無制限）に変更してください。');
         if (target && nextConfig.generations && target > nextConfig.generations) throw new HttpError(400, '停止世代が設定の世代数を超えています。学習設定を確認してください。');
         const config = join(cache, `resume-${randomUUID()}.json`);
         await writeFile(config, JSON.stringify(nextConfig));
         const finished=run.manifest.config.generations>0 && run.manifest.generation>=run.manifest.config.generations;
-        const changed = [...Object.keys(editable), 'device', 'amp'].some(key => nextConfig[key] !== run.manifest.config[key]);
+        const changed = [...Object.keys(editable), 'device', 'amp', 'external_ai_enabled', 'external_ai_fraction', 'external_ai_save_teacher']
+          .some(key => nextConfig[key] !== (run.manifest.config[key] ?? defaults[key]));
         let args,activeRun=run;
         if (finished || !run.compatible && changed) {
           if (run.manifest.schema !== 'simultaneous-shogi/net-v2-62x24') throw new HttpError(409, 'この旧形式は「ルール比較」から重みを引き継いでください。');
@@ -467,7 +556,7 @@ export async function createDashboard(options = {}) {
     closing = true;
     if (job) {
       const child = job.child;
-      if (['training', 'experiment'].includes(job.kind)) { await mkdir(job.run.dir, { recursive: true }); await writeFile(join(job.run.dir, 'STOP'), 'dashboard closed'); }
+      if (['training', 'experiment', 'distillation'].includes(job.kind)) { await mkdir(job.run.dir, { recursive: true }); await writeFile(join(job.run.dir, 'STOP'), 'dashboard closed'); }
       else child.kill();
       // The trainer owns persistent native workers: wait for its cleanup before exiting.
       if (child.exitCode === null) await new Promise(done => child.once('close', done));

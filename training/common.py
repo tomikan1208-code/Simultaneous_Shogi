@@ -95,6 +95,8 @@ def load_config(path=None, overrides=None):
     validate_balance(config.get("balance"))
     if type(config.get("balance_logging", False)) is not bool:
         raise ValueError("balance_logging must be boolean")
+    from .external import validate_external_config
+    validate_external_config(config)
     return config
 
 

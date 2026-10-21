@@ -42,7 +42,12 @@ echo [BUILD] Updating the game...
 call npm.cmd run build
 if errorlevel 1 goto failed
 
+echo [SETUP] Checking Windows Firewall permissions for the game...
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\ensure-firewall.ps1"
+if errorlevel 1 goto failed
+
 echo [START] Starting the game and online match server. Press Ctrl+C to stop.
+echo [INFO] Direct connections use this PC. Router permissions are configured separately.
 node "scripts\serve.mjs" %*
 if errorlevel 1 goto failed
 popd

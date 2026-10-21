@@ -16,7 +16,9 @@ await new Promise(resolveReady => app.server.listen(0, '127.0.0.1', resolveReady
 const base = `http://127.0.0.1:${app.server.address().port}`;
 const python = process.platform === 'win32' ? join(root, '.venv/Scripts/python.exe') : join(root, '.venv/bin/python');
 async function api(path, input) {
-  const response = await fetch(base + path, input === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(input) });
+  // Synchronous Python fixtures block this shared server/client event loop;
+  // do not reuse an idle connection across those long fixture builds.
+  const response = await fetch(base + path, input === undefined ? { headers: { Connection: 'close' } } : { method: 'POST', headers: { 'Content-Type': 'application/json', Connection: 'close' }, body: JSON.stringify(input) });
   return { status: response.status, data: await response.json() };
 }
 async function until(check, label, timeout = 90000) {

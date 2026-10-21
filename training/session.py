@@ -7,6 +7,10 @@ RESUMABLE_SETTINGS = frozenset({
     'generations', 'games_per_generation', 'environments', 'workers',
     'candidates', 'cheap_candidates', 'batch_size', 'value_batch_size',
     'updates', 'eval_pairs', 'eval_every', 'device', 'amp',
+    'external_ai_enabled', 'external_ai_fraction', 'external_ai_nodes',
+    'external_ai_eval_pairs', 'external_ai_command', 'external_ai_options',
+    'external_ai_weights', 'external_ai_timeout',
+    'external_ai_save_teacher',
 })
 
 

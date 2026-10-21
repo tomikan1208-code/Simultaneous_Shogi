@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { chromium, expect } from '@playwright/test';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { createApplication } from '../server/app.mjs';
@@ -95,6 +95,34 @@ try {
   for (const width of [320, 360, 720, 1024]) { await a.setViewportSize({width,height:800}); await fit(a, 'home '+width); }
   await a.setViewportSize({width:1280,height:900});
   await b.goto(standard); await fit(b, 'mobile home'); await shot(b, 'home-mobile');
+  for (const [page,device] of [[a,'desktop'],[b,'mobile']]) {
+    await page.locator('#mode-cpu').click();
+    await expect(page.locator('#trained-options')).toBeVisible();
+    await page.locator('#ai-type').selectOption('external');
+    await expect(page.locator('#external-options')).toBeVisible();
+    await expect(page.locator('#trained-options')).toBeHidden();
+    await expect(page.locator('#external-status')).toContainText('2,000ノード');
+    await expect(page.locator('#start-game')).toBeEnabled();
+    await fit(page,device+' external setup'); await shot(page,'external-setup-'+device);
+    await page.locator('#start-game').click(); await ready(page);
+    await expect(page.locator('#game-mode')).toContainText('やねうら王');
+    await expect(page.locator('#player-top')).toContainText('やねうら王');
+    await cell(page,7,7).click(); await cell(page,7,6).click();
+    await expect(page.locator('#round-number')).toHaveText('02'); await ready(page);
+    await expect(page.locator('#error')).toBeHidden(); await fit(page,device+' external game');
+    await shot(page,'external-game-'+device);
+    await page.locator('#resign').click(); await page.locator('#confirm-accept').click();
+    await expect(page.locator('#result-overlay')).toBeVisible(); await ready(page);
+    await page.locator('#result-rematch').click(); await ready(page);
+    await expect(page.locator('#round-number')).toHaveText('01');
+    await expect(page.locator('#game-mode')).toContainText('やねうら王');
+    await page.locator('#game-home').click(); await page.locator('#confirm-accept').click();
+    await expect(page.locator('#home-screen')).toBeVisible();
+    await page.locator('#mode-cpu').click(); await page.locator('#ai-type').selectOption('model');
+    await expect(page.locator('#trained-options')).toBeVisible();
+    await page.locator('#setup-back').click();
+    await page.reload(); await expect(page.locator('#home-screen')).toBeVisible();
+  }
   await a.locator('#mode-cpu').click(); await a.locator('#start-game').click(); await ready(a);
   await expect(a.locator('#board .piece')).toHaveCount(40); await fit(a, 'desktop game'); await checkArena(a,'desktop game'); await shot(a, 'game-desktop');
   for (const width of [320, 360, 720, 721, 900, 1024, 1100, 1101]) { await a.setViewportSize({width,height:800}); await fit(a, 'game '+width); await checkArena(a,'game '+width); }
@@ -163,6 +191,54 @@ try {
   await a.locator('#show-result').click(); await a.locator('#result-rematch').click(); await ready(a); await expect(a.locator('#board .piece')).toHaveCount(40);
   await importReplay(a, fixtures.draw); await a.locator('#show-result').click(); await expect(a.locator('#result-title')).toHaveText('引き分け'); await shot(a, 'draw-desktop'); await a.locator('#result-final').click();
 
+  for (const [page,device] of [[a,'desktop'],[b,'mobile']]) {
+    await page.goto(standard);
+    await page.locator('#mode-local').click();
+    await expect(page.locator('#setup-title')).toHaveText('1端末モード');
+    await page.locator('#local-name-a').fill('棋士 あお');await page.locator('#local-name-b').fill('棋士 あか');
+    await fit(page,device+' one-device setup');await shot(page,'one-device-setup-'+device);
+    await page.locator('#start-game').click();await ready(page);
+    await expect(page.locator('#local-controls')).toBeVisible();await expect(page.locator('#handoff')).toHaveCount(0);
+    const files=await page.locator('#files').textContent();
+    for (const viewport of device==='desktop' ? [{width:1101,height:800},{width:1280,height:600},{width:1920,height:1080},{width:1280,height:900}] : [{width:320,height:844},{width:360,height:844},{width:390,height:844}]) {
+      await page.setViewportSize(viewport);await fit(page,device+' one-device '+viewport.width);
+      const layout=await page.evaluate(()=>({board:document.querySelector('.board-surround').getBoundingClientRect().bottom,height:innerHeight}));
+      if (viewport.width>1100) assert.ok(layout.board<=layout.height+1,'one-device toolbar and board fit in the desktop viewport');
+    }
+    await shot(page,'one-device-game-'+device);
+    await page.locator('#local-side-b').click();await ready(page);
+    await cell(page,3,3).click();await cell(page,3,4).click();await ready(page);
+    await expect(page.locator('#local-side-b')).toBeDisabled();await expect(page.locator('#local-side-a')).toHaveAttribute('aria-pressed','true');
+    await expect(cell(page,3,3).locator('.piece')).toHaveCount(1);await expect(page.locator('.history-row')).toHaveCount(0);
+    await expect(page.locator('#files')).toHaveText(files);await shot(page,'one-device-sealed-'+device);
+    await cell(page,7,7).click();await cell(page,7,6).click();await ready(page);
+    await expect(page.locator('#round-number')).toHaveText('02');await expect(page.locator('.history-row')).toHaveCount(1);
+    for (const [fromA,toA,fromB,toB] of [[[7,6],[7,5],[3,4],[3,5]],[[7,5],[7,4],[3,5],[3,6]]]) {
+      await cell(page,...fromA).click();await cell(page,...toA).click();await ready(page);
+      await cell(page,...fromB).click();await cell(page,...toB).click();await ready(page);
+    }
+    await cell(page,7,4).click();await cell(page,7,3).click();await expect(page.locator('#choice-popover')).toBeVisible();
+    await shot(page,'one-device-promotion-'+device);await page.locator('[data-choice="promote"]').click();await ready(page);
+    await cell(page,3,6).click();await cell(page,3,7).click();await page.locator('[data-choice="upgrade"]').click();await ready(page);
+    await expect(cell(page,7,3).locator('.piece.promoted')).toHaveCount(1);await expect(cell(page,3,7).locator('.piece.upgraded')).toHaveCount(1);
+    await page.locator('#hand-bottom [data-kind="P"]').click();await cell(page,3,5).click();await ready(page);
+    await page.locator('#hand-top [data-kind="P"]').click();await cell(page,7,5).click();await ready(page);
+    await expect(page.locator('#round-number')).toHaveText('06');await expect(page.locator('#files')).toHaveText(files);
+    await expect(page.locator('.hand-piece')).toHaveCount(0);await expect(page.locator('#error')).toBeHidden();
+    await fit(page,device+' one-device after both drops');await shot(page,'one-device-played-'+device);
+    await page.locator('#menu-open').click();
+    const saved=page.waitForEvent('download');await page.locator('#export').click();
+    const replay=JSON.parse(await readFile(await (await saved).path(),'utf8'));
+    assert.equal(replay.rounds.length,5);assert.deepEqual(replay.rounds.at(-1).actions.map(action=>action.type),['drop','drop']);
+    await page.locator('#resign').click();await page.locator('#confirm-accept').click();
+    await expect(page.locator('#result-title')).toHaveText('B陣営の勝利');await shot(page,'one-device-result-'+device);
+    await page.locator('#result-review').click();await ready(page);await expect(page.locator('#stage-label')).toHaveText('開始局面');
+    await page.locator('#show-result').click();await page.locator('#result-rematch').click();await ready(page);
+    await expect(page.locator('#round-number')).toHaveText('01');await expect(page.locator('#board .piece')).toHaveCount(40);
+    await expect(page.locator('#local-side-a')).toBeEnabled();await expect(page.locator('#local-side-b')).toBeEnabled();
+    await expect(page.locator('.history-row')).toHaveCount(0);
+  }
+
   const online = await server('online', { initialPosition: fixtures.collision.initial, graceMs: 45_000 });
   await a.goto(online); await b.goto(online);
   await a.locator('#mode-online').click(); await a.locator('#player-name').fill('棋士 あお'); await a.locator('#online-submit').click();
@@ -195,7 +271,7 @@ try {
   await expect(a.locator('#result-detail')).toHaveText('対戦相手が退出しました');
   await a.locator('#result-rematch').click(); await expect(a.locator('#room-players')).toContainText('対戦相手を待つ');
   assert.deepEqual(errors, [], 'browser errors');
-  console.log('Browser integration passed in isolated desktop and mobile Chromium contexts: board/hand aspect ratios, wide racks, bounded long records and persistent hide toggle, right-side menu, actual WAV placement/clash playback and mute, post-game-only review, actual WASM, immediate moves, promotion colors/choices, all results, AI rematch, real room/create/join/ready, secret commitment/reload, collision presentation, network recovery, online rematch and leave. Screenshots: artifacts/screenshots.');
+  console.log('Browser integration passed in isolated desktop and mobile Chromium contexts: board/hand aspect ratios, wide racks, bounded long records and persistent hide toggle, right-side menu, actual WAV placement/clash playback and mute, post-game-only review, actual WASM, immediate moves, promotion colors/choices, all results, AI rematch, one-device fixed perspective and B-first input, both hand trays and saved replay, one-device results/review/rematch, real room/create/join/ready, secret commitment/reload, collision presentation, network recovery, online rematch and leave. Screenshots: artifacts/screenshots.');
 } catch (error) {
   if (browser) for (const [i, context] of browser.contexts().entries()) for (const [j, page] of context.pages().entries()) await shot(page, `failure-${i}-${j}`).catch(() => {});
   throw error;

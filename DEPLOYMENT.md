@@ -4,7 +4,7 @@
 
 ## ローカル・同じネットワークで遊ぶ
 
-Windowsではルートの `start-server.bat` をダブルクリックする。ゲーム画面も自動で開く場合は `start-game.bat`。両方とも同じゲーム・オンライン対戦サーバーを起動するので、どちらか一方を使う。必要なnpm依存とWASMターゲットを取得し、毎回ビルドしてから起動する。Node.js 20以上・npm・Rust（rustup）が必要で、初回の依存取得にはインターネット接続を使う。停止は起動コンソールで `Ctrl+C`。
+Windowsでは `start-server.bat` をダブルクリックする。ゲーム画面も自動で開く場合は `start-game.bat`。両方とも同じゲーム・オンライン対戦サーバーを起動するので、どちらか一方を使う。必要なnpm依存とWASMターゲットを取得し、毎回ビルドしてから起動する。Node.js 20以上・npm・Rust（rustup）が必要で、初回の依存取得にはインターネット接続を使う。停止は起動コンソールで `Ctrl+C`。
 
 コマンドから手動で起動する場合：
 
@@ -14,10 +14,10 @@ npm run build
 npm start
 ```
 
-既定は `0.0.0.0:5173`。起動したPCでは [http://localhost:5173](http://localhost:5173)、別端末ではそのPCのLANアドレスとポートを開く。LANからそのポートに接続可能な環境が必要。ホスト・ポートは次のように設定できる。
+既定は `[::]:5173` でIPv4・IPv6を受け付ける。IPv6を利用できない環境ではIPv4（`0.0.0.0`）に切り替える。コンソールにPC内URLと検出したLAN内URLを表示する。起動したPCでは [http://localhost:5173](http://localhost:5173)、別端末では表示されたLAN内URLを開く。LANからそのポートに接続可能な環境が必要。ホスト・ポートは次のように設定できる。
 
 ```powershell
-$env:HOST = '0.0.0.0'
+$env:HOST = '::'
 $env:PORT = '8080'
 $env:DATA_DIR = 'C:/path/to/private-shogi-data/rooms'
 npm start
@@ -29,9 +29,26 @@ npm start
 
 ## インターネット経由で遊ぶ
 
-インターネットから到達できるサーバーへこのアプリを置く。ブラウザーだけを静的ホスティングしてもオンライン対戦は動作しない。画面・WASM・API・SSEを同じオリジンから配信する。
+`start-server.bat` はゲーム画面・API・対局状況のリアルタイム通知（SSE）をこのPCから直接配信する。共有用のIPアドレスはPCのネットワーク設定と環境変数から取得する。
 
-Node.js 20以上でビルド済みの `web/dist`、`server`、`scripts/serve.mjs` を配置すれば起動できる。実行時の npm ランタイム依存はなく、サーバーも同じWASMを実行する。Rustはビルド時だけ必要。
+BATは起動前に `scripts/ensure-firewall.ps1` でWindowsの受信許可を確認する。設定が必要な場合はWindowsの管理者確認（UAC）を表示し、実際に使用する `node.exe` とゲーム用TCPポートだけを対象とする規則を追加する。IPv4・IPv6の両方に適用し、規則名は `SimultaneousShogi-Game-TCP-5173`（`PORT` を変更した場合はその番号）となる。設定済みの規則が有効なら管理者確認を繰り返さない。UACをキャンセルするなどして許可できなかった場合は、理由を表示して起動を中止する。`HOST=127.0.0.1` / `::1` / `localhost` または `PORT=0` の場合は自動設定を省略する。`npm start` で直接起動する場合は、先に `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/ensure-firewall.ps1` を実行できる。
+
+グローバルIPv6アドレスがあるPCでは、起動時に **「インターネット (直接接続): http://[IPv6アドレス]:5173/」** を表示する。ルーターのIPv6ファイアウォールで、このPC宛てのゲーム用TCPポートの受信を許可する。相手もIPv6を利用できれば、このURLを直接開ける。リンクローカル・プライベート・ループバックのIPv6は共有用URLに含めない。IPv6アドレスが変わったら、サーバーを起動し直して新しいURLを確認する。
+
+IPv4の場合は、ルーターのWAN側のグローバルIPv4を確認し、外部TCPポートを起動時のLANアドレスのTCP 5173番へ転送する。共有IPv4など、回線側で外部から着信できない構成では、ルーターの設定だけでは公開できない。
+
+IPv4の外部IPはこのサーバーでは自動取得しないため、共有用URLを `PUBLIC_URL` で指定する。次は例示用のIPなので、実際のWANアドレスへ置き換える。外部ポートがサーバーのポートと異なる場合は、外部ポートをURLに含める。
+
+```powershell
+$env:PUBLIC_URL = 'http://203.0.113.10:5173/'
+.\start-server.bat
+```
+
+指定したURLもコンソールに表示する。双方が同じ外部向けURLを開いて部屋を作成・参加する。表示は到達性の保証ではないので、ルーター・Windowsの受信設定後に別のネットワークの端末から接続を確認する。
+
+インターネットから到達できる別のサーバーに配置する場合も、画面・WASM・API・SSEを同じオリジンから配信する。ブラウザーだけを静的ホスティングしてもオンライン対戦は動作しない。
+
+Node.js 20以上でビルド済みの `web/dist`、`server`、`scripts/serve.mjs`、`scripts/server-addresses.mjs` を配置すれば起動できる。実行時の npm ランタイム依存はなく、サーバーも同じWASMを実行する。Rustはビルド時だけ必要。
 
 Dockerを使う場合は同梱の構成でビルドできる。
 

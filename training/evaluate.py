@@ -1,6 +1,8 @@
 """Paired, seeded, fixed-budget evaluation. Pair is the statistical unit."""
 from __future__ import annotations
 import argparse
+from collections import Counter
+from contextlib import nullcontext
 import math
 from pathlib import Path
 import time
@@ -14,6 +16,8 @@ from .search import Searcher
 from .balance_metrics import EvidenceWriter, GameTracker
 from .compatibility import network_hash
 from .candidates import SEARCH_PROTOCOL
+from .external import ExternalOpponent, external_opponent, count_decision
+from .teacher import TeacherWriter
 
 
 def interval(pair_scores, alpha=.05):
@@ -45,20 +49,34 @@ def paired_match(pool, model, opponent, config, device, generation, label, pairs
     evidence = EvidenceWriter(Path(out_dir) / f"{label}-evidence", dict(
         phase="paired_evaluation", generation=generation, label=label, rules=rules_for(config),
         rules_hash=rules_hash(rules_for(config)), source_fingerprint=fingerprint(), seed=seed, pairs=pairs,
-        model_weights_sha256=network_hash(model), opponent_weights_sha256=network_hash(opponent) if isinstance(opponent,Net) else opponent,
+        model_weights_sha256=network_hash(model), opponent_weights_sha256=network_hash(opponent) if isinstance(opponent,Net) else opponent.identity if isinstance(opponent, ExternalOpponent) else opponent,
         config=config)) if config.get("balance_logging") and out_dir else None
+    teacher = TeacherWriter(Path(out_dir) / f'{label}-teacher.jsonl.gz', dict(
+        phase='evaluation', generation=generation, rules=rules_for(config), rules_hash=rules_hash(rules_for(config)),
+        source_fingerprint=fingerprint(), engine=opponent.identity, seed=seed, pairs=pairs,
+        teacher_is_optimal_for_variant=False, value_target='actual completed simultaneous-game outcome')) if (
+            isinstance(opponent, ExternalOpponent) and out_dir and config.get('external_ai_save_teacher', True)) else None
     try:
-        return _paired_match(pool, model, opponent, config, device, generation, label, pairs, seed, out_dir, alpha, progress, evidence)
+        result = _paired_match(pool, model, opponent, config, device, generation, label, pairs, seed, out_dir, alpha, progress, evidence, teacher)
+        if teacher:
+            summary = teacher.finish()
+            result['teacher'] = dict(file=teacher.path.name, games=summary['games'], decisions=summary['decisions'])
+            atomic_json(Path(out_dir) / f'{label}.json', result)
+        return result
     finally:
         if evidence:
             evidence.close()
+        if teacher:
+            teacher.close()
 
 
-def _paired_match(pool, model, opponent, config, device, generation, label, pairs, seed, out_dir, alpha, progress, evidence):
+def _paired_match(pool, model, opponent, config, device, generation, label, pairs, seed, out_dir, alpha, progress, evidence, teacher=None):
     started = time.perf_counter()
     all_games, events, captures, representative = [], {}, {}, []
     searcher = Searcher(pool, model, config, device, generation)
     other_searcher = Searcher(pool, opponent, config, device, generation) if isinstance(opponent, Net) else None
+    external = opponent if isinstance(opponent, ExternalOpponent) else None
+    external_counts = {}
     # Never split a pair between waves. Streams follow policy roles on a color swap.
     pairs_per_wave = max(1, config["environments"] // 2)
     for first in range(0, pairs, pairs_per_wave):
@@ -77,10 +95,23 @@ def _paired_match(pool, model, opponent, config, device, generation, label, pair
             rngs[key(row)] = [streams[s ^ model_side] for s in range(2)]
             opponent_rngs[key(row)] = [np.random.default_rng(np.random.SeedSequence([seed, pair, 20 + (s ^ model_side)])) for s in range(2)]
             baseline_rngs[key(row)] = np.random.default_rng(np.random.SeedSequence([seed, pair, 99]))
+            external_counts[key(row)] = Counter()
         while rows:
             choices = {key(r): r for r in searcher.search(rows, rngs)}
             if other_searcher:
                 other = {key(r): r for r in other_searcher.search(rows, opponent_rngs)}
+            elif external:
+                other = {}
+                for row in rows:
+                    identity = key(row)
+                    pair, swapped, model_side = identities[identity]
+                    decision = external.choose(pool, row, 'AB'[1-model_side], baseline_rngs[identity])
+                    other[identity] = decision
+                    count_decision(external_counts[identity], decision)
+                    if teacher:
+                        teacher.decision(pair * 2 + int(swapped), row, 'AB'[1-model_side], decision)
+                    if progress:
+                        progress(len(all_games), pairs * 2, label)
             else:
                 other = {key(r): r for r in pool.call("baseline", [
                     {"_engine": row["_engine"], "env": row["env"], "side": ["B", "A"][identities[key(row)][2]],
@@ -105,6 +136,11 @@ def _paired_match(pool, model, opponent, config, device, generation, label, pair
                     decision['sampling_strategies'][opponent_side] = other[identity]['sampling_strategies'][opponent_side]
                     decision['coverage'][opponent_side] = other[identity]['coverage'][opponent_side]
                     decision["opponent_gap"] = other[identity]["gap"]
+                elif external:
+                    opponent_side = 1-identities[identity][2]
+                    decision['sampling_strategies'][opponent_side] = None
+                    decision['external_policy'] = dict(side=opponent_side, opponent_id=external.identity['id'],
+                                                       source=other[identity]['source'], reason=other[identity].get('reason'))
                 decisions[identity] = decision
             for result in pool.call("step", items):
                 if evidence:
@@ -120,7 +156,10 @@ def _paired_match(pool, model, opponent, config, device, generation, label, pair
                     pair, swapped, side = identities[key(result)]
                     winner = result["outcome"]["winner"]
                     score = .5 if winner == "draw" else float(winner == ["A", "B"][side])
-                    all_games.append({"pair": pair, "swapped": swapped, "score": score, "rounds": result["round"], "outcome": result["outcome"]})
+                    all_games.append({"pair": pair, "swapped": swapped, "score": score, "rounds": result["round"], "outcome": result["outcome"],
+                                      "model_side": 'AB'[side], **({'adapter_counts': dict(external_counts[key(result)])} if external else {})})
+                    if teacher:
+                        teacher.result(pair * 2 + int(swapped), result['outcome'])
                     if result.get("replay"):
                         representative.append({"label": f"{label} / pair {pair} / {'B' if side else 'A'}", "replay": result["replay"]})
             if progress:
@@ -139,6 +178,12 @@ def _paired_match(pool, model, opponent, config, device, generation, label, pair
                "captures": captures, "search": searcher.timing,
                "budget": dict({k: config[k] for k in ["candidates", "regret_iterations", "round_limit", "bootstrap_weight", "bootstrap_generations"]},
                               search_protocol=SEARCH_PROTOCOL,repetition_candidate_multiplier=2,training_exploration=0)}
+    results.update(win_rate=results['wins']/results['games'], draw_rate=results['draws']/results['games'],
+                   loss_rate=results['losses']/results['games'])
+    if external:
+        results.update(engine=external.identity, opponent_id=external.identity['id'], opponent_name=external.identity['name'],
+                       adapter=external.stats())
+        results['budget'].update(external_ai_nodes=external.nodes, equal_wall_time=False)
     if evidence:
         results["balance"] = evidence.finish()
     if out_dir:
@@ -153,7 +198,8 @@ def main():
     parser = argparse.ArgumentParser(description="Paired local evaluation of a Colab checkpoint")
     parser.add_argument("--run-dir", required=True)
     parser.add_argument("--checkpoint", default="latest")
-    parser.add_argument("--opponent", default="adapted_self", choices=["adapted_self","recent_checkpoint","hunter", "defense", "upgrade", "random", "champion"])
+    parser.add_argument("--opponent", default="adapted_self", choices=["adapted_self","recent_checkpoint","external_usi","hunter", "defense", "upgrade", "random", "champion"])
+    parser.add_argument('--nodes', type=int, help='Override the external engine node budget')
     parser.add_argument("--pairs", type=int, default=32)
     parser.add_argument("--device", default="auto", choices=["auto", "cpu", "cuda"])
     args = parser.parse_args()
@@ -161,7 +207,7 @@ def main():
         parser.error("pairs must be 1..4096")
     run = Path(args.run_dir).resolve()
     manifest = read_json(run / "manifest.json")
-    config = load_config(overrides=dict(manifest["config"], device=args.device))
+    config = load_config(overrides=dict(manifest["config"], device=args.device, **({'external_ai_nodes': args.nodes} if args.nodes is not None else {})))
     torch.set_num_threads(max(1, min(4, config["workers"])))
     device = device_for(config)
     filename = manifest["latest_checkpoint"] if args.checkpoint == "latest" else f"checkpoints/g{int(args.checkpoint):04d}.pt"
@@ -183,7 +229,9 @@ def main():
     if opponent == "champion":
         opponent, _ = load_model(run / manifest["champion_checkpoint"], config, device, fingerprint())
     stamp = str(int(time.time()))
-    with EnginePool(config["workers"]) as pool:
+    with EnginePool(config["workers"]) as pool, (external_opponent(config, force=True) if opponent == 'external_usi' else nullcontext(None)) as external:
+        if external:
+            opponent = external
         results = paired_match(pool, model, opponent, config, device, ckpt["generation"], args.opponent,
                                args.pairs, config["eval_seed"], run / "local-evaluations" / stamp)
     if reference_generation is not None:

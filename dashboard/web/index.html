@@ -30,21 +30,33 @@
     <section id="view-overview" class="view active" aria-label="進捗">
       <article class="card"><div class="card-head"><h2 class="card-title">現在の状態</h2><span class="card-note" id="statusUpdated">待機中</span></div><div id="liveStatus" class="status-card"></div><div id="kpis" class="tiles"></div><div id="welcome" class="welcome"><button class="btn btn-ghost" id="welcomeSettings">学習設定を開く</button></div></article>
       <article class="card"><div class="card-head"><h2 class="card-title">強さの評価</h2><span class="card-note">最近の学習済みモデルとの対戦</span></div><div id="gateSummary"></div></article>
+      <article class="card"><div class="card-head"><h2 class="card-title">既存AIとの対戦</h2><span class="card-note">学習中と定期評価を分けて記録</span></div><div id="externalSummary"></div></article>
       <article class="card"><div class="card-head"><h2 class="card-title">最新の学習状況</h2><span class="card-note">同じ学習条件の直近10世代まで</span></div><div id="learningSummary"></div><p id="historyPersistence" class="hint"></p></article>
       <article class="card"><div class="card-head"><h2 class="card-title">世代の記録</h2><span class="card-note">行を選ぶと、その世代の詳細を表示</span></div><div class="table-wrap"><div class="table-scroll"><table><thead><tr><th>世代</th><th>対局数</th><th>平均ラウンド</th><th>引分率</th><th>方策損失</th><th>価値損失</th><th>対・学習済みモデル</th><th>判定</th></tr></thead><tbody id="generationTable"></tbody></table></div></div></article>
       <article class="card" id="generationDetailCard" tabindex="-1"><div class="card-head"><h2 class="card-title" id="generationDetailTitle">世代の詳細</h2><div class="stack-actions"><button class="btn btn-ghost" id="latestGeneration">最新世代に戻る</button><a class="btn btn-ghost" id="downloadGeneration" download>世代データを保存</a></div></div><div id="generationDetail"></div></article>
       <details class="raw-log"><summary>生ログを表示 <span id="jobLabel"></span></summary><pre id="jobLogs" class="log-view"></pre></details>
     </section>
     <section id="view-charts" class="view" aria-label="グラフ" hidden>
+      <article class="card"><div class="card-head"><h2 class="card-title">既存AIに対する勝率・得点率</h2><span class="card-note">定期評価 / 相手・探索量ごと</span></div><div id="externalChart" class="chart"></div><p class="hint">勝率は勝ち／局数、得点率は（勝ち＋引き分け×0.5）／局数。相手の重みやノード数が変わった記録は線を分けます。</p></article>
       <div class="chart-pair"><article class="card"><div class="card-head"><h2 class="card-title">強さの推移</h2><span class="card-note">学習済みモデルへの得点率</span></div><div id="strengthChart" class="chart"></div></article><article class="card"><div class="card-head"><h2 class="card-title">学習損失</h2><span class="card-note">方策 / 価値</span></div><div id="lossChart" class="chart"></div></article></div>
       <p class="hint">点を選ぶと世代の詳細を表示します。対戦相手の世代や学習条件が変わるため、得点率は一つの固定相手への上達曲線ではありません。</p>
       <div class="chart-pair"><article class="card"><div class="card-head"><h2 class="card-title">平均対局ラウンド数</h2><span class="card-note">両者の同時着手で1ラウンド</span></div><div id="roundsChart" class="chart"></div></article><article class="card"><div class="card-head"><h2 class="card-title">引き分けと千日手</h2><span class="card-note">自己対戦の対局結果</span></div><div id="drawChart" class="chart"></div></article></div>
       <article class="card"><div class="card-head"><h2 class="card-title">計算時間の内訳</h2></div><div id="efficiency"></div></article>
     </section>
     <section id="view-evaluation" class="view" aria-label="強さ・比較" hidden>
-      <article class="card"><div class="card-head"><h2 class="card-title">追加評価</h2><span class="card-note">1ペア = 陣営交換した2局</span></div><form id="evaluateForm" class="form-row"><label>対戦相手<select class="select" id="evalOpponent"><option value="adapted_self">現在モデル同士</option><option value="recent_checkpoint">最近の学習済みモデル</option></select></label><label>評価ペア数<input class="input" id="evalPairs" type="number" min="1" max="512" value="32"></label><button class="btn btn-primary" id="evaluateButton" type="submit">評価を実行</button></form></article>
-      <article class="card"><div class="card-head"><h2 class="card-title">対戦成績</h2><span class="card-note" id="evalGeneration"></span></div><div class="table-wrap"><table><thead><tr><th>相手</th><th>勝 / 分 / 負</th><th>得点率</th><th>信頼区間</th><th>対局数</th><th>判定</th></tr></thead><tbody id="evaluationTable"></tbody></table></div><p class="hint">区間が50%をまたぐ場合は判定保留。</p></article>
+      <article class="card"><div class="card-head"><h2 class="card-title">追加評価</h2><span class="card-note">1ペア = 陣営交換した2局</span></div><form id="evaluateForm" class="form-row"><label>対戦相手<select class="select" id="evalOpponent"><option value="adapted_self">現在モデル同士</option><option value="recent_checkpoint">最近の学習済みモデル</option><option value="external_usi">既存AI（やねうら王など）</option></select></label><label>評価ペア数<input class="input" id="evalPairs" type="number" min="1" max="512" value="32"></label><label>既存AIのノード数<input class="input" id="evalNodes" type="number" min="1" max="100000000" value="2000"></label><button class="btn btn-primary" id="evaluateButton" type="submit">評価を実行</button></form></article>
+      <article class="card"><div class="card-head"><h2 class="card-title">対戦成績</h2><span class="card-note" id="evalGeneration"></span></div><div class="table-wrap"><table><thead><tr><th>相手</th><th>勝 / 分 / 負</th><th>勝率</th><th>得点率</th><th>得点率の区間</th><th>対局数</th><th>判定</th></tr></thead><tbody id="evaluationTable"></tbody></table></div><p class="hint">区間が50%をまたぐ場合は判定保留。</p></article>
+      <article class="card"><div class="card-head"><h2 class="card-title">既存AIとの累計成績</h2><span class="card-note">選択した世代まで / 同じ相手・探索量ごと</span></div><div id="externalOpponentTable"></div></article>
       <article class="card"><div class="card-head"><h2 class="card-title">追加評価の記録</h2></div><div id="localEvaluations"></div></article>
+      <article class="card"><div class="card-head"><h2 class="card-title">教師データから蒸留</h2><button class="btn btn-ghost" id="refreshTeachers" type="button">一覧を更新</button></div>
+        <form id="distillForm">
+          <label class="field">教師データ<select class="select" id="distillDataset" required><option value="">完了した既存AI対局を選択</option></select></label>
+          <label class="field">引き継ぐモデル<select class="select" id="distillSource" required><option value="">モデルを選択</option></select></label>
+          <div class="field-row"><label class="field">引き継ぐ世代<input class="input" id="distillCheckpoint" type="number" min="0" placeholder="最新の確定済み世代"></label><label class="field">更新回数<input class="input" id="distillUpdates" type="number" min="1" max="4096" value="32" required></label></div>
+          <div class="field-row"><label class="field">実行先<select class="select" id="distillDevice"><option value="cpu">Local CPU</option><option value="cuda">Local GPU（CUDA）</option></select></label><div class="field"><span class="field-label">元モデルを保持して別モデルを作成</span><button class="btn btn-primary" id="distillButton" type="submit" disabled>蒸留を実行</button></div></div>
+          <p id="distillPreview" class="hint">自己対戦・定期評価で保存した、完了した対局の手と実際の勝敗を使います。</p>
+        </form>
+      </article>
       <article class="card"><div class="card-head"><h2 class="card-title">実行を比較</h2><select class="select" id="compareRun" aria-label="比較する実行"><option value="">比較先を選択</option></select></div><div id="comparison"></div></article>
       <details class="raw-log"><summary>評価条件・基準モデル</summary><div class="card" id="championInfo"></div></details>
     </section>
@@ -84,6 +96,14 @@
       <div class="field-row"><label class="field"><span class="field-label">バッチサイズ</span><input class="input" data-setting="batch_size" type="number" min="2" max="4096" value="128" required></label><label class="field"><span class="field-label">世代ごとの更新回数</span><input class="input" data-setting="updates" type="number" min="1" max="4096" value="64" required></label></div>
       <div class="field-row"><label class="field"><span class="field-label">評価ペア数</span><input class="input" data-setting="eval_pairs" type="number" min="1" max="512" value="16" required></label><label class="field"><span class="field-label">評価間隔（世代）</span><input class="input" data-setting="eval_every" type="number" min="1" max="100000" value="5" required></label></div>
       <label class="switch-row"><span>混合精度（GPU）</span><input type="checkbox" id="ampInput" checked></label>
+      <details class="advanced" open><summary>既存AIとの対戦・教師データ</summary>
+        <label class="switch-row"><span>自己対戦と定期評価に既存AIを使う</span><input type="checkbox" id="externalAIEnabled"></label>
+        <div class="field-row"><label class="field"><span class="field-label">自己対戦へ混ぜる割合（%）</span><input class="input" data-setting="external_ai_fraction" type="number" min="0" max="100" step="1" value="25" required></label><label class="field"><span class="field-label">既存AIのノード数</span><input class="input" data-setting="external_ai_nodes" type="number" min="1" max="100000000" value="2000" required></label></div>
+        <label class="field"><span class="field-label">既存AIとの定期評価ペア数</span><input class="input" data-setting="external_ai_eval_pairs" type="number" min="1" max="512" value="8" required></label>
+        <label class="switch-row"><span>蒸留に使う教師データを保存する</span><input type="checkbox" id="teacherSaveInput" checked></label>
+        <button class="btn btn-secondary" id="setupExternalAI" type="button" hidden>既存AIを準備</button>
+        <p id="externalAIHelp" class="field-help">定期評価は上の評価間隔で実施します。探索量の既定は2,000ノードです。</p>
+      </details>
       <details class="advanced"><summary>探索設定</summary><div class="field-row"><label class="field"><span class="field-label">通常候補数</span><input class="input" data-setting="cheap_candidates" type="number" min="2" max="32" value="4" required></label><label class="field"><span class="field-label">最大候補数</span><input class="input" data-setting="candidates" type="number" min="2" max="32" value="8" required></label></div></details>
       <p class="field-help">保存した設定は新規学習と次回の再開に反映します。実行中の変更は、停止して再開すると反映されます。重みと対局ルールは引き継ぎます。</p>
       <button type="submit" class="btn btn-primary btn-block" id="saveSettings">設定を保存</button>

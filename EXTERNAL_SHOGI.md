@@ -1,6 +1,6 @@
 # 公開将棋AIを対戦相手・教師として使う
 
-2026-10-21。公開済みのやねうら王CPU版とNNUE評価関数「Háo」を接続した。CLIで現行モデルとの評価対戦、教師データ保存、別モデルへの追加学習ができる。通常将棋の知識を借りつつ、合法な入力と勝敗はこのゲームのRust核で決める。
+2026-10-21。公開済みのやねうら王CPU版とNNUE評価関数「Háo」を接続した。ゲームのAI対戦で人間の対戦相手として選べる。ダッシュボードから通常の自己対戦への混在、定期・追加評価、教師データ保存、別モデルへの蒸留も実行できる。探索量の既定は**2,000ノード**。通常将棋の知識を借りつつ、合法な入力と勝敗はこのゲームのRust核で決める。
 
 現行モデルG17との予備対戦では、外部AI側が20,000ノード/判断で8勝0敗だった。新要素を知らない将棋AIにも利用価値があることを示す結果だが、少数の初期配置対局で、両者の計算時間も揃えていない。外部AIには後述のhunter補助が含まれるため、通常将棋エンジン単体の棋力とは区別する。
 
@@ -8,12 +8,41 @@
 
 | 用途 | 現在できること |
 | --- | --- |
+| 人間の対戦相手 | ゲームの「AI対戦」で既存AIを選択。学習済みモデルなしで両陣営から対戦・再戦できる。 |
 | AIの対戦・評価相手 | 保存済みチェックポイントまたは固定方策と、USIエンジンを陣営交換して対戦。各側は同じ公開局面だけを見る。 |
 | 教師データ | 実際に使われた外部AIの手、元の公開状態、指定可能手、通常将棋の候補手・参考評価、完了した本ルールの対局結果を保存。代替方策の手は教師から除く。 |
 | 追加学習 | 現行CNNへ手の模倣と実際の対局結果を学習させ、元のモデルと別の実行へ保存。optimizer/replayは新規。G0は移行元、G1は追加学習後。自動でchampionへ昇格しない。 |
 | 新ルールへの適応 | 追加学習した実行を通常の自己対戦学習へ継続できる。昇格・衝突・疲労・自陣補正の特徴も元の状態から入力する。 |
 
-入口は `external_shogi/` とCLI。ゲーム画面の外部エンジン選択、ダッシュボードの定期評価・自己対戦相手プールへの登録はまだ行っていない。既存の `training/` とRust核を変更していないので、進行中の学習のソース識別子を変えずに試せる。通常のColab用ZIPにも外部エンジンは含めない。
+通常の学習・評価と同じ入口で使用する。接続処理は保存ソースZIPへ含める `training/` に統合し、ゲームからもこの接続処理を使用する。従来の `external_shogi/` CLIも維持する。Colab用ZIPには接続コードを含めるが、Windowsのエンジン・評価関数を同梱しない。別環境では対応するUSIエンジンを設定するか、既存AIとの対戦を無効にする。
+
+## ゲームで対戦する
+
+1. `start-game.bat` で起動し、サーバーPCの `http://localhost:5173` を開く。
+2. 「AI対戦」→「対戦するAI」→「既存AI（やねうら王 / USI）」を選ぶ。
+3. 準備状況と探索量を確認し、自分の陣営を選んで「既存AIに接続して対局」を押す。
+
+未準備の場合は学習パネルの設定で「既存AIを準備」を実行し、ゲームの「接続を確認」を押す。学習済みチェックポイント・PyTorchは不要で、Python・NumPy・USIエンジンを使用する。Pythonは `.venv` 優先、`SHOGI_PYTHON` で変更できる。
+
+接続先・評価関数・ノード数は `dashboard/local.json` の `training.external_ai_*` 設定を使用する。未設定なら付属セットアップのやねうら王＋Háo・2,000ノード。別のUSIエンジンは `external_ai_command`（引数配列）、`external_ai_options`、`external_ai_weights` で設定できる。`external_ai_enabled` は学習への混在を制御する設定なので、無効でもゲームでは選択できる。対局中は開始時のエンジンとノード数を固定する。
+
+各判断ではRustで検証した公開済みの棋譜だけを渡し、人間の今回の入力は渡さない。通常将棋へ対応できない局面では従来と同じhunter補助を使う。エンジンの終了・タイムアウト・不正な応答では着手前の状態を保ってエラーを表示し、再試行できる。ゲーム用の接続では教師データや学習成績を書き込まない。
+
+接続と再試行の検証は `npm run test:external-play`、準備済みの実エンジンも含める場合は `npm run test:external-play -- --real`。
+
+## ダッシュボードから使う
+
+1. 設定 →「既存AIとの対戦・教師データ」。未準備なら「既存AIを準備」を実行する。
+2. 「自己対戦と定期評価に既存AIを使う」を有効にする。既定は混在25%、2,000ノード、定期評価8ペア。ノード数・混在率・ペア数を変更して保存する。
+3. 新規学習、または保存済みモデルを再開する。通常の評価間隔で既存AIと対戦し、世代ごとの勝率・得点率・勝敗数・ノード数を保存する。旧ソースの実行は全学習状態を引き継ぐ継続先で進める。
+4. 「強さ・比較」から既存AIとの追加評価も実行できる。評価ペア数とノード数を指定する。
+5. 蒸留は同じ画面の「教師データから蒸留」。保存された教師データ、引き継ぐモデルと世代、更新回数、実行先を選び「蒸留を実行」を押す。元モデルを保持した別モデルができる。
+
+学習・評価・蒸留は同時に起動しない。蒸留を実行する場合は先に学習を停止する。教師データには既存AIが実際に選んだ手だけを保存し、価値の教師は完了した本ルールの対局結果から作る。補助AIの手は教師から除く。
+
+進捗の「既存AIとの対戦」、グラフの「既存AIに対する勝率・得点率」、世代の詳細、強さ・比較の累計成績で記録を確認できる。勝率は勝ち／局数、得点率は（勝ち＋0.5×引き分け）／局数。学習中と定期評価、相手の重み・探索量を分けて集計する。過去に未実施だった世代を勝率0%とは表示しない。
+
+通常の教師データは圧縮した `*.jsonl.gz` と一覧用JSONで保存し、確定世代だけを画面へ出す。結果ZIPにも含まれる。外部エンジンの欠落・終了・タイムアウトは処理失敗として知らせ、既存AIとの対局を実行したことにしない。
 
 ## Windowsでの準備と評価
 
@@ -21,7 +50,7 @@
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/setup-external-shogi.ps1
-.venv\Scripts\python.exe -m external_shogi match --run-dir dashboard/runs/continued-1792516340972 --checkpoint 17 --pairs 16 --nodes 20000 --seed 719205 --output .cache/external-shogi/experiments/g0017-validation
+.venv\Scripts\python.exe -m external_shogi match --run-dir dashboard/runs/continued-1792516340972 --checkpoint 17 --pairs 16 --nodes 2000 --seed 719205 --output .cache/external-shogi/experiments/g0017-validation
 ```
 
 `--checkpoint` を省略すると、開始時の最後の確定済み世代を固定して読む。`--output` は未作成のディレクトリを指定する。CPUで実行するのが既定なので、既存のGPU学習とGPUメモリを取り合わない。
@@ -43,7 +72,7 @@ USIのノード数と現行モデルの候補数・行列探索予算は別の�
 
 ```powershell
 .venv\Scripts\python.exe -m external_shogi distill --data .cache/external-shogi/experiments/g0017-validation/teacher.jsonl --init-from dashboard/runs/continued-1792516340972 --checkpoint 17 --updates 32 --output dashboard/runs/usi-warmstart
-.venv\Scripts\python.exe -m external_shogi match --run-dir dashboard/runs/usi-warmstart --pairs 16 --nodes 20000 --seed 719305 --output .cache/external-shogi/experiments/usi-warmstart-validation
+.venv\Scripts\python.exe -m external_shogi match --run-dir dashboard/runs/usi-warmstart --pairs 16 --nodes 2000 --seed 719305 --output .cache/external-shogi/experiments/usi-warmstart-validation
 ```
 
 ここで行うのは**既存AIの手を教師にした現行モデルの追加学習（蒸留）**。やねうら王のNNUE重みを現行CNNへ直接読み込む操作ではない。方策の教師は実際に選んだ手、価値の教師は本ルールで完了した対局の勝敗。通常将棋のcp値・詰み・投了・宣言勝ちを本ルールの勝敗へ読み替えない。
@@ -88,6 +117,7 @@ dlshogiのような公開ニューラルモデル自体のファインチュー�
 
 ```powershell
 .venv\Scripts\python.exe -m unittest tests.test_external_shogi -v
+npm run test:external
 ```
 
 SFENの座標・持ち駒・成り、王への攻撃の変換限界、昇格と再打ち禁止、USI応答とタイムアウト、棋譜の再検証、完了対局だけの価値付与、元モデルを保った追加学習を検証する。

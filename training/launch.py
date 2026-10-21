@@ -62,6 +62,19 @@ def saved_source(run):
     return destination
 
 
+def source_runtime_config(values, source):
+    supported = read_json(source/'training/config.json')
+    values = {k: v for k, v in values.items() if k in supported}
+    if source != ROOT and values.get('external_ai_enabled'):
+        # An extracted source snapshot has its own ROOT but no engine binaries.
+        # Resolve the installed engine from the live project before changing cwd.
+        from .external import external_settings
+        command, options, weights = external_settings(values)
+        values.update(external_ai_command=command, external_ai_options=options,
+                      external_ai_weights=str(weights) if weights else '')
+    return values
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run-dir',required=True)
@@ -90,9 +103,9 @@ def main():
         # committed state into the current trainer without rewriting their source.
         source=ROOT
         values=current_config
-    supported=read_json(source/'training/config.json')
-    # A new runtime-only batch-size option need not exist in an older snapshot.
-    values={k:v for k,v in values.items() if k in supported or k!='value_batch_size'}
+    # Disabled new controls need not exist in an older verified snapshot.
+    # Enabled/changed settings migrate above; exact resumption keeps its old schema.
+    values=source_runtime_config(values, source)
     config=ROOT/'.cache/resume-configs'/f'{uuid4().hex}.json'
     config.parent.mkdir(parents=True,exist_ok=True)
     if not migrate:

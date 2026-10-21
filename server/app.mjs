@@ -4,6 +4,7 @@ import { resolve, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { RoomService, HttpError } from './rooms.mjs';
 import { ModelService } from './models.mjs';
+import { ExternalService } from './external.mjs';
 import { WasmEngine } from '../web/dist/engine.js';
 import { PLAY_RULES } from '../web/dist/rules.js';
 
@@ -28,7 +29,9 @@ export async function createApplication(options = {}) {
   const bytes = await readFile(new URL('../web/dist/engine.wasm', import.meta.url));
   const service = await RoomService.open({ bytes, dataDir: resolve(process.env.DATA_DIR || 'data/rooms'), ...options });
   const probe = await WasmEngine.fromBytes(bytes);
-  const models = new ModelService({ ...options.models, rules: probe.call({ cmd: 'new',rules:PLAY_RULES }).value.rules });
+  const rules = probe.call({ cmd: 'new',rules:PLAY_RULES }).value.rules;
+  const models = new ModelService({ ...options.models, rules });
+  const external = new ExternalService({ ...options.external, rules });
   const rates = new Map();
   function rate(req, lobby = false) {
     const key = `${req.socket.remoteAddress}:${lobby ? 'lobby' : 'api'}`;
@@ -52,7 +55,10 @@ export async function createApplication(options = {}) {
         rate(req, path === '/api/rooms' || path === '/api/join');
         if (path.startsWith('/api/ai/')) {
           const address = req.socket.remoteAddress, hostname = new URL(`http://${req.headers.host}`).hostname;
-          if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address) || !['localhost', '127.0.0.1', '[::1]'].includes(hostname)) throw new HttpError(403, '学習済みモデルは、サーバーを起動したPCのlocalhostから利用してください。');
+          if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address) || !['localhost', '127.0.0.1', '[::1]'].includes(hostname)) throw new HttpError(403, 'AI対戦は、サーバーを起動したPCのlocalhostから利用してください。');
+          if (req.method === 'GET' && path === '/api/ai/external') { json(res, 200, await external.status()); return; }
+          if (req.method === 'POST' && path === '/api/ai/external/load') { await body(req); json(res, 200, await external.load()); return; }
+          if (req.method === 'POST' && path === '/api/ai/external/move') { json(res, 200, await external.choose(await body(req, 2 * 1024 * 1024))); return; }
           if (req.method === 'GET' && path === '/api/ai/models') { json(res, 200, await models.catalogue()); return; }
           if (req.method === 'POST' && path === '/api/ai/load') { json(res, 200, await models.load((await body(req)).model)); return; }
           if (req.method === 'POST' && path === '/api/ai/move') { json(res, 200, await models.choose(await body(req, 2 * 1024 * 1024))); return; }
@@ -112,7 +118,7 @@ export async function createApplication(options = {}) {
   return {
     server, service,
     async close() {
-      clearInterval(tick); clearInterval(heartbeat); await models.close(); await service.close(); server.closeIdleConnections();
+      clearInterval(tick); clearInterval(heartbeat); await Promise.all([models.close(), external.close()]); await service.close(); server.closeIdleConnections();
       await new Promise((resolveClose, reject) => server.close(error => error ? reject(error) : resolveClose()));
     },
   };

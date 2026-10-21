@@ -55,6 +55,55 @@
 .arena {
   display:block
 }
+.local-controls {
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px 14px;
+  min-height:48px;
+  margin-bottom:10px
+}
+.local-controls-label {
+  color:var(--muted);
+  font-size:11px
+}
+.local-sides {
+  display:flex;
+  gap:6px
+}
+.local-sides button {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-height:40px;
+  padding:7px 12px;
+  border:1px solid var(--line);
+  border-radius:5px;
+  background:#ffffff04;
+  font-size:12px
+}
+.local-sides button[aria-pressed="true"] {
+  border-color:#c1a87888;
+  background:#d9bb8215;
+  color:var(--gold-light)
+}
+.local-sides button small {
+  font-size:9px;
+  color:var(--muted)
+}
+.local-sides button:disabled {
+  opacity:.6
+}
+#local-status {
+  margin:0 0 0 auto;
+  color:var(--muted);
+  font-size:11px
+}
+@media (min-width:1101px) {
+  .game-screen.is-local {
+    --board-size:min(calc(100svh - 134px),calc(100vw - var(--rack-size) - var(--right-size) - 76px))
+  }
+}
 .playfield {
   display:grid;
   grid-template-columns:var(--rack-size) minmax(0,1fr) var(--right-size);
@@ -328,6 +377,19 @@
   }
 }
 @media (max-width:1100px) {
+  .local-controls {
+    margin-inline:6px;
+    gap:6px 10px
+  }
+  .local-sides button {
+    gap:8px;
+    padding-inline:10px
+  }
+  #local-status {
+    width:100%;
+    margin:0;
+    font-size:10px
+  }
   .game-screen {
     --board-size:100%;
     width:calc(100% - 12px);

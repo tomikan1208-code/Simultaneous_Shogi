@@ -63,18 +63,64 @@ try {
   assert.ok(cell(2,7).title.includes('味方が取られた場合'));click($('clear-selection'));
 
   click($('game-home'));click($('confirm-accept'));await until(()=>$('home-screen').hidden===false&&ready(),'home');
+  window.document.querySelector('input[name="side"][value="B"]').checked=true;
   click($('mode-local'));click($('start-game'));await until(()=>$('game-screen').hidden===false&&ready(),'local setup');
-  click(cell(7,7));click(cell(7,6));await until(()=>$('handoff').hidden===false&&ready(),'private handoff');
-  assert.ok($('handoff-title').textContent.includes('プレイヤー2'));
+  assert.equal($('game-mode').textContent,'1端末モード');assert.equal($('handoff'),null);
+  assert.equal($('local-controls').hidden,false);
+  const fixedFiles = $('files').textContent;
+  assert.equal(fixedFiles,'987654321','the AI side setting does not change the local perspective');
+  window.document.querySelector('input[name="side"][value="A"]').checked=true;
+  click(cell(7,7));click(cell(7,6));await until(()=>$('local-side-a').disabled&&ready(),'A sealed without handoff');
+  assert.equal($('local-side-b').getAttribute('aria-pressed'),'true');
+  assert.equal($('files').textContent,fixedFiles,'switching input keeps the board orientation');
+  assert.match($('player-bottom').textContent,/プレイヤー1.*着手済み/);
+  assert.match($('player-top').textContent,/プレイヤー2.*手を選択中/);
   assert.ok(cell(7,7).querySelector('.piece'));assert.equal(cell(7,6).querySelector('.piece'),null,'sealed action does not move the public board');
   assert.equal(window.document.querySelectorAll('.history-row').length,0);
-  click($('handoff-ready'));click(cell(3,3));click(cell(3,4));await round(2);
-  assert.equal($('handoff').hidden,false);click($('handoff-ready'));
+  $('local-side-a').click();assert.equal($('local-side-b').getAttribute('aria-pressed'),'true','a sealed side cannot be selected again');
+  click(cell(3,3));click(cell(3,4));await round(2);
+  assert.equal($('local-side-a').getAttribute('aria-pressed'),'true');
+  assert.equal($('files').textContent,fixedFiles);
   assert.equal($('tab-replay').hidden,true);
   assert.ok($('history').textContent.includes('7六歩'));assert.ok($('history').textContent.includes('3四歩'));
-  click(cell(7,6));click(cell(7,5));await until(()=>!$('handoff').hidden&&ready(),'second handoff');
-  click($('handoff-ready'));click(cell(3,4));click(cell(3,5));await round(3);click($('handoff-ready'));
+  click(cell(7,6));assert.ok(cell(7,5).classList.contains('available'));
+  click($('local-side-b'));await until(ready,'choose B first');
+  assert.equal($('clear-selection').hidden,true,'switching sides clears the previous selection');
+  click(cell(3,4));click(cell(3,5));await until(()=>$('local-side-b').disabled&&ready(),'B sealed first');
+  assert.equal($('round-number').textContent,'02');assert.ok(cell(3,4).querySelector('.piece'));
+  assert.equal($('local-side-a').getAttribute('aria-pressed'),'true');
+  click(cell(7,6));click(cell(7,5));await round(3);
+  click(cell(7,5));click(cell(7,4));await until(()=>$('local-side-a').disabled&&ready(),'third A input');
+  click(cell(3,5));click(cell(3,6));await round(4);
+  click($('local-side-b'));await until(ready,'B promotion input');
+  click(cell(3,6));click(cell(3,7));assert.equal($('choice-popover').hidden,false);
+  assert.equal($('local-side-b').disabled,false,'a promotion choice is not a sealed move');
+  click(window.document.querySelector('[data-choice="upgrade"]'));await until(()=>$('local-side-b').disabled&&ready(),'B upgrade sealed');
+  assert.ok(cell(3,6).querySelector('.piece'));assert.ok(cell(3,7).querySelector('.piece:not(.upgraded)'));
+  click(cell(7,4));click(cell(7,3));assert.equal($('choice-popover').hidden,false);
+  click(window.document.querySelector('[data-choice="promote"]'));await round(5);
+  assert.ok(cell(7,3).querySelector('.piece.promoted'));assert.ok(cell(3,7).querySelector('.piece.upgraded'));
+  assert.ok(window.document.querySelector('#hand-bottom [data-kind="P"]'));
+  assert.equal(window.document.querySelector('#hand-top [data-kind="P"]').disabled,true);
+  click(window.document.querySelector('#hand-bottom [data-kind="P"]'));click(cell(3,5));await until(()=>$('local-side-a').disabled&&ready(),'A drop sealed');
+  assert.equal(window.document.querySelector('#hand-top [data-kind="P"]').disabled,false);
+  click(window.document.querySelector('#hand-top [data-kind="P"]'));click(cell(7,5));await round(6);
+  assert.ok(cell(3,5).querySelector('.piece'));assert.ok(cell(7,5).querySelector('.piece'));
+  assert.equal(window.document.querySelectorAll('.hand-piece').length,0);
+  assert.equal($('files').textContent,fixedFiles,'promotion and both hand trays keep a fixed perspective');
+  assert.equal(window.document.querySelectorAll('.history-row').length,5);
   click($('resign'));click($('confirm-accept'));await until(()=>!$('result-overlay').hidden&&ready(),'local game ends before review');
+  assert.equal($('result-title').textContent,'B陣営の勝利');
+  click($('result-rematch'));await until(()=>$('result-overlay').hidden&&ready(),'local rematch');
+  assert.equal($('round-number').textContent,'01');assert.equal(window.document.querySelectorAll('#board .piece').length,40);
+  assert.equal($('local-side-a').getAttribute('aria-pressed'),'true');assert.equal($('local-side-b').disabled,false);
+  assert.equal(window.document.querySelectorAll('.history-row').length,0);
+  // Record two rounds again so post-game stage review exercises the same local match.
+  for (const [number,fromA,toA,fromB,toB] of [[2,[7,7],[7,6],[3,3],[3,4]],[3,[7,6],[7,5],[3,4],[3,5]]]) {
+    click(cell(...fromA));click(cell(...toA));await until(()=>$('local-side-a').disabled&&ready(),'review A input');
+    click(cell(...fromB));click(cell(...toB));await round(number);
+  }
+  click($('resign'));click($('confirm-accept'));await until(()=>!$('result-overlay').hidden&&ready(),'rematch ends before review');
   click($('result-final'));assert.equal($('tab-replay').hidden,false);
   click($('tab-replay'));await until(()=>!$('replay-panel').hidden&&ready(),'post-game replay round two');
   $('replay-round').value='1';$('replay-round').dispatchEvent(new window.Event('change'));
@@ -142,11 +188,27 @@ try {
   const incompatibleRun = {id:'old-run',name:'旧ルール',source:'ローカル',compatible:false,reason:'ルールが異なります',checkpoints:[]};
   let catalogue = {runs:[learnedRun,incompatibleRun]}, loadFailure = false, moveFailure = false, invalidMove = false;
   const moves = [], loads = [];
+  const externalEngine = 'c'.repeat(24), externalMoves = [], externalLoads = [];
+  let externalAvailable = false, externalLoadFailure = false, externalMoveFailure = false, externalWrongEngine = false, externalInvalidMove = false;
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async (path,init) => {
     if (typeof path !== 'string' || !path.startsWith('/api/ai/')) return originalFetch(path,init);
     const input = init?.body ? JSON.parse(init.body) : null;
     const reply = (value,status=200) => new Response(JSON.stringify(value),{status,headers:{'Content-Type':'application/json'}});
+    if (path === '/api/ai/external') return reply({available:externalAvailable,label:'既存AIテスト',nodes:2000,reason:externalAvailable ? '' : '既存AIを準備してください。'});
+    if (path === '/api/ai/external/load') {
+      externalLoads.push(input);
+      if (externalLoadFailure) return reply({error:'既存AI接続の試験エラー'},422);
+      return reply({engine:externalEngine,name:'USI fixture',label:'既存AIテスト',nodes:2000,rules:call({cmd:'new',rules:PLAY_RULES}).rules});
+    }
+    if (path === '/api/ai/external/move') {
+      externalMoves.push(input);
+      assert.deepEqual(Object.keys(input).sort(),['engine','replay','seed','side']);
+      if (externalMoveFailure) return reply({error:'既存AI通信の試験エラー'},503);
+      const state = call({cmd:'import',replay:input.replay});
+      const action = externalInvalidMove ? {type:'move',side:input.side,piece:'missing',to:[1,1],choice:'none'} : call({cmd:'actions',side:input.side})[0].action;
+      return reply({engine:externalWrongEngine ? 'd'.repeat(24) : input.engine,nodes:2000,round:state.round,action,source:'usi',reason:null});
+    }
     if (path.endsWith('/models')) return reply(catalogue);
     const generation = modelIds.indexOf(input.model);
     if (path.endsWith('/load')) {
@@ -201,8 +263,40 @@ try {
     await until(() => !$('refresh-models').disabled,'empty catalogue refreshed');
     assert.equal($('start-game').disabled,true);assert.match($('model-status').textContent,/保存済みモデルがありません/);
     assert.equal($('start-game').disabled,true,'An empty model list cannot fall back to a basic AI');
+    $('ai-type').value='external';$('ai-type').dispatchEvent(new window.Event('change'));
+    await until(() => !$('refresh-external').disabled,'external availability');
+    assert.equal($('trained-options').hidden,true);assert.equal($('external-options').hidden,false);
+    assert.equal($('start-game').disabled,true);assert.match($('external-status').textContent,/既存AIを準備/);
+    externalAvailable=true;click($('refresh-external'));await until(ready,'external ready without a learned model');
+    assert.match($('external-status').textContent,/2,000ノード/);
+    window.document.querySelector('input[name="side"][value="A"]').checked=true;
+    externalLoadFailure=true;click($('start-game'));await until(ready,'external failed connection');
+    assert.equal($('setup-screen').hidden,false);assert.match($('error-text').textContent,/既存AI接続の試験エラー/);click($('error-close'));
+    externalLoadFailure=false;click($('start-game'));await until(() => !$('game-screen').hidden && ready(),'external game');
+    assert.match($('game-mode').textContent,/既存AIテスト/);assert.match($('player-top').textContent,/既存AIテスト/);
+    externalMoveFailure=true;click(cell(7,7));click(cell(7,6));await until(ready,'external network failure');
+    assert.equal(window.document.querySelectorAll('.history-row').length,0);assert.ok(cell(7,7).querySelector('.piece'));click($('error-close'));
+    externalMoveFailure=false;externalWrongEngine=true;click(cell(7,7));click(cell(7,6));await until(ready,'wrong external identity');
+    assert.equal(window.document.querySelectorAll('.history-row').length,0);assert.ok(cell(7,7).querySelector('.piece'));click($('error-close'));
+    externalWrongEngine=false;externalInvalidMove=true;click(cell(7,7));click(cell(7,6));await until(ready,'invalid external action');
+    assert.equal(window.document.querySelectorAll('.history-row').length,0);assert.ok(cell(7,7).querySelector('.piece'));click($('error-close'));
+    externalInvalidMove=false;click(cell(7,7));click(cell(7,6));await round(2);
+    assert.equal(externalMoves.at(-1).engine,externalEngine);assert.equal(externalMoves.at(-1).side,'B');assert.equal(externalMoves.at(-1).replay.rounds.length,0);
+    $('ai-type').value='model'; // The active opponent stays pinned even if a hidden control is changed.
+    click(cell(7,6));click(cell(7,5));await round(3);
+    assert.equal(externalMoves.at(-1).engine,externalEngine);assert.match($('game-mode').textContent,/既存AIテスト/);
+    $('ai-type').value='external';
+    click($('resign'));click($('confirm-accept'));await until(() => !$('result-overlay').hidden && ready(),'external resign');
+    const previousLoads=externalLoads.length;
+    click($('result-rematch'));await until(() => !$('game-screen').hidden && ready(),'external rematch');
+    assert.equal(externalLoads.length,previousLoads+1);assert.equal($('round-number').textContent,'01');
+    click($('game-home'));click($('confirm-accept'));await until(() => !$('home-screen').hidden && ready(),'external B home');
+    click($('mode-cpu'));await until(ready,'external B ready');window.document.querySelector('input[name="side"][value="B"]').checked=true;
+    click($('start-game'));await until(() => !$('game-screen').hidden && ready(),'human B external game');
+    click(cell(3,3));click(cell(3,4));await round(2);
+    assert.equal(externalMoves.at(-1).side,'A');assert.equal($('error').hidden,true);
   } finally { globalThis.fetch=originalFetch; }
-  console.log('DOM integration passed, including learned-model/generation selection, incompatible models, load/network failures, rollback/retry, pinned opponent, both human sides, rematch, and no basic-AI fallback.');
+  console.log('DOM integration passed, including one-device fixed perspective, both input orders, sealed-side locks, both promotion choices and hand trays, results/review/rematch, learned-model/generation and external-USI selection, unavailable engines/models, load/network failures, rollback/retry, pinned opponents, both human sides, and USI play without a learned model.');
 } finally {
   globalThis.fetch = realFetch;
   intervals.forEach(clearInterval);
