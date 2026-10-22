@@ -6,6 +6,8 @@ import type { ExternalStatus, SavedRun } from './models.js';
 import type { Connection } from './online.js';
 import { actionLabel, conditionText, escape, eventText, icon, offersChange, other, pieceMarkup, rankAppearance, reasons, same, sideIndex, square, symbol, symbols } from './presentation.js';
 import { PLAY_RULES, sameRules } from './rules.js';
+import { editorKinds, handKinds, PositionEditor } from './test-position.js';
+import { TestBoardControls } from './test-board-controls.js';
 import type { Action, ActionOption, Choice, HistoryEntry, Kind, MatchView, OnlineEntry, OnlineState, Outcome, Piece, Position, Replay, Resolution, RuleSet, Side, Square } from './types.js';
 
 const $ = <T extends HTMLElement = HTMLElement>(id:string):T => {
@@ -14,7 +16,7 @@ const $ = <T extends HTMLElement = HTMLElement>(id:string):T => {
 const engine = new EngineClient();
 let historyEngine:EngineClient|null = null;
 type Screen = 'home'|'setup'|'online'|'room'|'game';
-type Mode = 'cpu'|'local'|'online'|'replay';
+type Mode = 'cpu'|'local'|'online'|'replay'|'test';
 let screen:Screen = 'home', mode:Mode = 'cpu', setupMode:'cpu'|'local' = 'cpu';
 let view:MatchView|null = null, options:ActionOption[] = [];
 let active:Side = 'A', human:Side = 'A';
@@ -28,6 +30,7 @@ let opponent:Opponent = {type:'model',id:'',generation:0,label:'学習済みAI'}
 let modelRuns:SavedRun[] = [], modelsLoading = false, modelsListed = false, modelMessage = '';
 let externalStatus:ExternalStatus|null = null, externalLoading = false, externalMessage = '';
 let localOutcome:Outcome|null = null;
+let testEditing = false, testEditor:PositionEditor|null = null, testInitial:Position|null = null;
 let history:HistoryEntry[] = [];
 let replayResolution:Resolution|null = null, replayRound = 0, stageIndex:number|null = null;
 let animationResolution:Resolution|null = null, animationStage = 0;
@@ -52,17 +55,19 @@ const net = new OnlineClient(state => { void enqueueOnline(state); },state => {
   if (state === 'replaced') showError('別のタブでこのルームが開かれました。この画面からの操作は停止しています。');
   render();
 });
-const outcome = ():Outcome|null => mode === 'online' ? onlineState?.room.result ?? view?.outcome ?? null : localOutcome ?? view?.outcome ?? null;
+const isEditing = ():boolean => mode === 'test' && testEditing;
+const isTwoPlayer = ():boolean => mode === 'local' || mode === 'test';
+const outcome = ():Outcome|null => isEditing() ? null : mode === 'online' ? onlineState?.room.result ?? view?.outcome ?? null : localOutcome ?? view?.outcome ?? null;
 const perspective = ():Side => human;
-const currentResolution = ():Resolution|null => replayResolution ?? view?.lastResolution ?? null;
-const canReview = ():boolean => !!view && (mode === 'replay' || !!outcome());
+const currentResolution = ():Resolution|null => isEditing() ? null : replayResolution ?? view?.lastResolution ?? null;
+const canReview = ():boolean => !!view && !isEditing() && (mode === 'test' || mode === 'replay' || !!outcome());
 function showError(error:unknown):void { $('error-text').textContent = error instanceof Error ? error.message : String(error); $('error').hidden = false; }
 function hideError():void { $('error').hidden = true; }
 function setScreen(next:Screen):void {
   screen = next;
   document.body.classList.toggle('is-playing',next === 'game');
   for (const name of ['home','setup','online','room','game'] as Screen[]) $(name+'-screen').hidden = name !== next;
-  $('context-label').textContent = next === 'room' ? 'インターネット対戦' : next === 'game' ? mode === 'online' ? 'ルーム '+onlineCode : mode === 'cpu' ? 'AI対戦' : mode === 'local' ? '1端末モード' : '棋譜の検討' : '';
+  $('context-label').textContent = next === 'room' ? 'インターネット対戦' : next === 'game' ? mode === 'online' ? 'ルーム '+onlineCode : mode === 'cpu' ? 'AI対戦' : mode === 'local' ? '1端末モード' : mode === 'test' ? 'テストモード' : '棋譜の検討' : '';
   document.title = next === 'game' ? '対局 · 同時着手将棋' : '同時着手将棋';
   window.scrollTo({top:0,behavior:'instant'});
   render();
@@ -71,9 +76,16 @@ function selectedOptions():ActionOption[] {
   return options.filter(option => selection && ('piece' in selection ? option.action.type === 'move' && option.action.piece === selection.piece : option.action.type === 'drop' && option.action.kind === selection.kind));
 }
 function canAct():boolean {
-  return !!view && screen === 'game' && mode !== 'replay' && !outcome() && !busy && !animating && stageIndex === null && !view.committed[sideIndex(active)] && (mode !== 'online' || connection === 'connected' && onlineState?.room.phase === 'playing' && onlineState.room.players.every(player => player?.connected));
+  return !!view && screen === 'game' && mode !== 'replay' && !isEditing() && !outcome() && !busy && !animating && stageIndex === null && !view.committed[sideIndex(active)] && (mode !== 'online' || connection === 'connected' && onlineState?.room.phase === 'playing' && onlineState.room.players.every(player => player?.connected));
 }
 function canInput():boolean { return canAct() && !pendingChoice; }
+function canEdit():boolean { return isEditing() && !!testEditor && screen === 'game' && !busy && !animating; }
+const testBoardControls = new TestBoardControls($('board'),$('test-piece-menu'),$('test-drag-preview'),{
+  editor:() => canEdit() ? testEditor : null,
+  perspective,
+  changed:() => { hideError(); render(); },
+  markup:piece => pieceMarkup(piece,piece.side !== perspective(),{rules:view?.rules}),
+});
 function clearSelection():void { selection = null; pendingChoice = null; }
 function stopPlayback():void { if (playback) clearInterval(playback); playback = undefined; $('play').textContent = '▶ 再生'; }
 function hideResult():void {
@@ -82,6 +94,7 @@ function hideResult():void {
   document.querySelector<HTMLElement>('.app-header')!.inert = false;
 }
 function resetGameUI():void {
+  testBoardControls.reset();
   gameSerial++; effects.skip(); stopPlayback(); hideResult(); clearSelection();
   animating = false; animationResolution = null; replayResolution = null;
   stageIndex = null; replayRound = 0; tab = 'game'; history = []; replayCache.clear(); roundStarts.clear();
@@ -97,7 +110,7 @@ async function run(work:()=>Promise<void>):Promise<void> {
   } finally { busy = false; render(); }
 }
 async function loadOptions():Promise<void> {
-  options = mode === 'online' ? onlineState?.options ?? [] : mode === 'replay' || outcome() ? [] : await engine.request<ActionOption[]>({cmd:'actions',side:active});
+  options = mode === 'online' ? onlineState?.options ?? [] : mode === 'replay' || isEditing() || outcome() ? [] : await engine.request<ActionOption[]>({cmd:'actions',side:active});
 }
 function openSetup(next:'cpu'|'local'):void {
   detachHomeConnection();
@@ -203,6 +216,51 @@ async function startGame():Promise<void> {
   view = await engine.request<MatchView>({cmd:'new',rules:PLAY_RULES}); await loadOptions();
   setScreen('game'); effects.sound('start');
 }
+function editTestPosition(position:Position):void {
+  resetGameUI(); testEditing = true; testEditor = new PositionEditor(position); active = 'A'; options = [];
+}
+async function openTestMode():Promise<void> {
+  detachHomeConnection();
+  const initial = await engine.request<MatchView>({cmd:'new',rules:PLAY_RULES});
+  mode = 'test'; view = initial; human = 'A'; names = {A:'A陣営',B:'B陣営'};
+  testInitial = structuredClone(initial.position); editTestPosition(initial.position); setScreen('game');
+}
+async function startTest(position:Position):Promise<void> {
+  if ((['A','B'] as Side[]).some(side => position.pieces.filter(piece => piece.side === side && piece.kind === 'K').length !== 1)) {
+    throw new Error('テストを始めるには、A・B両陣営の王を1枚ずつ配置してください。');
+  }
+  const started = await engine.request<MatchView>({cmd:'new',position,rules:PLAY_RULES});
+  resetGameUI(); testEditing = false; testInitial = structuredClone(started.position); view = started; active = 'A';
+  await loadOptions();
+}
+function renderTestControls():void {
+  $('test-controls').hidden = mode !== 'test';
+  $('game-screen').classList.toggle('is-test',mode === 'test');
+  $('game-screen').classList.toggle('is-editing',isEditing());
+  if (mode !== 'test' || !testEditor) return;
+  const editor = testEditor, editing = isEditing();
+  $('test-phase').textContent = editing ? '配置中' : outcome() ? 'テスト終了' : 'テスト中';
+  $('test-editor').hidden = !editing; $('test-start').hidden = !editing; $('test-clear').hidden = !editing;
+  $('test-edit').hidden = editing; $('test-restart').hidden = editing;
+  for (const id of ['test-initial','test-clear','test-start','test-edit','test-restart','test-move','test-erase','test-side','test-state']) {
+    $<HTMLButtonElement|HTMLSelectElement>(id).disabled = busy || animating;
+  }
+  $('test-move').setAttribute('aria-pressed',String(editor.tool === 'move'));
+  $('test-erase').setAttribute('aria-pressed',String(editor.tool === 'erase'));
+  $<HTMLSelectElement>('test-side').value = editor.side;
+  $<HTMLSelectElement>('test-state').value = editor.state;
+  $<HTMLSelectElement>('test-state').disabled ||= !editor.changeable;
+  $('test-palette').innerHTML = editorKinds.map(kind => {
+    const preview:Piece = {id:'preview',side:editor.side,at:[1,1],kind,promoted:!['K','G'].includes(kind) && editor.state === 'promote',upgraded:!['K','G'].includes(kind) && editor.state === 'upgrade'};
+    return '<button type="button" data-kind="'+kind+'" aria-label="'+symbols[kind]+'を追加" aria-pressed="'+(editor.tool === 'place' && editor.kind === kind)+'" class="'+(preview.promoted ? 'text-promoted' : preview.upgraded ? 'text-upgraded' : '')+'"'+(canEdit() ? '' : ' disabled')+'>'+symbol(preview)+'</button>';
+  }).join('');
+  $('test-hand-side').textContent = editor.side+'陣営';
+  $('test-hands').innerHTML = handKinds.map(kind => {
+    const count = editor.position.hands[editor.side][kind] ?? 0;
+    return '<div class="test-hand-row"><span>'+symbols[kind]+'</span><button type="button" data-kind="'+kind+'" data-delta="-1" aria-label="'+editor.side+'の持ち駒の'+symbols[kind]+'を減らす"'+(!canEdit() || !count ? ' disabled' : '')+'>−</button><output aria-label="'+editor.side+'の持ち駒の'+symbols[kind]+'の枚数">'+count+'</output><button type="button" data-kind="'+kind+'" data-delta="1" aria-label="'+editor.side+'の持ち駒の'+symbols[kind]+'を増やす"'+(!canEdit() || count >= 40 ? ' disabled' : '')+'>＋</button></div>';
+  }).join('');
+  $('test-hint').textContent = !editing ? '両陣営を操作して確認できます。段階リプレイで途中の動きも確認できます。' : editor.tool === 'erase' ? '取り除く駒をクリック。ドラッグして盤外へ出しても削除できます。' : editor.tool === 'place' ? editor.side+'陣営の'+symbols[editor.kind]+'の配置先をクリック。盤上の駒はドラッグで移動、右クリックで編集。' : editor.selectedPiece ? '移動先をクリック。右クリックで陣営・状態を編集。' : '左ドラッグで移動、盤外へ離すと削除。右クリックで陣営・状態を編集。';
+}
 function openOnline(join = false):void {
   detachHomeConnection();
   hideError(); joinMode = join; setScreen('online'); renderOnlineForm();
@@ -249,7 +307,7 @@ function renderBoard():void {
   const resolution = animationResolution ?? currentResolution();
   const index = animationResolution ? animationStage : stageIndex;
   const frame = index !== null && resolution ? resolution.frames[index] : undefined;
-  const position = index !== null && resolution ? resolution : view.position;
+  const position = isEditing() && testEditor ? testEditor.position : index !== null && resolution ? resolution : view.position;
   const pieces = frame?.pieces ?? position.pieces;
   const round=animationResolution ? view.round : replayRound || view.round;
   const start=frame ? roundStarts.get(round) : undefined;
@@ -261,7 +319,7 @@ function renderBoard():void {
   $('files').innerHTML = files.map(n => '<span>'+n+'</span>').join('');
   $('ranks').innerHTML = ranks.map(n => '<span>'+'一二三四五六七八九'[n-1]+'</span>').join('');
   const candidates = canInput() ? selectedOptions() : [];
-  const latest = view.lastResolution?.actions ?? [];
+  const latest = isEditing() ? [] : view.lastResolution?.actions ?? [];
   const actualEnds = latest.flatMap(action => action.type === 'move' ? view!.position.pieces.filter(p => p.id === action.piece).map(p => p.at) : view!.position.pieces.filter(p => p.side === action.side && same(p.at,action.to)).map(p => p.at));
   $('board').innerHTML = ranks.flatMap(y => files.map(x => {
     const at:Square = [x,y], p = pieces.find(piece => same(piece.at,at));
@@ -270,13 +328,14 @@ function renderBoard():void {
     if (p) classes.push('occupied');
     if (candidate) { classes.push('available'); if (candidate.conditions.length) classes.push('conditional'); }
     if (selection && 'piece' in selection && p?.id === selection.piece && index === null) classes.push('selected');
+    if (canEdit() && p?.id === testEditor?.selected) classes.push('selected');
     if (pendingChoice && same(pendingChoice.to,at)) classes.push('destination');
     if (index === null && !selection && actualEnds.some(q => same(q,at))) classes.push('last');
     const status=p ? rankAppearance(p,rankContext(p)) : null;
     const label = square(at)+(p ? ' '+p.side+' '+symbol(p)+' '+status!.description : ' 空きマス');
     const conditional = candidate ? conditionText(candidate.conditions) : '';
     const title=[status?.description,conditional].filter(Boolean).join(' / ');
-    return '<button class="'+classes.join(' ')+'" data-x="'+x+'" data-y="'+y+'" aria-label="'+escape(label)+(conditional ? ' 条件：'+escape(conditional) : '')+'"'+(title ? ' title="'+escape(title)+'"' : '')+(canInput() ? '' : ' disabled')+'>'+ (p ? pieceMarkup(p,p.side !== perspective(),rankContext(p)) : '')+'</button>';
+    return '<button class="'+classes.join(' ')+'" data-x="'+x+'" data-y="'+y+'" aria-label="'+escape(label)+(conditional ? ' 条件：'+escape(conditional) : '')+'"'+(title ? ' title="'+escape(title)+'"' : '')+(canInput() || canEdit() ? '' : ' disabled')+'>'+ (p ? pieceMarkup(p,p.side !== perspective(),rankContext(p)) : '')+'</button>';
   })).join('');
   if (animating && !settings.reduced && $('board').clientWidth > 0) {
     const size = $('board').clientWidth/9;
@@ -294,7 +353,7 @@ function renderBoard():void {
     const kinds = (['R','B','G','S','N','L','P'] as Kind[]).filter(kind => (position.hands[side][kind] ?? 0) > 0);
     const stageHands = index !== null && resolution && index < resolution.frames.length;
     element.innerHTML = '<span class="hand-label">持ち駒</span>'+(stageHands ? '<span class="hand-empty">段階再生中</span>' : kinds.length ? kinds.map(kind =>
-      '<button class="hand-piece'+(selection && 'kind' in selection && selection.kind === kind && side === active ? ' selected' : '')+'" data-side="'+side+'" data-kind="'+kind+'" aria-label="'+side+' 持ち駒 '+symbols[kind]+' '+position.hands[side][kind]+'枚"'+(canInput() && side === active ? '' : ' disabled')+'>'+pieceMarkup({id:'hand:'+side+':'+kind,side,kind,at:[1,1],promoted:false,upgraded:false},top)+'<small aria-hidden="true">'+position.hands[side][kind]+'</small></button>').join('') : '<span class="hand-empty">なし</span>');
+      '<button class="hand-piece'+(selection && 'kind' in selection && selection.kind === kind && side === active ? ' selected' : '')+'" data-side="'+side+'" data-kind="'+kind+'" aria-label="'+side+' 持ち駒 '+symbols[kind]+' '+position.hands[side][kind]+'枚"'+(canInput() && side === active || canEdit() ? '' : ' disabled')+'>'+pieceMarkup({id:'hand:'+side+':'+kind,side,kind,at:[1,1],promoted:false,upgraded:false},top)+'<small aria-hidden="true">'+position.hands[side][kind]+'</small></button>').join('') : '<span class="hand-empty">なし</span>');
   }
   renderChoice();
 }
@@ -316,16 +375,16 @@ function renderPlayers():void {
   if (!view) return;
   for (const side of ['A','B'] as Side[]) {
     const top = side !== perspective(), element = $(top ? 'player-top' : 'player-bottom');
-    const committed = view.committed[sideIndex(side)], player = onlineState?.room.players[sideIndex(side)];
-    const status = outcome() ? '終局' : stageIndex !== null ? '公開済み' : animating ? '同時着手' : mode === 'online' && !player?.connected ? '接続待ち' : committed ? '着手済み' : mode === 'cpu' && side !== human ? '思考中' : mode === 'local' && side !== active ? '入力待ち' : '手を選択中';
-    element.classList.toggle('is-you',mode === 'local' ? side === active : !top);
+    const committed = !isEditing() && view.committed[sideIndex(side)], player = onlineState?.room.players[sideIndex(side)];
+    const status = isEditing() ? '自由配置' : outcome() ? '終局' : stageIndex !== null ? '公開済み' : animating ? '同時着手' : mode === 'online' && !player?.connected ? '接続待ち' : committed ? '着手済み' : mode === 'cpu' && side !== human ? '思考中' : isTwoPlayer() && side !== active ? '入力待ち' : '手を選択中';
+    element.classList.toggle('is-you',isTwoPlayer() ? side === active : !top);
     element.innerHTML = '<span class="player-avatar">'+(side === 'A' ? '王' : '玉')+'</span><strong class="player-name">'+escape(names[side])+'<span class="player-side">'+side+'陣営</span></strong><span class="player-status'+(committed ? ' ready' : '')+'"><i class="live-dot"></i>'+status+'</span>';
   }
 }
 function renderLocalControls():void {
-  $('local-controls').hidden = mode !== 'local';
-  $('game-screen').classList.toggle('is-local',mode === 'local');
-  if (mode !== 'local' || !view) return;
+  $('local-controls').hidden = !isTwoPlayer() || isEditing();
+  $('game-screen').classList.toggle('is-local',isTwoPlayer() && !isEditing());
+  if (!isTwoPlayer() || isEditing() || !view) return;
   const finished = !!outcome();
   for (const side of ['A','B'] as Side[]) {
     const button = $<HTMLButtonElement>('local-side-'+side.toLowerCase());
@@ -391,13 +450,13 @@ function render():void {
   renderModelSetup();
   $<HTMLButtonElement>('start-game').disabled = busy || screen === 'setup' && setupMode === 'cpu' && (usesModel() ? modelsLoading || !selectedModel() : externalLoading || !externalStatus?.available);
   $<HTMLButtonElement>('online-submit').disabled = busy;
-  for (const id of ['mode-cpu','mode-local','mode-online','setup-back','online-back','home-nav','game-home','menu-open']) $<HTMLButtonElement>(id).disabled = busy || animating;
+  for (const id of ['mode-cpu','mode-local','mode-online','mode-test','setup-back','online-back','home-nav','game-home','menu-open']) $<HTMLButtonElement>(id).disabled = busy || animating;
   if (screen === 'room') renderRoom();
   if (screen !== 'game' || !view) return;
-  $('context-label').textContent = mode === 'online' ? 'ルーム '+onlineCode : mode === 'cpu' ? 'AI対戦' : mode === 'local' ? '1端末モード' : '棋譜の検討';
-  $('game-mode').textContent = mode === 'cpu' ? 'AI対戦 · '+opponent.label : mode === 'online' ? 'ルーム '+onlineCode : mode === 'local' ? '1端末モード' : '棋譜の検討';
+  $('context-label').textContent = mode === 'online' ? 'ルーム '+onlineCode : mode === 'cpu' ? 'AI対戦' : mode === 'local' ? '1端末モード' : mode === 'test' ? 'テストモード' : '棋譜の検討';
+  $('game-mode').textContent = mode === 'cpu' ? 'AI対戦 · '+opponent.label : mode === 'online' ? 'ルーム '+onlineCode : mode === 'local' ? '1端末モード' : mode === 'test' ? 'テストモード · '+(testEditing ? '自由配置' : '動作確認') : '棋譜の検討';
   $('game-mode').title = $('game-mode').textContent ?? '';
-  $('round-number').textContent = String(stageIndex !== null ? replayRound : outcome() ? view.round : view.round+1).padStart(2,'0');
+  $('round-number').textContent = String(isEditing() ? 0 : stageIndex !== null ? replayRound : outcome() ? view.round : view.round+1).padStart(2,'0');
   const reviewable = canReview();
   $('game-sidebar').hidden = !settings.history;
   $('history-toggle').setAttribute('aria-pressed',String(settings.history));
@@ -410,7 +469,7 @@ function render():void {
   $<HTMLButtonElement>('tab-game').disabled = busy || animating;
   $('history-panel').hidden = tab !== 'game'; $('replay-panel').hidden = tab !== 'replay';
   $('history').innerHTML = history.length ? history.map(entry => '<button class="history-row'+(entry.round === replayRound && stageIndex !== null ? ' active' : '')+'" data-round="'+entry.round+'" aria-label="ラウンド '+entry.round+(reviewable ? ' を振り返る' : '')+'"'+(!reviewable || busy || animating ? ' disabled' : '')+'><span>'+String(entry.round).padStart(2,'0')+'</span>'+entry.labels.map(label => '<span>'+escape(label)+'</span>').join('')+'</button>').join('') : '<p class="empty-history">双方の一手が揃うと<br>ここに棋譜が残ります。</p>';
-  const meaningful = view.lastResolution?.events.filter(event => !['move','blocked','drop_wait'].includes(event.type)) ?? [];
+  const meaningful = isEditing() ? [] : view.lastResolution?.events.filter(event => !['move','blocked','drop_wait'].includes(event.type)) ?? [];
   $('last-event').hidden = !meaningful.length;
   if (meaningful.length && view.lastResolution) $('last-event').textContent = eventText(meaningful.find(event => event.type === 'contact') ?? meaningful[meaningful.length-1],view.lastResolution);
   const finished = !!outcome();
@@ -418,18 +477,19 @@ function render():void {
   $('show-result').hidden = !finished;
   $('rematch').hidden = !finished || mode === 'online' || mode === 'replay';
   $('back-room').hidden = !finished || mode !== 'online';
-  $('resign').hidden = finished || mode === 'replay';
-  $('menu-resign').hidden = finished || mode === 'replay';
+  $('rematch').textContent = mode === 'test' ? '同じ配置で再テスト' : 'もう一度対戦';
+  $('resign').hidden = finished || mode === 'replay' || mode === 'test';
+  $('menu-resign').hidden = finished || mode === 'replay' || mode === 'test';
   $<HTMLButtonElement>('resign').disabled = busy || animating;
-  $<HTMLButtonElement>('export').disabled = busy || animating;
+  $<HTMLButtonElement>('export').disabled = busy || animating || isEditing();
   $<HTMLButtonElement>('import').disabled = busy || mode === 'online' || animating;
-  const committed = view.committed[sideIndex(active)];
+  const committed = !isEditing() && view.committed[sideIndex(active)];
   const selectedId = selection && 'piece' in selection ? selection.piece : null;
   const selectedPiece = view.position.pieces.find(p => p.id === selectedId);
   $('input-hint').textContent = finished ? '終局 · '+(outcome()!.winner === 'draw' ? '引き分け' : names[outcome()!.winner as Side]+'の勝利') : stageIndex !== null ? '段階リプレイ · 公開済みの局面' : animating ? '双方の駒が同時に動きます' : committed ? '着手を封じました。相手の一手を待っています' : busy ? '処理中…' : pendingChoice ? '成り・昇格を選択' : selection ? (selectedPiece ? symbol(selectedPiece) : symbols[(selection as {kind:Kind}).kind])+'の移動先を選択' : '';
   $('input-hint').parentElement!.classList.toggle('waiting',committed && !finished);
   $('clear-selection').hidden = !selection || busy || animating;
-  renderLocalControls(); renderPlayers(); renderBoard(); renderReplay(); renderConnection();
+  renderTestControls(); renderLocalControls(); renderPlayers(); renderBoard(); testBoardControls.render(); renderReplay(); renderConnection();
 }
 async function animateRound(resolution:Resolution):Promise<void> {
   await ensureRoundStart(view!.round);
@@ -493,7 +553,7 @@ async function submitAction(action:Action):Promise<void> {
     if (publicReplay) { view = await engine.request<MatchView>({cmd:'import',replay:publicReplay}); await loadOptions(); }
     throw error;
   }
-  if (mode === 'local') active = view.round > round ? 'A' : other(submittingSide);
+  if (isTwoPlayer()) active = view.round > round ? 'A' : other(submittingSide);
   if (view.round > round && view.lastResolution) {
     rememberRound(view.lastResolution,view.round); await animateRound(view.lastResolution);
   }
@@ -525,15 +585,15 @@ function showResult(force = false):void {
   for (const dialog of document.querySelectorAll<HTMLDialogElement>('dialog[open]')) dialog.close();
   confirmAction = null;
   resultShown = key; stopPlayback(); clearSelection();
-  const draw = result.winner === 'draw', victory = !draw && (mode === 'local' || result.winner === human);
+  const draw = result.winner === 'draw', victory = !draw && (isTwoPlayer() || result.winner === human);
   $('result-card').className = 'result-card '+(draw ? 'draw' : victory ? 'victory' : 'defeat');
   $('result-sigil').textContent = draw ? '和' : victory ? '勝' : '敗';
   $('result-kicker').textContent = draw ? 'DRAW' : victory ? 'VICTORY' : 'DEFEAT';
-  $('result-title').textContent = draw ? '引き分け' : mode === 'local' ? result.winner+'陣営の勝利' : victory ? '勝利' : '敗北';
+  $('result-title').textContent = draw ? '引き分け' : isTwoPlayer() ? result.winner+'陣営の勝利' : victory ? '勝利' : '敗北';
   $('result-detail').textContent = reasons[result.reason] ?? result.reason;
   $('result-players').innerHTML = '<span>'+escape(names.A)+'</span><small>vs</small><span>'+escape(names.B)+'</span>';
-  $('result-rounds').textContent = view.round+' ROUNDS · '+(mode === 'online' ? 'ONLINE MATCH' : mode === 'cpu' ? 'AI MATCH' : mode === 'local' ? 'LOCAL MATCH' : 'REPLAY');
-  $('result-rematch').textContent = mode === 'online' ? 'ルームへ戻って再戦' : mode === 'replay' ? 'AI対戦を始める' : 'もう一度対戦';
+  $('result-rounds').textContent = view.round+' ROUNDS · '+(mode === 'online' ? 'ONLINE MATCH' : mode === 'cpu' ? 'AI MATCH' : mode === 'local' ? 'LOCAL MATCH' : mode === 'test' ? 'TEST' : 'REPLAY');
+  $('result-rematch').textContent = mode === 'online' ? 'ルームへ戻って再戦' : mode === 'replay' ? 'AI対戦を始める' : mode === 'test' ? '同じ配置で再テスト' : 'もう一度対戦';
   $<HTMLButtonElement>('result-review').disabled = view.round === 0;
   $('result-overlay').hidden = false; $('app').inert = true; document.querySelector<HTMLElement>('.app-header')!.inert = true;
   document.body.classList.add('result-open');
@@ -559,12 +619,12 @@ function requestHome():void {
   $<HTMLDialogElement>('menu-dialog').close();
   if (onlineToken && screen !== 'home') {
     confirm('ルームを退出しますか？',outcome() || screen === 'room' ? '再戦する場合は、このルームに残ってください。' : '対局中に退出すると、あなたの負けになります。','退出する',() => void run(goHome));
-  } else if (view && mode !== 'replay' && !outcome() && screen === 'game') {
+  } else if (view && mode !== 'replay' && mode !== 'test' && !outcome() && screen === 'game') {
     confirm('対局を終了しますか？','この対局を終了してホームへ戻ります。','ホームへ戻る',() => void run(goHome));
   } else void run(goHome);
 }
 function requestResign():void {
-  if (busy || animating || outcome() || !view) return;
+  if (busy || animating || outcome() || !view || mode === 'test') return;
   $<HTMLDialogElement>('menu-dialog').close();
   confirm('投了しますか？',names[active]+'さんの投了として、対局を終了します。','投了する',() => void run(async () => {
     if (mode === 'online') await enqueueOnline(await net.request<OnlineState>('resign',{gameId:onlineState!.room.gameId}));
@@ -577,6 +637,7 @@ async function rematch():Promise<void> {
     await enqueueOnline(await net.request<OnlineState>('return',{gameId:onlineState!.room.gameId}));
     setScreen('room');
   } else if (mode === 'replay') openSetup('cpu');
+  else if (mode === 'test') { if (testInitial) await startTest(testInitial); }
   else { setupMode = mode; await startGame(); }
 }
 async function saveReplay():Promise<void> {
@@ -659,6 +720,50 @@ for (const element of document.querySelectorAll<HTMLElement>('[data-icon]')) ele
 $('mode-cpu').addEventListener('click',() => openSetup('cpu'));
 $('mode-local').addEventListener('click',() => openSetup('local'));
 $('mode-online').addEventListener('click',() => openOnline());
+$('mode-test').addEventListener('click',() => void run(openTestMode));
+$('test-initial').addEventListener('click',() => {
+  if (mode !== 'test' || busy || animating) return;
+  void run(async () => {
+    view = await engine.request<MatchView>({cmd:'new',rules:PLAY_RULES});
+    editTestPosition(view.position);
+  });
+});
+$('test-clear').addEventListener('click',() => {
+  if (!canEdit()) return;
+  editTestPosition({pieces:[],hands:{A:{},B:{}},dropBans:[],moveBans:[],nextPieceId:0}); hideError(); render();
+});
+$('test-start').addEventListener('click',() => { if (canEdit()) void run(() => startTest(testEditor!.position)); });
+$('test-edit').addEventListener('click',() => {
+  if (mode !== 'test' || isEditing() || busy || animating || !view) return;
+  editTestPosition(view.position); hideError(); render();
+});
+$('test-restart').addEventListener('click',() => {
+  if (mode === 'test' && !isEditing() && testInitial && !busy && !animating) void run(() => startTest(testInitial!));
+});
+for (const tool of ['move','erase'] as const) $('test-'+tool).addEventListener('click',() => {
+  if (!canEdit()) return;
+  testEditor!.selectTool(tool); hideError(); render();
+});
+$('test-side').addEventListener('change',() => {
+  if (!canEdit()) return;
+  testEditor!.setSide($<HTMLSelectElement>('test-side').value as Side); hideError(); render();
+});
+$('test-state').addEventListener('change',() => {
+  if (!canEdit()) return;
+  testEditor!.setState($<HTMLSelectElement>('test-state').value as Choice); hideError(); render();
+});
+$('test-palette').addEventListener('click',event => {
+  const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-kind]');
+  if (!canEdit() || !button) return;
+  testEditor!.chooseKind(button.dataset.kind as Kind); hideError(); render();
+  $('test-palette').querySelector<HTMLButtonElement>('[data-kind="'+button.dataset.kind+'"]')?.focus({preventScroll:true});
+});
+$('test-hands').addEventListener('click',event => {
+  const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-delta]');
+  if (!canEdit() || !button || button.disabled) return;
+  testEditor!.changeHand(button.dataset.kind as Kind,Number(button.dataset.delta)); hideError(); render();
+  $('test-hands').querySelector<HTMLButtonElement>('[data-kind="'+button.dataset.kind+'"][data-delta="'+button.dataset.delta+'"]:enabled')?.focus({preventScroll:true});
+});
 $('refresh-models').addEventListener('click',() => void refreshModels());
 $('refresh-external').addEventListener('click',() => void refreshExternal());
 $('ai-type').addEventListener('change',() => {
@@ -693,9 +798,14 @@ $('resume-online').addEventListener('click',() => void run(resumeOnline));
 $('copy-code').addEventListener('click',() => void run(() => copy(onlineCode,'部屋番号')));
 $('copy-link').addEventListener('click',() => void run(() => copy(location.origin+location.pathname+'?room='+onlineCode,'招待リンク')));
 $('board').addEventListener('click',event => {
-  if (!canInput() || !view) return;
+  if ((!canInput() && !canEdit()) || !view) return;
   const cell = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-x]'); if (!cell) return;
   const at:Square = [Number(cell.dataset.x),Number(cell.dataset.y)];
+  if (canEdit()) {
+    testEditor!.click(at); hideError(); render();
+    $('board').querySelector<HTMLButtonElement>('[data-x="'+at[0]+'"][data-y="'+at[1]+'"]')?.focus({preventScroll:true});
+    return;
+  }
   const candidates = selectedOptions().filter(option => same(option.action.to,at));
   if (selection && candidates.length) {
     const option = candidates.find(option => option.action.type === 'drop' || option.action.choice === 'none')!;
@@ -714,8 +824,12 @@ $('board').addEventListener('click',event => {
   }
 });
 for (const id of ['hand-top','hand-bottom']) $(id).addEventListener('click',event => {
-  if (!canInput()) return;
   const target = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-kind]');
+  if (canEdit() && target) {
+    testEditor!.selectTool('move'); testEditor!.setSide(target.dataset.side as Side);
+    hideError(); render(); $('test-side').focus({preventScroll:true}); return;
+  }
+  if (!canInput()) return;
   if (!target || target.dataset.side !== active) return;
   const kind = target.dataset.kind as Kind;
   selection = selection && 'kind' in selection && selection.kind === kind ? null : {kind}; pendingChoice = null; render();
@@ -728,7 +842,7 @@ $('choice-popover').addEventListener('click',event => {
   const chosen = pendingChoice.options.find(option => option.action.type === 'move' && option.action.choice === target.dataset.choice);
   if (chosen) void run(() => submitAction(chosen.action));
 });
-$('clear-selection').addEventListener('click',() => { clearSelection(); render(); });
+$('clear-selection').addEventListener('click',() => { clearSelection(); if (canEdit()) testEditor!.selectTool('move'); render(); });
 $('board').addEventListener('pointerover',event => {
   if (!selection || !canInput()) return;
   const cell = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-x]'); if (!cell) return;
@@ -742,7 +856,7 @@ $('board').addEventListener('pointerleave',() => {
   }
 });
 for (const side of ['A','B'] as Side[]) $('local-side-'+side.toLowerCase()).addEventListener('click',() => {
-  if (mode !== 'local' || !canAct() || view!.committed[sideIndex(side)]) return;
+  if (!isTwoPlayer() || !canAct() || view!.committed[sideIndex(side)]) return;
   void run(async () => { active = side; clearSelection(); await loadOptions(); });
 });
 $('skip-effects').addEventListener('click',() => effects.skip());
@@ -814,11 +928,12 @@ document.addEventListener('keydown',event => {
     if (!$('clash-overlay').hidden) effects.skip();
     else if (!$('result-overlay').hidden) { hideResult(); returnLive(); $('show-result').focus({preventScroll:true}); }
     else if (pendingChoice) { pendingChoice = null; render(); }
+    else if (canEdit()) { testEditor!.selectTool('move'); render(); }
     else if (selection) { clearSelection(); render(); }
     else if (stageIndex !== null) returnLive();
   }
   const cell = (event.target as HTMLElement).closest<HTMLButtonElement>('#board [data-x]');
-  if (cell && /^Arrow/.test(event.key) && canInput()) {
+  if (cell && /^Arrow/.test(event.key) && (canInput() || canEdit())) {
     event.preventDefault(); const flip = perspective() === 'B' ? 1 : -1;
     const x = Number(cell.dataset.x)+(event.key === 'ArrowRight' ? flip : event.key === 'ArrowLeft' ? -flip : 0);
     const y = Number(cell.dataset.y)+(event.key === 'ArrowDown' ? -flip : event.key === 'ArrowUp' ? flip : 0);

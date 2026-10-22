@@ -39,7 +39,7 @@
           <button id="mode-online" class="menu-option"><span class="option-icon" data-icon="globe"></span><span>インターネット対戦<small>部屋番号で、友だちと。</small></span><span class="option-arrow" data-icon="chevron"></span></button>
           <button id="mode-local" class="menu-option"><span class="option-icon" data-icon="people"></span><span>1端末モード<small>ひとつの盤で、両陣営を操作。</small></span><span class="option-arrow" data-icon="chevron"></span></button>
         </div>
-        <div class="sub-options"><button id="import-home" class="text-button"><span data-icon="replay"></span>棋譜を開く</button></div>
+        <div class="sub-options"><button id="mode-test" class="text-button"><span data-icon="settings"></span>テストモード</button><button id="import-home" class="text-button"><span data-icon="replay"></span>棋譜を開く</button></div>
         <button id="resume-online" class="resume-button" hidden><span class="live-dot"></span>前のルームに戻る<span data-icon="chevron"></span></button>
       </div>
       <div class="home-footer"><span>双方が選ぶ。盤が動く。</span><span>RULES 0.7</span></div>
@@ -104,8 +104,26 @@
         <section class="playfield" aria-label="将棋盤と持ち駒">
           <div class="side-rail opponent-rail">
             <section class="player-rack opponent-rack" aria-label="相手の駒台"><div id="player-top" class="player-strip"></div><div id="hand-top" class="hand-tray" aria-label="相手の持ち駒"></div></section>
+            <section id="test-controls" class="test-controls" aria-label="テストモードの操作" hidden>
+              <div class="test-heading"><strong>テストモード</strong><span id="test-phase">配置中</span></div>
+              <div class="test-presets"><button id="test-initial" class="secondary" type="button">初期盤面</button><button id="test-clear" class="secondary" type="button">盤面を空にする</button></div>
+              <div id="test-editor">
+                <div class="test-tools" role="group" aria-label="盤面の編集方法"><button id="test-move" type="button" aria-pressed="true">選択・移動</button><button id="test-erase" type="button" aria-pressed="false">削除</button></div>
+                <div class="test-fields"><label for="test-side">陣営<select id="test-side"><option value="A">☗ A陣営</option><option value="B">☖ B陣営</option></select></label><label for="test-state">駒の状態<select id="test-state"><option value="none">通常</option><option value="promote">成り</option><option value="upgrade">昇格 +1</option></select></label></div>
+                <span class="test-label">追加する駒</span><div id="test-palette" class="test-palette" role="group" aria-label="追加する駒"></div>
+                <details id="test-hand-editor"><summary class="test-hand-heading"><span class="test-label">持ち駒を編集</span><span id="test-hand-side">A陣営</span></summary><div id="test-hands" class="test-hands"></div></details>
+              </div>
+              <p id="test-hint" class="test-hint" role="status" aria-live="polite"></p>
+              <button id="test-start" class="primary full" type="button">この配置でテスト</button>
+              <button id="test-edit" class="secondary full" type="button" hidden>現在の局面を編集</button>
+              <button id="test-restart" class="secondary full" type="button" hidden>同じ配置で再テスト</button>
+            </section>
           </div>
-          <div class="board-surround"><div id="files" class="files" aria-hidden="true"></div><div class="board-and-ranks"><div class="board-wrap"><div id="board" class="board" role="group" aria-label="9×9の将棋盤"></div><div id="choice-popover" class="choice-popover" role="dialog" aria-label="成り・昇格を選択" hidden></div></div><div id="ranks" class="ranks" aria-hidden="true"></div></div></div>
+          <div class="board-surround"><div id="files" class="files" aria-hidden="true"></div><div class="board-and-ranks"><div class="board-wrap"><div id="board" class="board" role="group" aria-label="9×9の将棋盤"></div><div id="choice-popover" class="choice-popover" role="dialog" aria-label="成り・昇格を選択" hidden></div><div id="test-piece-menu" class="test-piece-menu" role="dialog" aria-labelledby="test-piece-title" hidden>
+            <div class="test-piece-heading"><strong id="test-piece-title">駒を編集</strong><button type="button" class="icon-button" data-editor-close aria-label="駒の編集を閉じる">×</button></div>
+            <fieldset><legend>陣営</legend><div class="test-piece-options"><button type="button" data-editor-side="A" aria-pressed="false">☗ A陣営</button><button type="button" data-editor-side="B" aria-pressed="false">☖ B陣営</button></div></fieldset>
+            <fieldset><legend>状態</legend><div class="test-piece-options"><button type="button" data-editor-state="none" aria-pressed="false">通常</button><button type="button" data-editor-state="promote" aria-pressed="false">成り</button><button type="button" data-editor-state="upgrade" aria-pressed="false">昇格 +1</button></div></fieldset>
+          </div></div><div id="ranks" class="ranks" aria-hidden="true"></div></div></div>
           <div class="side-rail self-rail">
         <aside id="game-sidebar" class="game-sidebar" aria-label="棋譜と対局後の検討">
           <div class="tab-bar"><button id="tab-game" class="active" aria-pressed="true">棋譜</button><button id="tab-replay" aria-pressed="false">段階リプレイ</button></div>
@@ -127,6 +145,7 @@
       </div>
     </section>
   </main>
+  <div id="test-drag-preview" class="test-drag-preview" aria-hidden="true" hidden></div>
   <div id="clash-overlay" class="clash-overlay" role="status" aria-live="polite" hidden><div class="clash-scrim"></div><div id="clash-content" class="clash-band"></div><button id="skip-effects" class="effect-skip">演出をスキップ ›</button></div>
   <div id="result-overlay" class="result-overlay" role="dialog" aria-modal="true" aria-labelledby="result-title" tabindex="-1" hidden><div id="result-card" class="result-card"><div class="result-rays" aria-hidden="true"></div><span id="result-sigil" class="result-sigil">勝</span><p id="result-kicker" class="overline">VICTORY</p><h1 id="result-title">勝利</h1><p id="result-detail" class="result-detail"></p><div id="result-players" class="result-players"></div><p id="result-rounds" class="result-rounds"></p><button id="result-rematch" class="primary full">もう一度対戦</button><div class="result-review-actions"><button id="result-final" class="secondary">最終盤面</button><button id="result-review" class="secondary">振り返る</button></div><button id="result-home" class="text-button">ホームへ戻る</button></div></div>
   <dialog id="rules-dialog" class="dialog rules-dialog"><button class="dialog-close icon-button" data-close="rules-dialog" aria-label="閉じる">×</button><p class="overline">HOW TO PLAY</p><h2>同時に指す、将棋。</h2><ol class="rule-list"><li><b>駒 → 移動先で、一手。</b><p>双方が選ぶまで着手は秘密。揃うと、長距離駒は1マスずつ同時に動きます。桂は跳んで1段階です。</p></li><li><b>動く駒同士は「格」で衝突。</b><p>格の高い方が勝ち、同格なら相討ち。勝った駒も停止します。止まっている駒は、格によらず捕獲できます。</p><div class="rank-key">王 0　歩 1　香 2　桂 3　銀 4　金 5　飛・角 6</div></li><li><b>成りと昇格は、別の選択。</b><p><span class="text-promoted">成り：動きが変わる。格は元のまま。</span><br><span class="text-upgraded">昇格：動きはそのまま。格 +1を保持。</span><br>全種類の駒は2ラウンド続けて動くと格−1（下限0）。続けて動いても低下は−1までで、1ラウンド休むと回復します。昇格そのものは失いません。<br>自陣3段では、動く駒同士の衝突時のみ防御+1。自陣で防御が強化されている駒は青、格低下中の駒は紫のオーラ。自陣の外では昇格していても青いオーラは出ません。<br>敵陣から動くか、実際に敵陣へ到達すると成り・昇格が適用。昇格後は任意では成らず、行き所がなくなる場合の強制成りでのみ成り駒へ変わります。</p></li><li><b>王を取って、勝利。</b><p>王を取った駒が同じラウンドで取り返されても勝利。王自身が敵王を取ってから取り返された場合も勝利します。独立して双方が王を取った場合は捕獲時の格で比較します。4回の反復・200ラウンドで引き分けです。</p></li></ol><details class="advanced-rules"><summary>条件付きの指定と同時打ち</summary><p>味方のいるマスや障害の先も指定できます。味方が取られると進めます。敵が残れば捕獲して停止します。二歩や敵の占有先への打ちは、条件が解消されれば成立します。</p><p>同じマスへの同時打ちは格で比較し、同格なら双方とも持ち駒を保持。次ラウンドは同じ駒種・同じマスへの再打ちを禁止します。盤上の駒と打ち駒が競合すると盤上駒を優先します。</p><p>王手放置・打ち歩詰めの禁止と、独立したパスはありません。</p></details></dialog>

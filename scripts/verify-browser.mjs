@@ -22,6 +22,14 @@ async function server(name, options = {}) {
 const cell = (page, x, y) => page.locator(`#board [data-x="${x}"][data-y="${y}"]`);
 const ready = page => expect(page.locator('#menu-open')).toBeEnabled({ timeout: 15000 });
 async function shot(page, name) { await page.screenshot({ path: resolve(artifacts, 'screenshots', name + '.png'), animations: 'disabled', fullPage: true }); }
+async function startPieceDrag(page,x,y) {
+  await cell(page,x,y).scrollIntoViewIfNeeded();
+  const source = await cell(page,x,y).boundingBox();
+  await page.mouse.move(source.x+source.width/2,source.y+source.height/2);
+  await page.mouse.down();
+  await page.mouse.move(source.x+source.width/2+8,source.y+source.height/2,{steps:2});
+  await expect(page.locator('#test-drag-preview')).toBeVisible();
+}
 async function fit(page, label) {
   const layout = await page.evaluate(() => ({ viewport: innerWidth, content: document.documentElement.scrollWidth, board: (() => { const r = document.querySelector('#board').getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; })() }));
   assert.ok(layout.content <= layout.viewport, `${label}: horizontal overflow ${JSON.stringify(layout)}`);
@@ -95,6 +103,135 @@ try {
   for (const width of [320, 360, 720, 1024]) { await a.setViewportSize({width,height:800}); await fit(a, 'home '+width); }
   await a.setViewportSize({width:1280,height:900});
   await b.goto(standard); await fit(b, 'mobile home'); await shot(b, 'home-mobile');
+  for (const [page,device] of [[a,'desktop'],[b,'mobile']]) {
+    await page.locator('#mode-test').click(); await ready(page);
+    await expect(page.locator('#test-controls')).toBeVisible();
+    await expect(page.locator('#board .piece')).toHaveCount(40);
+    await expect(page.locator('#local-controls')).toBeHidden();
+    await expect(page.locator('#export')).toBeDisabled();
+    await fit(page,device+' test editor');
+    const widths = device === 'desktop' ? [320,360,720,1100,1101,1280,1920] : [390];
+    for (const width of widths) {
+      await page.setViewportSize({width,height:device === 'desktop' ? 900 : 844});
+      await fit(page,'test editor '+width);
+      const placement = await page.evaluate(() => {
+        const hand = document.querySelector('.opponent-rack').getBoundingClientRect();
+        const controls = document.querySelector('#test-controls').getBoundingClientRect();
+        return {handBottom:hand.bottom,controlsTop:controls.top,controlsWidth:controls.width};
+      });
+      assert.ok(placement.controlsTop >= placement.handBottom,`test ${width}: controls below opponent hand`);
+      assert.ok(placement.controlsWidth > 100,`test ${width}: editor has usable width`);
+    }
+    if (device === 'desktop') await page.setViewportSize({width:1280,height:900});
+    await shot(page,'test-editor-'+device);
+    await cell(page,7,7).click({button:'right'});
+    await expect(page.locator('#test-piece-menu')).toBeVisible();
+    await page.locator('[data-editor-side="B"]').click();
+    await page.locator('[data-editor-state="promote"]').click();
+    await expect(cell(page,7,7).locator('.piece.enemy.promoted')).toHaveCount(1);
+    await page.locator('[data-editor-state="upgrade"]').click();
+    await expect(cell(page,7,7).locator('.piece.enemy.upgraded:not(.promoted)')).toHaveCount(1);
+    await shot(page,'test-piece-menu-'+device);
+    await page.locator('[data-editor-state="none"]').click();
+    await page.locator('[data-editor-side="A"]').click();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#test-piece-menu')).toBeHidden();
+    await expect(cell(page,7,7)).toBeFocused();
+    for (const at of [[9,1],[1,9]]) {
+      await cell(page,...at).click({button:'right'});
+      const menu = await page.locator('#test-piece-menu').boundingBox(), viewport = page.viewportSize();
+      assert.ok(menu.x>=0 && menu.y>=0 && menu.x+menu.width<=viewport.width && menu.y+menu.height<=viewport.height,device+' corner piece menu fits the viewport');
+      await page.keyboard.press('Escape');
+    }
+    await cell(page,5,1).click({button:'right'});
+    await expect(page.locator('[data-editor-state="promote"]')).toBeDisabled();
+    await expect(page.locator('[data-editor-state="upgrade"]')).toBeDisabled();
+    await cell(page,9,5).click();
+    await expect(page.locator('#test-piece-menu')).toBeHidden();
+    await expect(cell(page,5,1).locator('.piece')).toHaveCount(1);
+    await expect(cell(page,9,5).locator('.piece')).toHaveCount(0);
+    if (device === 'desktop') {
+      await cell(page,3,3).click({button:'right'});
+      await page.locator('[data-editor-side="A"]').click();
+      await page.locator('[data-editor-state="upgrade"]').click();
+      await page.keyboard.press('Escape');
+      const pieceId = await cell(page,3,3).locator('.piece').getAttribute('data-piece');
+      await page.locator('#test-palette [data-kind="R"]').click();
+      await startPieceDrag(page,3,3);
+      let target = await cell(page,4,4).boundingBox();
+      await page.mouse.move(target.x+target.width/2,target.y+target.height/2,{steps:8});
+      await expect(cell(page,4,4)).toHaveClass(/editor-drop-target/);
+      await shot(page,'test-piece-drag-desktop');
+      await page.mouse.up();
+      await expect(page.locator('#test-drag-preview')).toBeHidden();
+      await expect(cell(page,3,3).locator('.piece')).toHaveCount(0);
+      await expect(cell(page,4,4).locator('.piece.upgraded:not(.enemy)')).toHaveAttribute('data-piece',pieceId);
+      await expect(cell(page,4,4)).not.toHaveClass(/selected/);
+      await expect(page.locator('#board .piece')).toHaveCount(40);
+      await startPieceDrag(page,4,4);
+      target = await cell(page,5,3).boundingBox();
+      await page.mouse.move(target.x+target.width/2,target.y+target.height/2,{steps:8});await page.mouse.up();
+      await expect(page.locator('#board .piece')).toHaveCount(39);
+      await expect(cell(page,5,3).locator('.piece.upgraded')).toHaveAttribute('data-piece',pieceId);
+      await startPieceDrag(page,5,3);
+      const board = await page.locator('#board').boundingBox();
+      await page.mouse.move(board.x-14,target.y+target.height/2,{steps:8});
+      await expect(page.locator('#test-drag-preview')).toHaveClass(/will-delete/);
+      await expect(page.locator('#test-drag-preview')).toContainText('盤外で削除');
+      await shot(page,'test-piece-delete-desktop');await page.mouse.up();
+      await expect(page.locator('#board .piece')).toHaveCount(38);
+      await expect(page.locator('.hand-piece')).toHaveCount(0);
+      await expect(page.locator('#test-drag-preview')).toBeHidden();
+      await startPieceDrag(page,7,7);
+      await page.mouse.move(board.x-14,board.y+board.height/2,{steps:8});
+      await page.keyboard.press('Escape');await page.mouse.up();
+      await expect(cell(page,7,7).locator('.piece')).toHaveCount(1);
+      await expect(page.locator('#board .piece')).toHaveCount(38);
+      await expect(page.locator('#test-drag-preview')).toBeHidden();
+      await page.locator('#test-initial').click();await ready(page);
+      await expect(page.locator('#board .piece')).toHaveCount(40);
+    }
+    await cell(page,3,3).click(); await cell(page,4,4).click();
+    await expect(cell(page,4,4).locator('.piece.enemy')).toHaveCount(1);
+    await page.locator('#test-clear').click();
+    await expect(page.locator('#board .piece')).toHaveCount(0);
+    await page.locator('#test-start').click(); await ready(page);
+    await expect(page.locator('#error')).toContainText('王を1枚ずつ');
+    await page.locator('#test-palette [data-kind="K"]').click(); await cell(page,9,9).click();
+    await page.locator('#test-side').selectOption('B'); await cell(page,9,1).click();
+    await page.locator('#test-state').isDisabled().then(disabled => assert.equal(disabled,true));
+    await page.locator('#test-side').selectOption('A');
+    await page.locator('#test-palette [data-kind="R"]').click();
+    await page.locator('#test-state').selectOption('upgrade'); await cell(page,5,7).click();
+    await page.locator('#test-side').selectOption('B'); await page.locator('#test-state').selectOption('none');
+    await cell(page,5,3).click();
+    await page.locator('#test-hand-editor summary').click();
+    await page.locator('#test-hands [data-kind="P"][data-delta="1"]').click();
+    await expect(page.locator('#hand-top [data-kind="P"] small')).toHaveText('1');
+    await fit(page,device+' custom editor with hand counts'); await shot(page,'test-custom-'+device);
+    await page.locator('#test-start').click(); await ready(page);
+    await expect(page.locator('#local-controls')).toBeVisible();
+    await expect(page.locator('#round-number')).toHaveText('01');
+    await cell(page,5,7).click(); await cell(page,5,5).click(); await ready(page);
+    await expect(page.locator('#local-side-a')).toBeDisabled();
+    await cell(page,5,3).click(); await cell(page,5,5).click(); await ready(page);
+    await expect(page.locator('#round-number')).toHaveText('02');
+    await expect(cell(page,5,5).locator('.piece.upgraded')).toHaveCount(1);
+    await page.locator('#tab-replay').click(); await ready(page);
+    await expect(page.locator('#stage-label')).toHaveText('開始局面');
+    await page.locator('#stage-next').click();
+    await expect(page.locator('#stage-label')).toHaveText('段階 1');
+    await page.locator('#test-restart').click(); await ready(page);
+    await expect(page.locator('#round-number')).toHaveText('01');
+    await expect(page.locator('#history .history-row')).toHaveCount(0);
+    await expect(cell(page,5,7).locator('.piece.upgraded')).toHaveCount(1);
+    await page.locator('#test-initial').click(); await ready(page);
+    await expect(page.locator('#board .piece')).toHaveCount(40);
+    await expect(page.locator('.hand-piece')).toHaveCount(0);
+    await expect(page.locator('#test-start')).toBeVisible();
+    await page.locator('#game-home').click(); await ready(page);
+    await expect(page.locator('#home-screen')).toBeVisible();
+  }
   for (const [page,device] of [[a,'desktop'],[b,'mobile']]) {
     await page.locator('#mode-cpu').click();
     await expect(page.locator('#trained-options')).toBeVisible();

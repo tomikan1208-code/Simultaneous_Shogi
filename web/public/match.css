@@ -120,6 +120,245 @@
 .side-rail {
   min-width:0
 }
+.test-controls {
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:14px;
+  padding:12px 10px;
+  border:1px solid var(--line);
+  border-radius:5px;
+  background:#ffffff03
+}
+.test-heading,.test-hand-heading {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:6px
+}
+.test-heading strong {
+  font-size:12px;
+  font-weight:500
+}
+.test-heading>span,#test-hand-side {
+  color:var(--muted);
+  font-size:10px
+}
+.test-presets,.test-tools,.test-fields {
+  display:grid;
+  gap:6px
+}
+.test-tools,.test-fields {
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  margin-bottom:10px
+}
+.test-controls .secondary,.test-controls .primary,.test-tools button {
+  min-height:34px;
+  padding:7px 3px;
+  font-size:11px
+}
+.test-tools button,.test-palette button,.test-hand-row button {
+  border:1px solid var(--line);
+  border-radius:4px;
+  background:#ffffff04
+}
+.test-controls [aria-pressed="true"] {
+  border-color:#c1a87888;
+  background:#d9bb8215;
+  box-shadow:inset 0 0 0 1px #d9bb8222
+}
+.test-fields label,.test-label {
+  color:var(--muted);
+  font-size:10px
+}
+.test-fields select {
+  width:100%;
+  min-width:0;
+  height:32px;
+  padding:4px 1px;
+  margin-top:5px;
+  font-size:11px
+}
+.test-palette {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:5px;
+  margin:6px 0 12px
+}
+.test-palette button {
+  min-height:34px;
+  padding:3px;
+  font-family:"Shogi Brush",var(--serif);
+  font-size:21px
+}
+.test-hands {
+  display:grid;
+  gap:5px;
+  margin-top:7px
+}
+#test-hand-editor summary {
+  min-height:28px;
+  cursor:pointer
+}
+#test-hand-editor summary:after {
+  content:"＋";
+  color:var(--muted)
+}
+#test-hand-editor[open] summary:after {
+  content:"−"
+}
+.test-hand-row {
+  display:grid;
+  grid-template-columns:minmax(20px,1fr) 28px 28px 28px;
+  align-items:center;
+  gap:3px;
+  font-size:12px
+}
+.test-hand-row button {
+  min-height:26px;
+  padding:0;
+  font-size:14px
+}
+.test-hand-row output {
+  text-align:center;
+  color:var(--muted);
+  font-size:11px;
+  font-variant-numeric:tabular-nums
+}
+.test-hint {
+  margin:0;
+  color:var(--muted);
+  font-size:10px;
+  line-height:1.7
+}
+.game-screen.is-test .opponent-rack .hand-tray {
+  min-height:100px;
+  gap:8px 6px;
+  padding-block:10px
+}
+.game-screen.is-test .opponent-rack .hand-empty {
+  padding-top:10px
+}
+.is-editing #board .cell {
+  cursor:crosshair
+}
+.is-editing #board .cell.occupied {
+  cursor:grab;
+  touch-action:none
+}
+.test-piece-menu {
+  position:absolute;
+  z-index:8;
+  width:min(244px,calc(100% - 12px));
+  padding:10px 12px 12px;
+  border:1px solid #b79b6377;
+  border-radius:7px;
+  background:#242a26;
+  box-shadow:0 8px 28px #0007;
+  color:var(--text)
+}
+.test-piece-heading {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:6px
+}
+.test-piece-heading strong {
+  font-size:13px;
+  font-weight:500
+}
+.test-piece-heading .icon-button {
+  width:28px;
+  height:28px;
+  font-size:18px
+}
+.test-piece-menu fieldset {
+  margin:0;
+  padding:6px 0 0;
+  border:0
+}
+.test-piece-menu fieldset+fieldset {
+  margin-top:10px
+}
+.test-piece-menu legend {
+  padding:0;
+  color:var(--muted);
+  font-size:10px
+}
+.test-piece-options {
+  display:flex;
+  gap:5px
+}
+.test-piece-options button {
+  flex:1;
+  min-height:36px;
+  padding:7px 3px;
+  border:1px solid var(--line);
+  border-radius:4px;
+  background:#ffffff04;
+  font-size:11px
+}
+.test-piece-options [aria-pressed="true"] {
+  border-color:#c1a87888;
+  background:#d9bb8215;
+  color:var(--gold-light)
+}
+.test-piece-options [data-editor-state="promote"] {
+  color:var(--red)
+}
+.test-piece-options [data-editor-state="upgrade"] {
+  color:var(--blue)
+}
+.is-dragging-piece,.is-dragging-piece * {
+  cursor:grabbing !important
+}
+#board .editor-drag-source .piece {
+  opacity:.22
+}
+#board .editor-drop-target {
+  background:#52654355;
+  box-shadow:inset 0 0 0 2px #526543cc
+}
+.test-drag-preview {
+  position:fixed;
+  z-index:50;
+  translate:-50% -50%;
+  pointer-events:none;
+  container-type:inline-size;
+  filter:drop-shadow(0 5px 5px #0005)
+}
+.test-drag-preview .piece {
+  width:100%;
+  height:auto;
+  aspect-ratio:var(--shogi-piece-ratio)
+}
+.test-drag-preview .piece-symbol {
+  font-size:78cqw
+}
+.test-drag-preview .rank-badge {
+  font-size:12cqw
+}
+.test-drag-preview.will-delete {
+  filter:drop-shadow(0 0 6px #e3626288)
+}
+.test-drag-label {
+  position:absolute;
+  top:calc(100% + 7px);
+  left:50%;
+  translate:-50% 0;
+  padding:5px 8px;
+  border:1px solid var(--line);
+  border-radius:4px;
+  background:#242a26;
+  color:var(--text);
+  font-size:11px;
+  white-space:nowrap
+}
+.will-delete .test-drag-label {
+  border-color:#db797977;
+  color:#ffaaaa
+}
 .self-rail {
   display:flex;
   flex-direction:column;
@@ -377,6 +616,31 @@
   }
 }
 @media (max-width:1100px) {
+  .game-screen.is-test .playfield {
+    grid-template-areas:"board" "self" "opponent" "editor" "history" "controls"
+  }
+  .test-controls {
+    grid-area:editor;
+    margin:0 3px;
+    padding:12px;
+    gap:10px
+  }
+  .test-presets {
+    grid-template-columns:repeat(2,minmax(0,1fr))
+  }
+  .test-palette {
+    grid-template-columns:repeat(8,minmax(0,1fr))
+  }
+  .test-hands {
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    column-gap:20px
+  }
+  .game-screen.is-test .opponent-rack .hand-tray {
+    min-height:84px
+  }
+  .game-screen.is-test .opponent-rack .hand-empty {
+    padding-top:0
+  }
   .local-controls {
     margin-inline:6px;
     gap:6px 10px
