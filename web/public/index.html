@@ -9,6 +9,7 @@
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./style.css">
   <link rel="stylesheet" href="./match.css">
+  <link rel="stylesheet" href="./rule-demos.css">
   <link rel="preload" href="./fonts/shogi-brush.ttf" as="font" type="font/ttf" crossorigin>
 </head>
 <body>
@@ -148,7 +149,21 @@
   <div id="test-drag-preview" class="test-drag-preview" aria-hidden="true" hidden></div>
   <div id="clash-overlay" class="clash-overlay" role="status" aria-live="polite" hidden><div class="clash-scrim"></div><div id="clash-content" class="clash-band"></div><button id="skip-effects" class="effect-skip">演出をスキップ ›</button></div>
   <div id="result-overlay" class="result-overlay" role="dialog" aria-modal="true" aria-labelledby="result-title" tabindex="-1" hidden><div id="result-card" class="result-card"><div class="result-rays" aria-hidden="true"></div><span id="result-sigil" class="result-sigil">勝</span><p id="result-kicker" class="overline">VICTORY</p><h1 id="result-title">勝利</h1><p id="result-detail" class="result-detail"></p><div id="result-players" class="result-players"></div><p id="result-rounds" class="result-rounds"></p><button id="result-rematch" class="primary full">もう一度対戦</button><div class="result-review-actions"><button id="result-final" class="secondary">最終盤面</button><button id="result-review" class="secondary">振り返る</button></div><button id="result-home" class="text-button">ホームへ戻る</button></div></div>
-  <dialog id="rules-dialog" class="dialog rules-dialog"><button class="dialog-close icon-button" data-close="rules-dialog" aria-label="閉じる">×</button><p class="overline">HOW TO PLAY</p><h2>同時に指す、将棋。</h2><ol class="rule-list"><li><b>駒 → 移動先で、一手。</b><p>双方が選ぶまで着手は秘密。揃うと、長距離駒は1マスずつ同時に動きます。桂は跳んで1段階です。</p></li><li><b>動く駒同士は「格」で衝突。</b><p>格の高い方が勝ち、同格なら相討ち。勝った駒も停止します。止まっている駒は、格によらず捕獲できます。</p><div class="rank-key">王 0　歩 1　香 2　桂 3　銀 4　金 5　飛・角 6</div></li><li><b>成りと昇格は、別の選択。</b><p><span class="text-promoted">成り：動きが変わる。格は元のまま。</span><br><span class="text-upgraded">昇格：動きはそのまま。格 +1を保持。</span><br>全種類の駒は2ラウンド続けて動くと格−1（下限0）。続けて動いても低下は−1までで、1ラウンド休むと回復します。昇格そのものは失いません。<br>自陣3段では、動く駒同士の衝突時のみ防御+1。自陣で防御が強化されている駒は青、格低下中の駒は紫のオーラ。自陣の外では昇格していても青いオーラは出ません。<br>敵陣から動くか、実際に敵陣へ到達すると成り・昇格が適用。昇格後は任意では成らず、行き所がなくなる場合の強制成りでのみ成り駒へ変わります。</p></li><li><b>王を取って、勝利。</b><p>王を取った駒が同じラウンドで取り返されても勝利。王自身が敵王を取ってから取り返された場合も勝利します。独立して双方が王を取った場合は捕獲時の格で比較します。4回の反復・200ラウンドで引き分けです。</p></li></ol><details class="advanced-rules"><summary>条件付きの指定と同時打ち</summary><p>味方のいるマスや障害の先も指定できます。味方が取られると進めます。敵が残れば捕獲して停止します。二歩や敵の占有先への打ちは、条件が解消されれば成立します。</p><p>同じマスへの同時打ちは格で比較し、同格なら双方とも持ち駒を保持。次ラウンドは同じ駒種・同じマスへの再打ちを禁止します。盤上の駒と打ち駒が競合すると盤上駒を優先します。</p><p>王手放置・打ち歩詰めの禁止と、独立したパスはありません。</p></details></dialog>
+  <dialog id="rules-dialog" class="dialog rules-dialog" aria-labelledby="rules-title">
+    <button class="dialog-close icon-button" data-close="rules-dialog" aria-label="閉じる">×</button>
+    <p class="overline">HOW TO PLAY</p>
+    <h2 id="rules-title">同時に指す、将棋。</h2>
+    <p class="rules-intro">ルールを開いて、小さな盤面で見てみましょう。</p>
+    <div class="rules-playback">
+      <div class="rules-speed-label"><span>再生速度</span><small>すべての実演に適用</small></div>
+      <div id="rules-speed" class="rules-speed" role="group" aria-label="すべての実演の再生速度">
+        <button type="button" data-demo-speed="1" aria-pressed="true">1倍</button>
+        <button type="button" data-demo-speed="2" aria-pressed="false">2倍</button>
+        <button type="button" data-demo-speed="4" aria-pressed="false">4倍</button>
+      </div>
+    </div>
+    <div id="rule-demos" class="rule-accordion"></div>
+  </dialog>
   <dialog id="settings-dialog" class="dialog settings-dialog"><button class="dialog-close icon-button" data-close="settings-dialog" aria-label="閉じる">×</button><p class="overline">PREFERENCES</p><h2>設定</h2><label class="setting-row"><span>効果音<small>着手・衝突・対局結果</small></span><input id="sound-setting" type="checkbox" role="switch"></label><label class="setting-row"><span>駒の格を表示<small>現在位置で移動中同士が衝突した場合の格</small></span><input id="rank-setting" type="checkbox" role="switch" checked></label><label class="setting-row"><span>演出を控えめに<small>移動を短くし、点滅・揺れを抑える</small></span><input id="motion-setting" type="checkbox" role="switch"></label></dialog>
   <dialog id="menu-dialog" class="dialog menu-dialog"><button class="dialog-close icon-button" data-close="menu-dialog" aria-label="閉じる">×</button><h2>対局メニュー</h2><button id="menu-rules" class="menu-line"><span data-icon="help"></span>遊び方</button><button id="menu-settings" class="menu-line"><span data-icon="settings"></span>設定・効果音</button><button id="export" class="menu-line"><span data-icon="download"></span>棋譜を保存</button><button id="import" class="menu-line"><span data-icon="upload"></span>棋譜を開く</button><button id="menu-resign" class="menu-line danger"><span data-icon="flag"></span>投了する</button><button id="menu-home" class="menu-line"><span data-icon="home"></span>ホームへ戻る</button></dialog>
   <dialog id="confirm-dialog" class="dialog confirm-dialog"><h2 id="confirm-title"></h2><p id="confirm-description"></p><div class="confirm-actions"><button id="confirm-cancel" class="secondary">キャンセル</button><button id="confirm-accept" class="primary">退出する</button></div></dialog>

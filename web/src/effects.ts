@@ -39,6 +39,9 @@ export class Effects {
   }
   syncAudio():void {
     if (this.audible()) return;
+    this.stopAudio();
+  }
+  stopAudio():void {
     this.audioEpoch++;
     for (const voice of this.voices) { try { voice.stop(); } catch { /* Already finished. */ } }
     this.voices.clear();
@@ -84,11 +87,18 @@ export class Effects {
     overlay.hidden = false; document.getElementById('skip-effects')?.focus({preventScroll:true}); this.sound('clash');
     await this.wait(this.reduced() ? 1000 : 1750); overlay.hidden = true;
   }
-  sound(kind:'move'|'clash'|'win'|'lose'|'draw'|'start'):void {
+  sound(kind:'select'|'move'|'clash'|'win'|'lose'|'draw'|'start'):void {
     const ctx = this.context(); if (!ctx) return;
     try {
       if (ctx.state === 'suspended') void ctx.resume().catch(() => {});
       if (kind === 'move' || kind === 'clash') { void this.playSample(ctx,kind); return; }
+      if (kind === 'select') {
+        const click = ctx.createOscillator(), volume = ctx.createGain(), start = ctx.currentTime;
+        click.type = 'triangle'; click.frequency.setValueAtTime(1050,start); click.frequency.exponentialRampToValueAtTime(420,start+.035);
+        volume.gain.setValueAtTime(.0001,start); volume.gain.exponentialRampToValueAtTime(.1,start+.003); volume.gain.exponentialRampToValueAtTime(.0001,start+.045);
+        click.connect(volume); volume.connect(ctx.destination); click.start(start); click.stop(start+.05);
+        click.onended = () => { click.disconnect(); volume.disconnect(); }; return;
+      }
       const tones = kind === 'win' ? [523,659,784,1046] : kind === 'lose' ? [330,277,220] : kind === 'draw' ? [440,523] : [392,523];
       tones.forEach((frequency,i) => {
         const oscillator = ctx.createOscillator(), volume = ctx.createGain();

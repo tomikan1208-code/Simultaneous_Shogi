@@ -6,6 +6,7 @@ import type { ExternalStatus, SavedRun } from './models.js';
 import type { Connection } from './online.js';
 import { actionLabel, conditionText, escape, eventText, icon, offersChange, other, pieceMarkup, rankAppearance, reasons, same, sideIndex, square, symbol, symbols } from './presentation.js';
 import { PLAY_RULES, sameRules } from './rules.js';
+import { RuleDemos, type DemoSpeed } from './rule-demos.js';
 import { editorKinds, handKinds, PositionEditor } from './test-position.js';
 import { TestBoardControls } from './test-board-controls.js';
 import type { Action, ActionOption, Choice, HistoryEntry, Kind, MatchView, OnlineEntry, OnlineState, Outcome, Piece, Position, Replay, Resolution, RuleSet, Side, Square } from './types.js';
@@ -47,8 +48,15 @@ const storage = {
 };
 const savedSettings = (() => { try { return JSON.parse(storage.get('shogi-settings') ?? '{}') as Record<string,unknown>; } catch { return {}; } })();
 const systemReduced = matchMedia('(prefers-reduced-motion: reduce)');
-const settings = { sound:savedSettings.sound !== false, ranks:savedSettings.ranks !== false, reduced:savedSettings.reduced === true || systemReduced.matches, history:savedSettings.history !== false };
+const settings = { sound:savedSettings.sound !== false, ranks:savedSettings.ranks !== false, reduced:savedSettings.reduced === true || systemReduced.matches, history:savedSettings.history !== false,
+  demoSpeed:(savedSettings.demoSpeed===2 || savedSettings.demoSpeed===4 ? savedSettings.demoSpeed : 1) as DemoSpeed };
 const effects = new Effects(() => settings.reduced,() => settings.sound);
+const ruleDemos = new RuleDemos($<HTMLDialogElement>('rules-dialog'),{
+  resolve:(position,actions) => engine.request<Resolution>({cmd:'resolve',position,actions,rules:PLAY_RULES}),
+  sound:() => settings.sound,reduced:() => settings.reduced,
+  toggleSound:() => { settings.sound = !settings.sound; applySettings(); },
+  speed:() => settings.demoSpeed,setSpeed:speed => { settings.demoSpeed = speed; applySettings(); },
+});
 const net = new OnlineClient(state => { void enqueueOnline(state); },state => {
   connection = state;
   if (state === 'expired') { storage.set('shogi-room',null,true); showError('部屋の接続情報が失効しました。ホームから部屋に入り直してください。'); }
@@ -705,6 +713,7 @@ async function copy(value:string,label:string):Promise<void> {
   }
 }
 function applySettings():void {
+  ruleDemos.syncPreferences();
   effects.syncAudio();
   document.body.classList.toggle('hide-ranks',!settings.ranks);
   document.body.classList.toggle('reduced-motion',settings.reduced);

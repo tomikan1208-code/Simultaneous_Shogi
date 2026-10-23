@@ -21,7 +21,7 @@ export interface MatchView { position:Position; rules:RuleSet; round:number; out
 export type Policy = 'random'|'hunter'|'defense'|'interference'|'upgrade';
 export interface RoundRecord { round:number; actions:Action[]; beforeHash:string; afterHash:string; resolutionHash:string; outcome:Outcome|null; chainHash:string }
 export interface Replay { format:string; rules:RuleSet; initial:Position; rounds:RoundRecord[] }
-export type Request = {cmd:'new';position?:Position;rules?:RuleSet} | {cmd:'view'} | {cmd:'actions';side:Side} |
+export type Request = {cmd:'new';position?:Position;rules?:RuleSet} | {cmd:'resolve';position:Position;actions:Action[];rules?:RuleSet} | {cmd:'view'} | {cmd:'actions';side:Side} |
   {cmd:'submit';side:Side;action:Action} | {cmd:'submit_ai';side:Side;policy:Policy;seed:number} | {cmd:'export'} | {cmd:'import';replay:Replay} | {cmd:'replay_round';round:number};
 export type Response<T> = {ok:true;value:T} | {ok:false;error:string};
 export interface RoomPlayer { side:Side; name:string; ready:boolean; inLobby:boolean; connected:boolean; reconnectUntil:number|null }

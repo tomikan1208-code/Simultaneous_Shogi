@@ -21,6 +21,7 @@
     "test:launcher": "node scripts/verify-launcher.mjs",
     "build:wasm": "node scripts/build-wasm.mjs",
     "build:web": "node scripts/build-web.mjs",
+    "docs:rule-gifs": "node scripts/build-rule-gifs.mjs",
     "build": "npm run build:wasm && npm run build:web",
     "dev": "node scripts/serve.mjs",
     "start": "node scripts/serve.mjs",
@@ -32,12 +33,15 @@
     "test:external-play": "node scripts/verify-external-play.mjs",
     "test:play-rules": "node scripts/verify-play-rules.mjs",
     "test:auras": "node scripts/verify-auras-browser.mjs",
+    "test:rule-demos": "node scripts/verify-rule-demos.mjs --browser",
     "test:browser": "node scripts/verify-browser.mjs",
     "check": "node scripts/check.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",
+    "gifenc": "1.0.3",
     "happy-dom": "20.14.6",
+    "pngjs": "7.0.0",
     "typescript": "5.9.3"
   },
   "engines": {

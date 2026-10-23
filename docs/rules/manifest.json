@@ -1,0 +1,153 @@
+{
+  "speed": 2,
+  "loop": true,
+  "rules": {
+    "version": "0.7",
+    "profile": "balance-v1",
+    "repetitionLimit": 4,
+    "roundLimit": 200,
+    "balance": {
+      "movement": "all_pieces",
+      "consecutiveThreshold": 2,
+      "rankOffset": 0,
+      "minimumRank": 0,
+      "restRecovery": 1,
+      "homeRows": 3,
+      "defenseBonus": 1,
+      "defensePosition": "destination",
+      "defenseCap": null
+    }
+  },
+  "demos": [
+    {
+      "id": "simultaneous",
+      "title": "双方が一手ずつ選び、同時に動く",
+      "width": 420,
+      "height": 480,
+      "frames": 50,
+      "durationMs": 7280,
+      "bytes": 121656,
+      "sha256": "52c352485a8d05112fe11d5ea91f574f98cea3f5ee03505c0de9bf8aad3a8956"
+    },
+    {
+      "id": "rank",
+      "title": "動く駒同士は高い格が勝ち、同格なら相討ち",
+      "width": 420,
+      "height": 480,
+      "frames": 131,
+      "durationMs": 16400,
+      "bytes": 324441,
+      "sha256": "45c81d6302158a195e950141d599f2d88d7010766dfedc8de42941f74b828802"
+    },
+    {
+      "id": "contact",
+      "title": "同じマス・すれ違いで衝突する",
+      "width": 420,
+      "height": 480,
+      "frames": 133,
+      "durationMs": 17380,
+      "bytes": 375058,
+      "sha256": "4735ffe0555b7b488c9ffc64fe0efc0170c4c2849c3c2e8b7f7e01a56eb7ef7a"
+    },
+    {
+      "id": "capture",
+      "title": "停止中の敵駒は、格に関係なく取れる",
+      "width": 420,
+      "height": 480,
+      "frames": 61,
+      "durationMs": 8200,
+      "bytes": 177992,
+      "sha256": "8abc5563254238aa7c7def89b1dfb76dcb4ce371af16ea35d40d51f1dfd7c616"
+    },
+    {
+      "id": "promotion",
+      "title": "成りは動きが変わり、昇格は格が上がる",
+      "width": 420,
+      "height": 480,
+      "frames": 85,
+      "durationMs": 13250,
+      "bytes": 197333,
+      "sha256": "79776214932482f8943f29451758a0b40928d32d2d5e6f109cae6799f051f370"
+    },
+    {
+      "id": "defense",
+      "title": "自陣での衝突は格 +1、青いオーラで表示",
+      "width": 420,
+      "height": 480,
+      "frames": 31,
+      "durationMs": 5630,
+      "bytes": 89293,
+      "sha256": "8163613462e643aff57c6d3da406658722683b6f3a7cd513883ab419019e4728"
+    },
+    {
+      "id": "fatigue",
+      "title": "2ラウンド続けて動かすと格 −1、休むと回復",
+      "width": 420,
+      "height": 480,
+      "frames": 94,
+      "durationMs": 17380,
+      "bytes": 211917,
+      "sha256": "03c834f42c29ce040d363db7e721055834f30b862e949a30e2358537b585f97e"
+    },
+    {
+      "id": "movement",
+      "title": "敵や味方のいるマス、その先も指定できる",
+      "width": 420,
+      "height": 480,
+      "frames": 219,
+      "durationMs": 28450,
+      "bytes": 552882,
+      "sha256": "f14678511e774f759774f4d1ed76696c2c1622ccb2a8b48db513e95d30917212"
+    },
+    {
+      "id": "recapture",
+      "title": "味方を取った敵を、次の段階で取り返せる",
+      "width": 420,
+      "height": 480,
+      "frames": 88,
+      "durationMs": 11030,
+      "bytes": 255630,
+      "sha256": "760e46da801f195de91be5e724c8f3e7634ea2798e4a5f523744bb9c971c83e9"
+    },
+    {
+      "id": "drop",
+      "title": "打った駒は、格によらず盤上の駒に負ける",
+      "width": 420,
+      "height": 480,
+      "frames": 62,
+      "durationMs": 8200,
+      "bytes": 171984,
+      "sha256": "36658021892e72ba3443332e1e021a5d33320c9db5be94e755d044de80b61573"
+    },
+    {
+      "id": "double-drop",
+      "title": "同時打ちは格で比べ、同格なら持ち駒に残る",
+      "width": 420,
+      "height": 480,
+      "frames": 113,
+      "durationMs": 16400,
+      "bytes": 272936,
+      "sha256": "b4cf75cc319a4307a5408f3736352cf32cda6aef0ad8f2a3c07f284ae669e35d"
+    },
+    {
+      "id": "conditional-drop",
+      "title": "敵の移動や二歩の解消を待って打てる",
+      "width": 420,
+      "height": 480,
+      "frames": 186,
+      "durationMs": 24650,
+      "bytes": 483326,
+      "sha256": "6f6309398ca14d7116ee4f5b5aaa69a4412f6e3d4a5c72f1b98730c3779d67da"
+    },
+    {
+      "id": "king",
+      "title": "王の捕獲で決着、双方が取れば格で判定",
+      "width": 420,
+      "height": 480,
+      "frames": 148,
+      "durationMs": 18280,
+      "bytes": 437541,
+      "sha256": "6970398b95b9d05ab07a34ba9ab68e81b124b9249dea1406b1cef6a0d6baa7b7"
+    }
+  ]
+}
